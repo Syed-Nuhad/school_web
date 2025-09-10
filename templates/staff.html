@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Staff</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+    }
+    .navbar {
+      background-color: #004080;
+    }
+    .navbar-brand {
+      color: white !important;
+      font-weight: bold;
+    }
+    .navbar-nav .nav-link {
+      color: white !important;
+    }
+    .card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    .btn-home {
+      background-color: #004080;
+      color: white;
+      font-weight: bold;
+    }
+    .btn-home:hover {
+      background-color: #00264d;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">
+        <img src="logo.png" alt="College Logo" width="40" height="40" class="d-inline-block align-text-middle">
+        Our Staff
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+          <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Staff Section -->
+  <div class="container py-5">
+    <h2 class="text-center mb-4">Our Dedicated Staff</h2>
+    <div class="row g-4">
+      <!-- Staff Card 1 -->
+      <div class="col-md-4">
+        <div class="card h-100 text-center">
+          <img src="staff1.jpg" class="card-img-top" alt="Staff Member">
+          <div class="card-body">
+            <h5 class="card-title">Mr. John Smith</h5>
+            <p class="card-text">Librarian</p>
+          </div>
+        </div>
+      </div>
+      <!-- Staff Card 2 -->
+      <div class="col-md-4">
+        <div class="card h-100 text-center">
+          <img src="staff2.jpg" class="card-img-top" alt="Staff Member">
+          <div class="card-body">
+            <h5 class="card-title">Mrs. Linda Brown</h5>
+            <p class="card-text">Office Assistant</p>
+          </div>
+        </div>
+      </div>
+      <!-- Staff Card 3 -->
+      <div class="col-md-4">
+        <div class="card h-100 text-center">
+          <img src="staff3.jpg" class="card-img-top" alt="Staff Member">
+          <div class="card-body">
+            <h5 class="card-title">Mr. Alex Johnson</h5>
+            <p class="card-text">Accountant</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="text-center mt-5">
+      <a href="index.html" class="btn btn-home px-4 py-2">← Back to Home</a>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!-- Example: teachers.html (new page opened by "View All") -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teachers – College Members</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- AOS CSS for fade animations -->
+  <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <style>
+    /* Custom card styling for unique look */
+    .dashboard-card {
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.3s;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container-fluid">
+      <!-- Logo linking back to home (index.html) -->
+      <a class="navbar-brand" href="index.html">
+        <img src="logo.png" alt="College Logo" height="30">
+      </a>
+      <!-- Section Title -->
+      <span class="navbar-text fs-4 fw-bold ms-2">Teachers</span>
+    </div>
+  </nav>
+
+  <!-- Member Cards Section -->
+  <section class="container py-5" data-aos="fade-up">
+    <h2 class="text-center mb-4">All Teachers</h2>
+    <div class="row g-4">
+      <!-- Example Teacher Card 1 -->
+      <div class="col-md-4">
+        <div class="card dashboard-card text-center p-3" data-aos="fade-up">
+          <img src="teacher1.jpg" class="card-img-top rounded mx-auto" alt="Alice Smith">
+          <div class="card-body">
+            <h5 class="card-title">Alice Smith</h5>
+            <p class="card-text text-muted">Senior Lecturer</p>
+          </div>
+        </div>
+      </div>
+      <!-- Example Teacher Card 2 -->
+      <div class="col-md-4">
+        <div class="card dashboard-card text-center p-3" data-aos="fade-up" data-aos-delay="100">
+          <img src="teacher2.jpg" class="card-img-top rounded mx-auto" alt="Bob Johnson">
+          <div class="card-body">
+            <h5 class="card-title">Bob Johnson</h5>
+            <p class="card-text text-muted">Head of Mathematics</p>
+          </div>
+        </div>
+      </div>
+      <!-- Example Teacher Card 3 -->
+      <div class="col-md-4">
+        <div class="card dashboard-card text-center p-3" data-aos="fade-up" data-aos-delay="200">
+          <img src="teacher3.jpg" class="card-img-top rounded mx-auto" alt="Carol Lee">
+          <div class="card-body">
+            <h5 class="card-title">Carol Lee</h5>
+            <p class="card-text text-muted">Assistant Professor</p>
+          </div>
+        </div>
+      </div>
+      <!-- Additional cards would follow similarly... -->
+    </div>
+
+    <!-- Back to Home Button -->
+    <div class="text-center mt-5">
+      <a href="index.html" class="btn btn-secondary">Back to Home</a>
+    </div>
+  </section>
+
+  <!-- Bootstrap JS (with Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- AOS JS -->
+  <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+  <script>
+    // Initialize AOS animations
+    AOS.init();
+  </script>
+</body>
+</html>

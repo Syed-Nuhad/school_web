@@ -1,0 +1,49 @@
+{% load static %}
+<nav class="navbar">
+  <div class="logo">
+      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" style="height: 30px; width: auto;" class="mx-3">
+    <h1>Titu BD Science College</h1>
+  </div>
+
+  <ul class="nav-links">
+    <li><a href="{% url 'home' %}" class="active">Home</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#academics">Courses</a></li>
+
+    <li class="dropdown">
+      <a href="#" class="has-caret">Cultural</a>
+      <ul class="dropdown-menu">
+        <li><a href="#college-functions">Events</a></li>
+        <li><a href="#gallery-section">Gallery</a></li>
+      </ul>
+    </li>
+
+    <li class="dropdown">
+      <a href="#" class="has-caret">Student Corner</a>
+      <ul class="dropdown-menu">
+        <li><a href="#" target="_blank" rel="noopener">Online Admission Form</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Student ID Card</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Apply for Hostel</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Library Catalog</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Class Attendance Overview</a></li>
+        <li><a href="#" target="_blank" rel="noopener">School Bus Information</a></li>
+      </ul>
+    </li>
+
+    <li class="dropdown">
+      <a href="#" class="has-caret">Exam Corner</a>
+      <ul class="dropdown-menu">
+        <li><a href="#" target="_blank" rel="noopener">Exam Routine</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Class-wise Result Overview</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Student Mark Entry</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Parent Dashboard</a></li>
+        <li><a href="#" target="_blank" rel="noopener">Mark Sheet</a></li>
+      </ul>
+    </li>
+
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+
+  <!-- Mobile menu button -->
+  <div class="menu-toggle" id="mobile-menu">☰</div>
+</nav>

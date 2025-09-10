@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Reports</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body.section { background-color: #f8f9fa; font-family: "Segoe UI", sans-serif; }
+    .card-soft { background: #ffffff; border-radius: 10px; padding: 1rem; box-shadow: 0 3px 6px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    h6 { font-weight: bold; margin-bottom: 0.5rem; }
+    .sticky-column { position: sticky; top: 0; z-index: 1020; background: #0d6efd; color: white; padding: 0.75rem 1rem; display: flex; align-items: center; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+    .sticky-column img { height: 40px; width: 40px; margin-right: 0.75rem; }
+    .back-home { text-align: center; margin-top: 2rem; }
+    .search-bar { margin-bottom: 0.5rem; }
+    table.table-sm th, table.table-sm td { font-size: 0.9rem; }
+    /* Fade-in animation */
+.back-home-btn {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 1s forwards;
+  transition: all 0.3s ease;
+}
+
+/* Hover effect */
+.back-home-btn:hover {
+  background-color: #0b5ed7; /* Darker blue */
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  color: white;
+}
+
+/* Keyframes for fade-in and move up */
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+  </style>
+</head>
+<body class="section">
+
+<!-- ⭐⭐⭐⭐⭐ Sticky Column / Navbar -->
+<nav class="sticky-column">
+  <img src="./img/logo/DS-Logo.png" alt="College Logo">
+  <h4 class="mb-0">Admin Reports Dashboard</h4>
+</nav>
+
+<section class="container py-5">
+
+<!-- =================== 1. Fee Collection Reports =================== -->
+<h5 style="color:#fd7e14; padding:5px; border-radius:5px;">Fee Collection Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Monthly Fee Collection</h6>
+    <input class="form-control search-bar" placeholder="Search Month..." oninput="filterTable(this,'#repFeesMonth')">
+    <table class="table table-sm" id="repFeesMonth">
+      <thead><tr><th>Month</th><th>Collected</th></tr></thead>
+      <tbody>
+        <tr><td>July</td><td>৳120,000</td></tr>
+        <tr><td>August</td><td>৳98,000</td></tr>
+        <tr><td>September</td><td>৳110,000</td></tr>
+        <tr><td>October</td><td>৳125,000</td></tr>
+        <tr><td>November</td><td>৳130,000</td></tr>
+        <tr><td>December</td><td>৳140,000</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#ffe5b4;"><td>Grand Total</td><td>৳823,000</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Outstanding Fees per Student/Class</h6>
+    <input class="form-control search-bar" placeholder="Search Student/Class..." oninput="filterTable(this,'#repFeesOutstanding')">
+    <table class="table table-sm" id="repFeesOutstanding">
+      <thead><tr><th>Student</th><th>Class</th><th>Outstanding Amount</th></tr></thead>
+      <tbody>
+        <tr><td>John Doe</td><td>9</td><td>৳500</td></tr>
+        <tr><td>Jane Doe</td><td>10</td><td>৳300</td></tr>
+        <tr><td>Michael Smith</td><td>8</td><td>৳400</td></tr>
+        <tr><td>Emma Johnson</td><td>11</td><td>৳250</td></tr>
+        <tr><td>William Brown</td><td>12</td><td>৳600</td></tr>
+        <tr><td>Olivia Davis</td><td>9</td><td>৳350</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#ffe5b4;"><td>Grand Total</td><td></td><td>৳2,400</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Total Fees Collected per Term/Year</h6>
+    <input class="form-control search-bar" placeholder="Search Term/Year..." oninput="filterTable(this,'#repFeesTerm')">
+    <table class="table table-sm" id="repFeesTerm">
+      <thead><tr><th>Term/Year</th><th>Total Collected</th></tr></thead>
+      <tbody>
+        <tr><td>Term 1 / 2025</td><td>৳350,000</td></tr>
+        <tr><td>Term 2 / 2025</td><td>৳310,000</td></tr>
+        <tr><td>Term 3 / 2025</td><td>৳400,000</td></tr>
+        <tr><td>Term 1 / 2024</td><td>৳330,000</td></tr>
+        <tr><td>Term 2 / 2024</td><td>৳320,000</td></tr>
+        <tr><td>Term 3 / 2024</td><td>৳410,000</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#ffe5b4;"><td>Grand Total</td><td>৳2,120,000</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Payment Modes</h6>
+    <input class="form-control search-bar" placeholder="Search Mode..." oninput="filterTable(this,'#repPaymentModes')">
+    <table class="table table-sm" id="repPaymentModes">
+      <thead><tr><th>Mode</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Cash</td><td>৳200,000</td></tr>
+        <tr><td>Online</td><td>৳150,000</td></tr>
+        <tr><td>Bank</td><td>৳100,000</td></tr>
+        <tr><td>Cheque</td><td>৳50,000</td></tr>
+        <tr><td>Card</td><td>৳80,000</td></tr>
+        <tr><td>Mobile Payment</td><td>৳60,000</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#ffe5b4;"><td>Grand Total</td><td>৳640,000</td></tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+
+
+<!-- =================== 2. Academic Reports =================== -->
+
+<h5 style="color:#0dcaf0; padding:5px; border-radius:5px;">Academic Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Pass Rate by Class</h6>
+    <input class="form-control search-bar" placeholder="Search Class..." oninput="filterTable(this,'#repPass')">
+    <table class="table table-sm" id="repPass">
+      <thead><tr><th>Class</th><th>Pass %</th></tr></thead>
+      <tbody>
+        <tr><td>8</td><td>86%</td></tr>
+        <tr><td>9</td><td>78%</td></tr>
+        <tr><td>10</td><td>82%</td></tr>
+        <tr><td>11</td><td>88%</td></tr>
+        <tr><td>12</td><td>90%</td></tr>
+        <tr><td>7</td><td>81%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Average GPA per Class/Term</h6>
+    <input class="form-control search-bar" placeholder="Search Class/Term..." oninput="filterTable(this,'#repGPA')">
+    <table class="table table-sm" id="repGPA">
+      <thead><tr><th>Class</th><th>Term</th><th>Average GPA</th></tr></thead>
+      <tbody>
+        <tr><td>8</td><td>Term 1</td><td>3.85</td></tr>
+        <tr><td>9</td><td>Term 1</td><td>3.72</td></tr>
+        <tr><td>10</td><td>Term 1</td><td>3.90</td></tr>
+        <tr><td>11</td><td>Term 1</td><td>3.88</td></tr>
+        <tr><td>12</td><td>Term 1</td><td>3.95</td></tr>
+        <tr><td>8</td><td>Term 2</td><td>3.80</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Subject-wise Performance</h6>
+    <input class="form-control search-bar" placeholder="Search Subject..." oninput="filterTable(this,'#repSubjects')">
+    <table class="table table-sm" id="repSubjects">
+      <thead><tr><th>Subject</th><th>Average Marks</th></tr></thead>
+      <tbody>
+        <tr><td>Math</td><td>85</td></tr>
+        <tr><td>English</td><td>80</td></tr>
+        <tr><td>Science</td><td>82</td></tr>
+        <tr><td>Bangla</td><td>78</td></tr>
+        <tr><td>History</td><td>81</td></tr>
+        <tr><td>Geography</td><td>79</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Top Performing Students</h6>
+    <input class="form-control search-bar" placeholder="Search Student..." oninput="filterTable(this,'#repTopStudents')">
+    <table class="table table-sm" id="repTopStudents">
+      <thead><tr><th>Student</th><th>Class</th><th>GPA</th></tr></thead>
+      <tbody>
+        <tr><td>John Doe</td><td>8</td><td>4.9</td></tr>
+        <tr><td>Jane Doe</td><td>9</td><td>4.8</td></tr>
+        <tr><td>Michael Smith</td><td>10</td><td>4.7</td></tr>
+        <tr><td>Emma Johnson</td><td>11</td><td>4.85</td></tr>
+        <tr><td>William Brown</td><td>12</td><td>4.9</td></tr>
+        <tr><td>Olivia Davis</td><td>8</td><td>4.75</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- =================== 3. Attendance Reports =================== -->
+
+<h5 style="color:#fd6f96; padding:5px; border-radius:5px;">Attendance Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#fd6f96; color:white; padding:5px; border-radius:5px;">Attendance per Class/Section</h6>
+    <input class="form-control search-bar" placeholder="Search Class/Section..." oninput="filterTable(this,'#repAttendance')">
+    <table class="table table-sm" id="repAttendance">
+      <thead>
+        <tr><th>Class</th><th>Section</th><th>Attendance %</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>9</td><td>A</td><td>92%</td></tr>
+        <tr><td>9</td><td>B</td><td>89%</td></tr>
+        <tr><td>10</td><td>A</td><td>91%</td></tr>
+        <tr><td>10</td><td>B</td><td>88%</td></tr>
+        <tr><td>11</td><td>A</td><td>93%</td></tr>
+        <tr><td>11</td><td>B</td><td>87%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#fd6f96; color:white; padding:5px; border-radius:5px;">Students with Low Attendance</h6>
+    <input class="form-control search-bar" placeholder="Search Student..." oninput="filterTable(this,'#repLowAtt')">
+    <table class="table table-sm" id="repLowAtt">
+      <thead>
+        <tr><th>Student</th><th>Class</th><th>Attendance %</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>John Doe</td><td>9</td><td>70%</td></tr>
+        <tr><td>Jane Doe</td><td>10</td><td>65%</td></tr>
+        <tr><td>Michael Smith</td><td>9</td><td>68%</td></tr>
+        <tr><td>Emma Johnson</td><td>10</td><td>72%</td></tr>
+        <tr><td>William Brown</td><td>11</td><td>66%</td></tr>
+        <tr><td>Olivia Davis</td><td>11</td><td>64%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2">
+  <h6 style="color:#fd6f96; padding:5px; border-radius:5px;">Term-wise Attendance Summary</h6>
+  <input class="form-control search-bar" placeholder="Search Term/Class..." oninput="filterTable(this,'#repAttendanceSummary')">
+  <table class="table table-sm" id="repAttendanceSummary">
+    <thead>
+      <tr><th>Term</th><th>Class</th><th>Average Attendance %</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Term 1</td><td>9</td><td>90%</td></tr>
+      <tr><td>Term 1</td><td>10</td><td>89%</td></tr>
+      <tr><td>Term 1</td><td>11</td><td>91%</td></tr>
+      <tr><td>Term 2</td><td>9</td><td>88%</td></tr>
+      <tr><td>Term 2</td><td>10</td><td>87%</td></tr>
+      <tr><td>Term 2</td><td>11</td><td>90%</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- =================== 4. Exam Reports =================== -->
+
+<h5 style="color:#6f42c1; padding:5px; border-radius:5px;">Exam Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#6f42c1; color:white; padding:5px; border-radius:5px;">Individual Student Marks</h6>
+    <input class="form-control search-bar" placeholder="Search Student..." oninput="filterTable(this,'#repExamInd')">
+    <table class="table table-sm" id="repExamInd">
+      <thead>
+        <tr><th>Student</th><th>Subject</th><th>Marks</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>John Doe</td><td>Math</td><td>90</td></tr>
+        <tr><td>Jane Doe</td><td>English</td><td>85</td></tr>
+        <tr><td>Michael Smith</td><td>Physics</td><td>88</td></tr>
+        <tr><td>Emma Johnson</td><td>Chemistry</td><td>92</td></tr>
+        <tr><td>William Brown</td><td>Biology</td><td>87</td></tr>
+        <tr><td>Olivia Davis</td><td>History</td><td>90</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#6f42c1; color:white; padding:5px; border-radius:5px;">Class-wise Average Marks</h6>
+    <input class="form-control search-bar" placeholder="Search Class..." oninput="filterTable(this,'#repExamClass')">
+    <table class="table table-sm" id="repExamClass">
+      <thead>
+        <tr><th>Class</th><th>Subject</th><th>Average Marks</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>9</td><td>Math</td><td>85</td></tr>
+        <tr><td>9</td><td>English</td><td>82</td></tr>
+        <tr><td>10</td><td>Math</td><td>88</td></tr>
+        <tr><td>10</td><td>English</td><td>86</td></tr>
+        <tr><td>10</td><td>Science</td><td>89</td></tr>
+        <tr><td>11</td><td>History</td><td>90</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2">
+  <h6 style="color:#6f42c1; padding:5px; border-radius:5px;">Exam-wise Pass/Fail Summary</h6>
+  <input class="form-control search-bar" placeholder="Search Exam..." oninput="filterTable(this,'#repExamSummary')">
+  <table class="table table-sm" id="repExamSummary">
+    <thead>
+      <tr><th>Exam</th><th>Class</th><th>Passed</th><th>Failed</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Midterm</td><td>9</td><td>45</td><td>5</td></tr>
+      <tr><td>Midterm</td><td>10</td><td>48</td><td>2</td></tr>
+      <tr><td>Final</td><td>9</td><td>46</td><td>4</td></tr>
+      <tr><td>Final</td><td>10</td><td>50</td><td>0</td></tr>
+      <tr><td>Final</td><td>11</td><td>49</td><td>1</td></tr>
+      <tr><td>Midterm</td><td>11</td><td>47</td><td>3</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- =================== 5. Staff Reports =================== -->
+
+<h5 style="color:#198754; padding:5px; border-radius:5px;">Staff Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#198754; color:white; padding:5px; border-radius:5px;">Teacher Attendance</h6>
+    <input class="form-control search-bar" placeholder="Search Teacher..." oninput="filterTable(this,'#repStaffAtt')">
+    <table class="table table-sm" id="repStaffAtt">
+      <thead>
+        <tr><th>Teacher</th><th>Days Present</th><th>Days Absent</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Mr. Smith</td><td>20</td><td>2</td></tr>
+        <tr><td>Ms. Lee</td><td>18</td><td>4</td></tr>
+        <tr><td>Mrs. Johnson</td><td>19</td><td>3</td></tr>
+        <tr><td>Mr. Brown</td><td>21</td><td>1</td></tr>
+        <tr><td>Ms. Davis</td><td>17</td><td>5</td></tr>
+        <tr><td>Mr. Wilson</td><td>22</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#198754; color:white; padding:5px; border-radius:5px;">Teacher Workload</h6>
+    <input class="form-control search-bar" placeholder="Search Teacher/Subject..." oninput="filterTable(this,'#repWorkload')">
+    <table class="table table-sm" id="repWorkload">
+      <thead>
+        <tr><th>Teacher</th><th>Subjects</th><th>Classes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Mr. Smith</td><td>Math, Physics</td><td>8, 9</td></tr>
+        <tr><td>Ms. Lee</td><td>English, Literature</td><td>9, 10</td></tr>
+        <tr><td>Mrs. Johnson</td><td>Chemistry</td><td>10, 11</td></tr>
+        <tr><td>Mr. Brown</td><td>Biology</td><td>9, 12</td></tr>
+        <tr><td>Ms. Davis</td><td>History, Geography</td><td>8, 10</td></tr>
+        <tr><td>Mr. Wilson</td><td>Computer Science</td><td>11, 12</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2">
+  <h6 style="color:#198754; padding:5px; border-radius:5px;">Staff Leave Summary</h6>
+  <input class="form-control search-bar" placeholder="Search Staff..." oninput="filterTable(this,'#repStaffLeave')">
+  <table class="table table-sm" id="repStaffLeave">
+    <thead>
+      <tr><th>Staff</th><th>Leaves Taken</th><th>Leaves Remaining</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Mr. Smith</td><td>3</td><td>7</td></tr>
+      <tr><td>Ms. Lee</td><td>5</td><td>5</td></tr>
+      <tr><td>Mrs. Johnson</td><td>2</td><td>8</td></tr>
+      <tr><td>Mr. Brown</td><td>1</td><td>9</td></tr>
+      <tr><td>Ms. Davis</td><td>4</td><td>6</td></tr>
+      <tr><td>Mr. Wilson</td><td>0</td><td>10</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+
+<!-- =================== 6. Student Reports =================== -->
+
+<h5 style="color:#ffc107; padding:5px; border-radius:5px;">Student Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#ffc107; color:white; padding:5px; border-radius:5px;">Student Profile Summary</h6>
+    <input class="form-control search-bar" placeholder="Search Student Name/ID..." oninput="filterTable(this,'#repStudentProfile')">
+    <table class="table table-sm" id="repStudentProfile">
+      <thead>
+        <tr><th>Student</th><th>Class</th><th>Section</th><th>Roll No</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>John Doe</td><td>9</td><td>A</td><td>12</td></tr>
+        <tr><td>Jane Doe</td><td>10</td><td>B</td><td>8</td></tr>
+        <tr><td>Michael Smith</td><td>9</td><td>B</td><td>15</td></tr>
+        <tr><td>Emily Davis</td><td>10</td><td>A</td><td>5</td></tr>
+        <tr><td>William Brown</td><td>11</td><td>C</td><td>20</td></tr>
+        <tr><td>Olivia Johnson</td><td>12</td><td>B</td><td>7</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#ffc107; color:white; padding:5px; border-radius:5px;">Roll Number List</h6>
+    <input class="form-control search-bar" placeholder="Search Class/Section..." oninput="filterTable(this,'#repRollList')">
+    <table class="table table-sm" id="repRollList">
+      <thead>
+        <tr><th>Roll No</th><th>Student</th><th>Class</th><th>Section</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>12</td><td>John Doe</td><td>9</td><td>A</td></tr>
+        <tr><td>8</td><td>Jane Doe</td><td>10</td><td>B</td></tr>
+        <tr><td>15</td><td>Michael Smith</td><td>9</td><td>B</td></tr>
+        <tr><td>5</td><td>Emily Davis</td><td>10</td><td>A</td></tr>
+        <tr><td>20</td><td>William Brown</td><td>11</td><td>C</td></tr>
+        <tr><td>7</td><td>Olivia Johnson</td><td>12</td><td>B</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2"> 
+  <h6 style="color:#ffc107; padding:5px; border-radius:5px;">Admission Trends</h6>
+  <input class="form-control search-bar" placeholder="Search Term/Year..." oninput="filterTable(this,'#repAdmission')">
+  <table class="table table-sm" id="repAdmission">
+    <thead>
+      <tr><th>Term/Year</th><th>New Students</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Term 1 / 2025</td><td>50</td></tr>
+      <tr><td>Term 2 / 2025</td><td>40</td></tr>
+      <tr><td>Term 3 / 2025</td><td>45</td></tr>
+      <tr><td>Term 1 / 2024</td><td>60</td></tr>
+      <tr><td>Term 2 / 2024</td><td>55</td></tr>
+      <tr><td>Term 3 / 2024</td><td>52</td></tr>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:bold; background:#fff3cd;">
+        <td>Grand Total</td>
+        <td>302</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+
+
+<!-- =================== 7. Library Reports =================== -->
+
+<h5 style="color:#0dcaf0; padding:5px; border-radius:5px;">Library Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Books Issued/Returned</h6>
+    <input class="form-control search-bar" placeholder="Search Student/Book..." oninput="filterTable(this,'#repBooks')">
+    <table class="table table-sm" id="repBooks">
+      <thead>
+        <tr><th>Book</th><th>Student</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Math 101</td><td>John Doe</td><td>Issued</td><td>2025-08-01</td></tr>
+        <tr><td>English 101</td><td>Jane Doe</td><td>Returned</td><td>2025-08-02</td></tr>
+        <tr><td>Science 101</td><td>Michael Smith</td><td>Issued</td><td>2025-08-03</td></tr>
+        <tr><td>History 101</td><td>Emily Davis</td><td>Returned</td><td>2025-08-04</td></tr>
+        <tr><td>Geography 101</td><td>William Brown</td><td>Issued</td><td>2025-08-05</td></tr>
+        <tr><td>Physics 101</td><td>Olivia Johnson</td><td>Returned</td><td>2025-08-06</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Overdue Books</h6>
+    <input class="form-control search-bar" placeholder="Search Student/Book..." oninput="filterTable(this,'#repOverdue')">
+    <table class="table table-sm" id="repOverdue">
+      <thead>
+        <tr><th>Book</th><th>Student</th><th>Due Date</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Science 101</td><td>John Doe</td><td>2025-07-30</td></tr>
+        <tr><td>Math 101</td><td>Jane Doe</td><td>2025-07-28</td></tr>
+        <tr><td>English 101</td><td>Michael Smith</td><td>2025-07-27</td></tr>
+        <tr><td>History 101</td><td>Emily Davis</td><td>2025-07-25</td></tr>
+        <tr><td>Geography 101</td><td>William Brown</td><td>2025-07-24</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2"> 
+  <h6 style="background:#0dcaf0; color:white; padding:5px; border-radius:5px;">Most Borrowed Books</h6>
+  <input class="form-control search-bar" placeholder="Search Book..." oninput="filterTable(this,'#repMostBorrowed')">
+  <table class="table table-sm" id="repMostBorrowed">
+    <thead>
+      <tr><th>Book</th><th>Times Borrowed</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Math 101</td><td>25</td></tr>
+      <tr><td>English 101</td><td>20</td></tr>
+      <tr><td>Science 101</td><td>18</td></tr>
+      <tr><td>History 101</td><td>15</td></tr>
+      <tr><td>Geography 101</td><td>12</td></tr>
+      <tr><td>Physics 101</td><td>10</td></tr>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:bold; background:#d1ecf1;">
+        <td>Grand Total</td>
+        <td>100</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+
+
+<h5 style="color:#fd7e14; padding:5px; border-radius:5px;">Hostel / Transport Reports</h5>
+<div class="grid-2">
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Hostel Occupancy</h6>
+    <input class="form-control search-bar" placeholder="Search Hostel..." oninput="filterTable(this,'#repHostel')">
+    <table class="table table-sm" id="repHostel">
+      <thead>
+        <tr><th>Hostel</th><th>Occupied Beds</th><th>Total Beds</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Hostel A</td><td>45</td><td>50</td></tr>
+        <tr><td>Hostel B</td><td>30</td><td>35</td></tr>
+        <tr><td>Hostel C</td><td>40</td><td>45</td></tr>
+        <tr><td>Hostel D</td><td>25</td><td>30</td></tr>
+        <tr><td>Hostel E</td><td>50</td><td>50</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#fff3cd;">
+          <td>Grand Total</td>
+          <td>190</td>
+          <td>210</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card-soft">
+    <h6 style="background:#fd7e14; color:white; padding:5px; border-radius:5px;">Bus Routes & Student List</h6>
+    <input class="form-control search-bar" placeholder="Search Route/Student..." oninput="filterTable(this,'#repBus')">
+    <table class="table table-sm" id="repBus">
+      <thead>
+        <tr><th>Route</th><th>Student</th><th>Class</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Route 1</td><td>John Doe</td><td>9</td></tr>
+        <tr><td>Route 1</td><td>Jane Smith</td><td>9</td></tr>
+        <tr><td>Route 2</td><td>Michael Brown</td><td>10</td></tr>
+        <tr><td>Route 2</td><td>Emily Davis</td><td>10</td></tr>
+        <tr><td>Route 3</td><td>William Johnson</td><td>8</td></tr>
+      </tbody>
+      <tfoot>
+        <tr style="font-weight:bold; background:#fff3cd;">
+          <td>Grand Total</td>
+          <td>5</td>
+          <td>-</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div class="card-soft mt-2">
+  <h6 style="color:#fd7e14; padding:5px; border-radius:5px;">Fees per Hostel/Bus</h6>
+  <input class="form-control search-bar" placeholder="Search Hostel/Bus..." oninput="filterTable(this,'#repFeesHostelBus')">
+  <table class="table table-sm" id="repFeesHostelBus">
+    <thead>
+      <tr><th>Type</th><th>Name</th><th>Fees</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Hostel</td><td>Hostel A</td><td>৳5000</td></tr>
+      <tr><td>Hostel</td><td>Hostel B</td><td>৳4500</td></tr>
+      <tr><td>Hostel</td><td>Hostel C</td><td>৳4800</td></tr>
+      <tr><td>Bus</td><td>Route 1</td><td>৳1200</td></tr>
+      <tr><td>Bus</td><td>Route 2</td><td>৳1500</td></tr>
+      <tr><td>Bus</td><td>Route 3</td><td>৳1000</td></tr>
+    </tbody>
+    <tfoot>
+      <tr style="font-weight:bold; background:#fff3cd;">
+        <td>Grand Total</td>
+        <td>-</td>
+        <td>৳18,000</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+
+
+<!-- =================== 9. Custom Reports =================== -->
+
+<h5 style="color:#6f42c1; padding:5px; border-radius:5px;">Custom Reports</h5>
+<div class="card-soft">
+  <h6 style="background:#6f42c1; color:white; padding:5px; border-radius:5px;">Generate Custom Report</h6>
+  <input class="form-control search-bar" placeholder="Search any data..." oninput="filterTable(this,'#repCustom')">
+  <table class="table table-sm" id="repCustom">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Data</th>
+        <th>Generated On</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Fee</td><td>Term 1 Payments</td><td>2025-08-21</td></tr>
+      <tr><td>Attendance</td><td>Class 9A</td><td>2025-08-21</td></tr>
+      <tr><td>Marks</td><td>Class 10 Average</td><td>2025-08-20</td></tr>
+      <tr><td>Library</td><td>Most Borrowed Books</td><td>2025-08-19</td></tr>
+      <tr><td>Hostel</td><td>Occupancy Summary</td><td>2025-08-18</td></tr>
+      <tr><td>Staff</td><td>Teacher Attendance</td><td>2025-08-17</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="back-home">
+  <a href="index.html" class="btn btn bg-primary btn-lg mt-4 back-home-btn">🏠 Back to Home</a>
+</div>
+
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function filterTable(input, tableId) {
+    const filter = input.value.toLowerCase();
+    document.querySelectorAll(tableId+' tbody tr').forEach(tr => {
+      tr.style.display = tr.textContent.toLowerCase().includes(filter) ? '' : 'none';
+    });
+  }
+</script>
+
+</body>
+</html>

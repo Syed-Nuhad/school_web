@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Routine</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  
+</head>
+<body class="section bg-light">
+
+<!-- ⭐⭐⭐⭐⭐ START: Sticky Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+  <div class="container-fluid">
+    <!-- Logo -->
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="./img/logo/DS-Logo.png" alt="College Logo" width="40" height="40" class="me-2">
+      <span class="fw-bold">Exam Routine Overview</span>
+    </a>
+  </div>
+</nav>
+<!-- ⭐⭐⭐⭐⭐ END: Sticky Navigation Bar -->
+
+<!-- ⭐⭐⭐⭐⭐ START: Exam Routine Table -->
+<section class="container py-5">
+
+  <!-- Example Notice -->
+  <div class="alert alert-info text-center shadow-sm">
+    📢 Exam routines are published here by school authorities.
+  </div>
+
+  <!-- Routine Table Card -->
+  <div class="card shadow-sm mb-4">
+    <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle text-center" id="routineTable">
+        <thead class="table-primary">
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Room</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>2025-09-01</td>
+            <td>10:00 - 12:00</td>
+            <td>Class 8</td>
+            <td>Mathematics</td>
+            <td>201</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>2025-09-03</td>
+            <td>01:00 - 03:00</td>
+            <td>Class 9</td>
+            <td>English</td>
+            <td>105</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>2025-09-05</td>
+            <td>10:00 - 12:00</td>
+            <td>Class 10</td>
+            <td>Physics</td>
+            <td>301</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Back to Home -->
+  <div class="text-center">
+    <a href="index.html" class="btn btn-primary px-4">🏠 Back to Home</a>
+  </div>
+
+</section>
+<!-- ⭐⭐⭐⭐⭐ END: Exam Routine Table -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const exams = [
+    {date:'2025-08-20', time:'10:00-12:00', cls:'Class 8', subject:'Math', room:'201'},
+    {date:'2025-08-21', time:'10:00-12:00', cls:'Class 8', subject:'Science', room:'201'}
+  ];
+
+  function renderRoutine() {
+    const tbody = document.querySelector('#routineTable tbody');
+    tbody.innerHTML = exams.map((x,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${x.date}</td>
+        <td>${x.time}</td>
+        <td>${x.cls}</td>
+        <td>${x.subject}</td>
+        <td>${x.room}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.addEventListener('DOMContentLoaded', renderRoutine);
+</script>
+
+</body>
+</html>

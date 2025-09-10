@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Staff Attendance</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="./css/cms.css" rel="stylesheet">
+</head>
+<body class="section bg-light">
+
+<!-- ⭐⭐⭐⭐⭐ START: Sticky Navigation Bar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+  <div class="container-fluid">
+    <!-- Logo -->
+    <a class="navbar-brand d-flex align-items-center" href="#">
+      <img src="./img/logo/DS-Logo.png" alt="College Logo" width="40" height="40" class="me-2">
+      <span class="fw-bold">Class Attendance Overview</span>
+    </a>
+  </div>
+</nav>
+<!-- ⭐⭐⭐⭐⭐ END: Sticky Navigation Bar -->
+
+<!-- ⭐⭐⭐⭐⭐ START: Class Attendance Progress -->
+<section class="container py-5">
+
+  <!-- Example Notice -->
+  <div class="alert alert-info text-center shadow-sm">
+    📢 Attendance records are published here by school authorities.
+  </div>
+
+  <!-- Attendance Summary -->
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <h5 class="mb-3 text-success">Attendance Summary</h5>
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Class 10 - Section A</span>
+          <span><strong>Present:</strong> 45 / 50</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Class 9 - Section B</span>
+          <span><strong>Present:</strong> 38 / 42</span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Class 8 - Section C</span>
+          <span><strong>Present:</strong> 41 / 45</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Dynamic Attendance Table -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+      Class 10 - Section A (Today’s Attendance)
+    </div>
+    <div class="table-responsive">
+      <table class="table table-bordered mb-0" id="attTable">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Student Name</th>
+            <th>Roll</th>
+            <th>Present</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows added by JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Attendance Stats -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <p class="mb-0 fs-5">✅ Present: <span id="presentCount">0</span> / <span id="totalCount">0</span></p>
+    <button class="btn btn-success px-4" onclick="saveAttendance()">💾 Save Attendance</button>
+  </div>
+
+  <!-- Back to Home -->
+  <div class="text-center">
+    <a href="index.html" class="btn btn-secondary px-4">🏠 Back to Home</a>
+  </div>
+
+</section>
+<!-- ⭐⭐⭐⭐⭐ END: Class Attendance Progress -->
+
+<script src="./js/common.js"></script>
+<script>
+const demoStudents = Array.from({length: 30}, (_,i)=>({name:'Student '+(i+1), roll: i+1}));
+
+function loadStudents(){
+  const tbody = document.querySelector('#attTable tbody');
+  tbody.innerHTML = '';
+  demoStudents.forEach((s,idx)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${idx+1}</td>
+      <td>${s.name}</td>
+      <td>${s.roll}</td>
+      <td class="text-center"><input type="checkbox" class="form-check-input present-toggle"></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('totalCount').textContent = demoStudents.length;
+  updatePresentCount();
+  tbody.addEventListener('change', updatePresentCount, {once:false});
+}
+
+function updatePresentCount(){
+  const count = document.querySelectorAll('.present-toggle:checked').length;
+  document.getElementById('presentCount').textContent = count;
+}
+
+function saveAttendance(){
+  const rows=[...document.querySelectorAll('#attTable tbody tr')].map(tr=>{
+    return {
+      name: tr.children[1].innerText,
+      roll: tr.children[2].innerText,
+      present: tr.querySelector('input').checked
+    }
+  });
+  console.log('Saving (stub):', rows);
+  alert('✅ Attendance saved locally (stub). Replace with API later.');
+}
+
+// Load on page ready
+window.onload = loadStudents;
+</script>
+
+</body>
+</html>

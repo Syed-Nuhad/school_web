@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Section Marksheet (Letter - 8.5" x 11")</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    /* ====== Page & print settings ====== */
+    @page { size: 8.5in 11in; margin: 20mm; }
+    html, body { height: 100%; }
+    body { font-family: "Segoe UI", Tahoma, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .marksheet-wrap {
+      width: 8.5in; /* exact letter width for preview */
+      min-height: 11in;
+      margin: 12px auto;
+      padding: 28mm 20mm 18mm 20mm; /* give printable margins inside */
+      box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: white;
+    }
+
+    /* translucent overlay so text stays readable over JPG background */
+    .marksheet-inner {
+      background: rgba(255,255,255,0.92);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 18px;
+    }
+
+    .college-name { font-size: 26px; font-weight: 700; letter-spacing: 0.6px; }
+    .exam-name { font-size: 16px; font-weight: 600; }
+    .logo-img { max-width: 120px; max-height: 120px; object-fit: contain; }
+
+    .student-info .row > div { padding: 4px 8px; }
+
+    .marks-table th, .marks-table td { vertical-align: middle; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 20px; }
+    .signature-box { text-align: center; width: 40%; }
+    .signature-line { height: 60px; border-bottom: 1px solid #000; margin-bottom: 6px; }
+
+    /* small helper for background/logo previews */
+    .controls .form-label { font-weight: 600; }
+
+    /* Hide action buttons when printing but keep print button usable via browser print dialog */
+    @media print {
+      body { background: none !important; }
+      .controls { display: none !important; }
+      .marksheet-wrap { box-shadow: none; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Section Marksheet Builder</h4>
+    <small class="text-muted">Letter size: 8.5" × 11"</small>
+  </div>
+
+  <div class="card mb-3 controls">
+    <div class="card-body">
+      <div class="row gy-2">
+        <div class="col-md-6">
+          <label class="form-label">College Name</label>
+          <input id="collegeName" class="form-control" value=" Titu BD Scince Collage " />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Upload College Logo (PNG/JPG)</label>
+          <input id="logoInput" type="file" accept="image/*" class="form-control" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Exam Name</label>
+          <input id="examName" class="form-control" value="First Term Examination" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Position (in section)</label>
+          <input id="position" class="form-control" placeholder="e.g. 3rd" />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Upload College Logo (PNG/JPG)</label>
+          <input id="logoInput" type="file" accept="image/*" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Background JPG (Full-page)</label>
+          <input id="bgInput" type="file" accept="image/*" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">School/Section</label>
+          <input id="sectionName" class="form-control" value="Section A" />
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Student Name</label>
+          <input id="studentName" class="form-control" value="John Doe" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Roll Number</label>
+          <input id="rollNumber" class="form-control" value="2025-001" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Date / Session</label>
+          <input id="sessionDate" class="form-control" value="2025 - Annual" />
+        </div>
+
+        <div class="col-12 mt-2">
+          <button id="addRow" class="btn btn-sm btn-success">+ Add Subject</button>
+          <button id="resetBg" class="btn btn-sm btn-outline-secondary">Reset Background</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW (Letter sized) -->
+  <div id="marksheetContainer" class="marksheet-wrap mx-auto" style="background-image: none;">
+    <div class="marksheet-inner" id="marksheet">
+
+      <!-- Header -->
+      <div class="text-center mb-2">
+        <div class="college-name" id="previewCollege">Titu BD Scince Collage </div>
+        <div class="mt-2"><img id="previewLogo" src="./img/logo/DS-Logo.png" alt="logo" class="logo-img d-none" /></div>
+        <div class="exam-name mt-2" id="previewExam">First Term Examination</div>
+      </div>
+
+      <hr />
+
+      <!-- Student info -->
+      <div class="student-info mb-3">
+        <div class="row">
+          <div class="col-md-3"><strong>Student:</strong> <span id="previewStudent">John Doe</span></div>
+          <div class="col-md-3"><strong>Roll #:</strong> <span id="previewRoll">2025-001</span></div>
+          <div class="col-md-3"><strong>Section:</strong> <span id="previewSection">Section A</span></div>
+          <div class="col-md-3"><strong>Position:</strong> <span id="previewPosition"></span></div>
+        </div>
+      </div>
+
+      <!-- Marks table -->
+      <div class="table-responsive mb-2">
+        <table class="table table-bordered marks-table" id="marksTable">
+          <thead class="table-light">
+            <tr>
+              <th style="width:40%;">Subject</th>
+              <th style="width:15%;">Total Marks</th>
+              <th style="width:15%;">Marks Obtained</th>
+              <th style="width:15%;">Grade</th>
+              <th style="width:15%;">Remarks</th>
+              <th style="width:5%;">✖</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- sample rows will be inserted by JS -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              <th id="totalMax">0</th>
+              <th id="totalObtained">0</th>
+              <th id="overallGrade">-</th>
+              <th id="overallRemarks">-</th>
+              <th></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Present/Absent table -->
+      <div class="row mt-3">
+        <div class="col-md-6">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light"><tr><th>Attendance</th><th>Count</th></tr></thead>
+            <tbody>
+              <tr><td>Present</td><td><input id="presentCount" type="number" class="form-control form-control-sm" value="45" min="0"/></td></tr>
+              <tr><td>Absent</td><td><input id="absentCount" type="number" class="form-control form-control-sm" value="2" min="0"/></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="col-md-6">
+          <div class="p-2 border rounded bg-light h-100">
+            <strong>Final Summary</strong>
+            <div class="mt-2">Total Students: <span id="summaryTotal">47</span></div>
+            <div>Marks Obtained: <span id="summaryMarks">0 / 0</span></div>
+            <div>Final Grade: <span id="summaryGrade">-</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signatures -->
+      <div class="signatures mt-auto">
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div>Class Teacher</div>
+        </div>
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <div>Principal</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div class="mt-3 d-flex gap-2">
+    <button id="downloadPdf" class="btn btn-primary">Download PDF</button>
+    <button id="printBtn" class="btn btn-outline-primary">Print</button>
+    <button id="fillSample" class="btn btn-outline-secondary">Fill sample subjects</button>
+  </div>
+
+  <div class="mt-2 text-muted small">Tip: Upload a full-page JPG as background. For best print results, choose a high-resolution image and enable background printing in your browser.</div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+  // Short helpers and element refs
+  const collegeName = document.getElementById('collegeName');
+  const previewCollege = document.getElementById('previewCollege');
+  const examName = document.getElementById('examName');
+  const previewExam = document.getElementById('previewExam');
+  const previewLogo = document.getElementById('previewLogo');
+  const logoInput = document.getElementById('logoInput');
+  const bgInput = document.getElementById('bgInput');
+  const marksheetContainer = document.getElementById('marksheetContainer');
+  const studentName = document.getElementById('studentName');
+  const previewStudent = document.getElementById('previewStudent');
+  const rollNumber = document.getElementById('rollNumber');
+  const previewRoll = document.getElementById('previewRoll');
+  const sectionName = document.getElementById('sectionName');
+  const previewSection = document.getElementById('previewSection');
+  const positionInput = document.getElementById('position');
+  const previewPosition = document.getElementById('previewPosition');
+  const marksTableBody = document.querySelector('#marksTable tbody');
+  const totalMax = document.getElementById('totalMax');
+  const totalObtained = document.getElementById('totalObtained');
+  const overallGrade = document.getElementById('overallGrade');
+  const overallRemarks = document.getElementById('overallRemarks');
+  const presentCount = document.getElementById('presentCount');
+  const absentCount = document.getElementById('absentCount');
+  const summaryTotal = document.getElementById('summaryTotal');
+  const summaryMarks = document.getElementById('summaryMarks');
+  const summaryGrade = document.getElementById('summaryGrade');
+
+  // Update preview on input
+  function syncPreview() {
+    previewCollege.textContent = collegeName.value || 'College Name';
+    previewExam.textContent = examName.value || '';
+    previewStudent.textContent = studentName.value || '';
+    previewRoll.textContent = rollNumber.value || '';
+    previewSection.textContent = sectionName.value || '';
+    previewPosition.textContent = positionInput.value || '-';
+    summaryTotal.textContent = (Number(presentCount.value||0) + Number(absentCount.value||0));
+  }
+
+  [collegeName, examName, studentName, rollNumber, sectionName, positionInput, presentCount, absentCount].forEach(el=>el.addEventListener('input', syncPreview));
+
+  // Background image loader
+  bgInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      marksheetContainer.style.backgroundImage = `url(${ev.target.result})`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('resetBg').addEventListener('click', ()=>{
+    marksheetContainer.style.backgroundImage = 'none';
+    bgInput.value = '';
+  });
+
+  // Logo loader
+  logoInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      previewLogo.src = ev.target.result;
+      previewLogo.classList.remove('d-none');
+    }
+    r.readAsDataURL(f);
+  });
+
+  // Table row creation
+  function createRow(subject='', max=100, obtained=0) {
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td><input class="form-control form-control-sm subject-name" value="${subject}" /></td>
+      <td><input type="number" min="0" class="form-control form-control-sm max-mark" value="${max}" /></td>
+      <td><input type="number" min="0" class="form-control form-control-sm obtained-mark" value="${obtained}" /></td>
+      <td class="grade-cell">-</td>
+      <td class="remarks-cell">-</td>
+      <td class="text-center"><button class="btn btn-sm btn-danger remove-row">✖</button></td>
+    `;
+
+    // attach listeners
+    tr.querySelectorAll('.max-mark, .obtained-mark').forEach(inp => inp.addEventListener('input', calcTotals));
+    tr.querySelector('.remove-row').addEventListener('click', ()=>{ tr.remove(); calcTotals(); });
+
+    marksTableBody.appendChild(tr);
+    return tr;
+  }
+
+  // Add initial sample rows
+  function fillSample() {
+    marksTableBody.innerHTML = '';
+    createRow('Mathematics', 100, 88);
+    createRow('English', 100, 75);
+    createRow('Physics', 100, 69);
+    createRow('Chemistry', 100, 73);
+    createRow('Biology', 100, 82);
+    createRow('History', 100, 91);
+    calcTotals();
+  }
+
+  document.getElementById('fillSample').addEventListener('click', fillSample);
+
+  document.getElementById('addRow').addEventListener('click', (e)=>{
+    e.preventDefault();
+    createRow('New Subject', 100, 0);
+    calcTotals();
+  });
+
+  // calculate totals and grades
+  function calcTotals() {
+    const rows = Array.from(marksTableBody.querySelectorAll('tr'));
+    let maxSum = 0, obtainedSum = 0;
+    rows.forEach(r => {
+      const maxInp = r.querySelector('.max-mark');
+      const obtInp = r.querySelector('.obtained-mark');
+      const gradeCell = r.querySelector('.grade-cell');
+      const remarksCell = r.querySelector('.remarks-cell');
+      const max = Number(maxInp?.value||0);
+      const obt = Number(obtInp?.value||0);
+      maxSum += max;
+      obtainedSum += Math.min(obt, max);
+
+      // per-subject grade (basic scale). You can customize thresholds here.
+      const pct = max > 0 ? (obt / max) * 100 : 0;
+      const grade = pct >= 80 ? 'A+' : pct >= 70 ? 'A' : pct >= 60 ? 'B' : pct >= 50 ? 'C' : pct >= 40 ? 'D' : 'F';
+      gradeCell.textContent = grade;
+      remarksCell.textContent = pct >= 40 ? 'Pass' : 'Fail';
+    });
+
+    totalMax.textContent = maxSum;
+    totalObtained.textContent = obtainedSum;
+
+    // overall grade by percentage
+    const pctOverall = maxSum > 0 ? (obtainedSum / maxSum) * 100 : 0;
+    const overall = pctOverall >= 80 ? 'A+' : pctOverall >= 70 ? 'A' : pctOverall >= 60 ? 'B' : pctOverall >= 50 ? 'C' : pctOverall >= 40 ? 'D' : 'F';
+    overallGrade.textContent = overall;
+    overallRemarks.textContent = pctOverall >= 40 ? 'Pass' : 'Fail';
+
+    // update summary
+    summaryMarks.textContent = `${obtainedSum} / ${maxSum}`;
+    summaryGrade.textContent = overall;
+  }
+
+  // sync initial preview
+  syncPreview();
+  fillSample();
+
+  // download PDF (capture the marksheet element)
+  document.getElementById('downloadPdf').addEventListener('click', async () => {
+    syncPreview();
+    calcTotals();
+
+    const node = document.getElementById('marksheet');
+
+    // increase scale for better quality
+    const scale = 2;
+    const canvas = await html2canvas(node, { scale: scale, useCORS: true, allowTaint: true });
+    const imgData = canvas.toDataURL('image/png');
+
+    // jsPDF usage
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+
+    // calculate dimensions
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    // draw the image to fit the page
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${(collegeName.value||'marksheet')}_${(studentName.value||'student')}.pdf`);
+  });
+
+  // print
+  document.getElementById('printBtn').addEventListener('click', ()=>{
+    syncPreview();
+    calcTotals();
+    window.print();
+  });
+
+  // Observe row edits to update preview text (subject names don't affect header but student info does)
+  // Keep real-time updates for student fields (already wired)
+</script>
+</body>
+</html>

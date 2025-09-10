@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admission Form — Fee Breakdown</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="./css/cms.css" rel="stylesheet">
+  <style>
+    /* Sticky Header Section */
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      background: linear-gradient(90deg, #0d6efd, #6610f2);
+      color: white;
+      padding: 1rem 0;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .sticky-header img {
+      height: 60px;
+      margin-right: 15px;
+    }
+    .sticky-header h1 {
+      font-size: 1.8rem;
+      font-weight: bold;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    /* Watermark Styling */
+    .watermark-img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.05;
+      max-width: 80%;
+      height: auto;
+      z-index: 1;
+    }
+
+    /* Button hover effects */
+#confirm-payment-btn:hover {
+  background-color: #ffc107d1; /* slightly lighter warning color */
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+#submit-btn:hover:not(:disabled) {
+  background-color: #0b5ed7d1; /* slightly lighter primary color */
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+#print-btn:hover:not(:disabled) {
+  background-color: #198754d1; /* slightly lighter success color */
+  transform: scale(1.05);
+  transition: all 0.3s ease;
+}
+
+/* Buttons hover effect */
+#confirm-payment-btn:hover,
+#submit-btn:hover:not(:disabled),
+#print-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+/* Optional: subtle color change only when enabled */
+#confirm-payment-btn:hover,
+#submit-btn:hover:not(:disabled),
+#print-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+  </style>
+</head>
+<body>
+
+<!-- ⭐⭐⭐⭐⭐ Sticky Section (Logo + Name) -->
+<div class="sticky-header">
+  <img src="./img/logo/DS-Logo.png" alt="College Logo">
+  <h1>Online Admission Form</h1>
+</div>
+
+<!-- ⭐⭐⭐⭐⭐ Start Online Admission Form Section -->
+<section class="py-5 bg-light position-relative" id="admission-form">
+  <!-- Watermark Image -->
+  <img src="./img/college-monogram.png" alt="College Monogram Watermark" class="watermark-img">
+
+  <div class="container position-relative" style="z-index: 2;">
+    <div class="card shadow-lg p-4 bg-white bg-opacity-90">
+      <form id="admissionForm">
+        
+        <!-- Student Info -->
+        <h4 class="mb-3 text-success">Student Information</h4>  
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" placeholder="John Doe" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Class</label>
+            <!-- ✅ FIXED id to match fees.js -->
+            <select class="form-select" id="admissionClass" required>
+              <option value="">Select Class</option>
+              <option>Class 6</option>
+              <option>Class 7</option>
+              <option>Class 8</option>
+              <option>Class 9</option>
+              <option>Class 10</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Student Email</label>
+            <input type="email" class="form-control" placeholder="example@email.com" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" placeholder="01XXXXXXXXX" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-control" placeholder="Village, Thana, District" required>
+          </div>
+        </div>
+
+        <!-- ✅ Fee Breakdown Panel -->
+        <div class="mt-4">
+          <h5 class="text-success">Fee Breakdown</h5>
+          <table class="table table-bordered">
+            <tr><th>Admission Fee</th><td data-fee-admission></td></tr>
+            <tr><th>Tuition Fee</th><td data-fee-tuition></td></tr>
+            <tr><th>Exam Fee</th><td data-fee-exam></td></tr>
+            <tr><th>Bus Service</th><td data-fee-bus></td></tr>
+            <tr><th>Hostel Seat</th><td data-fee-hostel></td></tr>
+            <tr><th>Exact Marksheet</th><td data-fee-marksheet></td></tr>
+            <tr class="table-primary"><th>Total</th><td data-fee-total></td></tr>
+          </table>
+        </div>
+
+        <!-- ✅ Optional Fees -->
+        <div class="mt-3">
+          <h5 class="text-success">Optional Services</h5>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optBus">
+            <label class="form-check-label" for="optBus">School Bus</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optHostel">
+            <label class="form-check-label" for="optHostel">Hostel Seat</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="optExactMarksheet">
+            <label class="form-check-label" for="optExactMarksheet">Exact Marksheet Fee</label>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Guardian Info -->
+        <h4 class="mb-3 text-success">Guardian Information</h4>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Father's Name</label>
+            <input type="text" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Mother's Name</label>
+            <input type="text" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Guardian Phone Number</label>
+            <input type="tel" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Local Guardian's Name</label>
+            <input type="text" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Local Guardian's Phone</label>
+            <input type="tel" class="form-control">
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Payment Info -->
+        <h4 class="mb-3 text-success">Online Payment</h4>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Payment Method</label>
+            <select class="form-select" id="payment-method" required>
+              <option value="">Select Payment Method</option>
+              <option>bKash</option>
+              <option>Nagad</option>
+              <option>Rocket</option>
+              <option>Visa Card</option>
+              <option>Master Card</option>
+            </select>
+          </div>
+          
+          <div class="col-md-6">
+            <label class="form-label">Payment Confirmation</label>
+            <div id="payment-status" class="alert alert-info py-2" role="alert">
+              Please select payment method and confirm payment.
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Buttons -->
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+          <button type="button" id="confirm-payment-btn" class="btn btn-warning px-4 py-2">Confirm Payment</button>
+          <button type="submit" class="btn btn-primary px-4 py-2" disabled id="submit-btn">Submit Form</button>
+          <button type="button" id="print-btn" class="btn btn-success px-4 py-2" disabled>Print Form</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ⭐⭐⭐⭐⭐ Back to Home Button -->
+    <div class="text-center mt-4">
+      <a href="index.html" class="btn btn-primary px-4 py-2">← Back to Home</a>
+    </div>
+  </div>
+</section>
+
+<!-- ⭐ End Online Admission Form Section -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/fees.js"></script>
+</body>
+</html>

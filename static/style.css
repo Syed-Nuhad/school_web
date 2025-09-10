@@ -1,0 +1,1809 @@
+body {
+  background-color: #f3f8fc;
+  color: #333;
+}
+
+/* Section Titles */
+h2 {
+  color: #0d47a1;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(to right, #00bcd4, #0097a7);
+  border: none;
+  color: white;
+}
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(to right, #00bcd4, #0097a7);
+  border: none;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(to right, #0097a7, #00796b);
+}
+
+.btn-outline-primary {
+  color: #00bcd4;
+  border-color: #00bcd4;
+}
+
+.btn-outline-primary:hover {
+  background-color: #00bcd4;
+  color: white;
+}
+
+
+/* Header */
+header {
+  background-color: #0d47a1;
+  color: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.carousel-caption {
+  background: rgba(0, 76, 95, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.carousel-caption h5 {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.carousel-caption p {
+  color: #eee;
+}
+
+/* ================================================== NAVBAR START */
+.navbar {
+  display: flex;
+  justify-content: space-between; /* Logo/name on left, links on right */
+  align-items: center;
+  padding: 10px 30px;
+  background: #003366;
+  color: #fff;
+  flex-wrap: nowrap; /* Prevent wrapping into 2 rows */
+}
+/* Force sticky navbar to sit at the very top */
+body.section .sticky-section {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.navbar .logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0; /* Prevent logo area from shrinking */
+}
+
+.navbar .logo img {
+  width: 40px;
+  height: 40px;
+}
+
+.navbar .college-name {
+  font-size: 15px;
+  font-weight: bold;
+  margin-left: 10px;
+  white-space: nowrap; /* Prevent college name from breaking */
+  color: #fff;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 10px;
+  margin-left: auto; /* Push links to the right */
+  flex-wrap: nowrap; /* Keep them in one row */
+}
+
+.nav-links li {
+  position: relative;
+}
+
+.nav-links a {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 12px;
+  transition: 0.3s;
+}
+.nav-links a:hover {
+  background: #00509e;
+  border-radius: 5px;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #004080;
+  list-style: none;
+  padding: 10px 0;
+  min-width: 220px;
+  border-radius: 5px;
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+  z-index: 999;
+}
+
+.dropdown-menu li {
+  width: 100%;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 8px 15px;
+  color: #fff;
+  white-space: nowrap;
+}
+.dropdown-menu a:hover {
+  background: #005bb5;
+}
+
+/* Show dropdown on hover */
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
+/* END */
+
+
+/* ===== START: Mobile Menu Button ===== */
+.menu-toggle {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+/* ===== END: Mobile Menu Button ===== */
+
+
+/* ===== START: Responsive Menu ===== */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    background-color: #004080;
+    position: absolute;
+    top: 65px;
+    right: 0;
+    width: 200px;
+    padding: 15px;
+  }
+  .nav-links.active {
+    display: flex;
+  }
+  .menu-toggle {
+    display: block;
+  }
+}
+/* ===== END: Responsive Menu ===== */
+
+/* ===== END: Navigation Menu Styles ===== */
+
+/* ======= 🔥 ADDITIONS (kept separate; do not remove your original CSS above) ======= */
+
+/* caret indicator on dropdown parents */
+.nav-links .dropdown > a.has-caret::after {
+  content: " ▾";
+  margin-left: 4px;
+  font-size: .9em;
+  opacity: .9;
+}
+
+/* slightly brighter border for dropdown box */
+.dropdown-menu {
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+/* Mobile: make dropdowns collapsible (tap to open) */
+@media (max-width: 768px) {
+  .dropdown { width: 100%; }
+  .dropdown > a { width: 100%; display: block; }
+  .dropdown-menu {
+    position: static;   /* no absolute in stacked menu */
+    display: none;      /* closed by default */
+    background: #003a73; 
+    box-shadow: none;
+    padding: 6px 0 8px;
+  }
+  .dropdown.open > .dropdown-menu { display: block; }
+  .dropdown-menu a { padding-left: 26px; }
+}
+
+/* ===== END: Navigation Menu Styles ===== */
+
+
+
+/* ===== START: Banner Slider Styles ===== */
+.banner-slider {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+/* ===== START: Slider Container ===== */
+.slider {
+  display: flex;
+  transition: transform 0.5s ease-in-out;
+}
+/* ===== END: Slider Container ===== */
+
+/* ===== START: Individual Slide ===== */
+.slide {
+  min-width: 100%;
+  position: relative;
+  display: none;
+}
+.slide.active {
+  display: block;
+}
+/* ===== END: Individual Slide ===== */
+
+/* ===== START: Slide Images ===== */
+.slide img {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+}
+/* ===== END: Slide Images ===== */
+
+/* ===== START: Caption Text ===== */
+.caption {
+  position: absolute;
+  bottom: 30px;
+  left: 50px;
+  color: white;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+}
+.caption h2 {
+  font-size: 2.5rem;
+  margin: 0;
+}
+.caption p {
+  font-size: 1.2rem;
+}
+/* ===== END: Caption Text ===== */
+
+/* ===== START: Navigation Arrows ===== */
+.prev, .next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  padding: 12px;
+  cursor: pointer;
+  font-size: 24px;
+  border-radius: 50%;
+}
+.prev:hover, .next:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+.prev {
+  left: 15px;
+}
+.next {
+  right: 15px;
+}
+/* ===== END: Navigation Arrows ===== */
+
+/* ===== START: Dots Navigation ===== */
+.dots {
+  text-align: center;
+  position: absolute;
+  bottom: 15px;
+  width: 100%;
+}
+.dots span {
+  height: 12px;
+  width: 12px;
+  margin: 0 4px;
+  background-color: white;
+  border-radius: 50%;
+  display: inline-block;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.dots span.active {
+  opacity: 1;
+}
+/* ===== END: Dots Navigation ===== */
+/* ===== END: Banner Slider Styles ===== */
+
+
+/* Start SECTION Notice Board Section */
+
+#notice-board {
+  padding: 50px 0;
+  background-color: #f9f9f9;
+}
+
+#notice-board .card {
+  background: #fff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#notice-board .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+#notice-board .card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-bottom: 1px solid #ddd;
+}
+
+#notice-board .card-body {
+  padding: 15px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+#notice-board .card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+}
+
+#notice-board .card-text {
+  font-size: 1rem;
+  color: #555;
+  flex-grow: 1;
+}
+
+#notice-board .btn-read-more {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 15px;
+  text-decoration: none;
+}
+
+#notice-board .btn-read-more:hover {
+  background-color: #0056b3;
+}
+
+/* Responsive */
+
+@media (max-width: 767px) {
+  #notice-board .card img {
+    height: 150px;
+  }
+}
+
+/* End SECTION Notice Board Section=========================================================== */
+
+
+
+
+
+/* Start Photo & Video Gallery ===*/
+.gallery-grid {
+  cursor: pointer;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+  transition: transform 0.3s ease;
+  border: 6px solid white; /* White border */
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 220px; /* fixed height for uniform boxes */
+  display: block;
+  object-fit: cover; /* crop images nicely */
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+}
+
+.video-item .play-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+/* Meta info under images/videos */
+.gallery-meta {
+  background: #fff;       /* white background */
+  color: #666;            /* light gray text */
+  padding: 8px;
+  font-size: 0.9rem;
+  text-align: center;
+  border-top: 1px solid #ddd;
+}
+
+.gallery-title {
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 0;
+  color: #444;            /* darker gray for title */
+}
+
+.gallery-info {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Fade-in effect */
+.fade-in {
+  opacity: 0;
+  transform: translateY(25px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.fade-in.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Lightbox Styles */
+.lightbox {
+  position: fixed;
+  z-index: 1050;
+  left: 0; top: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.lightbox-content {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.lightbox-content img,
+.lightbox-content iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: none;
+}
+
+.lightbox .close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 2.5rem;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+}
+/* End SECTION Photo & Video Gallery ============================================================*/
+
+
+
+
+
+/* IMPORTANT! section 'School About section' does not use custom css instead it uses bootstrap */
+
+/* Make About section image fit and scale nicely */
+
+/* ⭐⭐⭐⭐⭐ ===================== Start: About Section Multiple Image Fade Styles */
+
+  .image-fade-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .image-fade-container img.fade-image {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 350px;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+  }
+
+  .image-fade-container img.fade-image.active {
+    opacity: 1;
+    z-index: 2;
+  }
+
+  /* Fade-in base for right text */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(25px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .fade-in.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .delay-2 {
+    transition-delay: 0.6s;
+  }
+
+.section-title {
+  position: relative;
+  display: inline-block;   /* Make the h2 shrink to text width */
+  padding-bottom: 8px;
+  cursor: default;
+  /* Remove margin: 0 auto; */
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  width: 0;
+  height: 3px;
+  left: 50%;
+  bottom: 0;
+  background: #28a745;
+  transition: width 0.4s ease, left 0.4s ease;
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+.section-title:hover::after,
+.section-title:focus::after {
+  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+  /* ⭐ End About section =====================================================================================*/
+
+
+
+
+
+
+/* ⭐ =====================================Start: Academic Calendar / Important Dates */
+
+.academic-calendar-section {
+  background: linear-gradient(to bottom right, #f9fafb, #eef2f7);
+  border-radius: 12px;
+  padding: 3rem 1rem;
+}
+
+.calendar-title {
+  font-size: 2rem;
+  color: #2c3e50;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  position: relative;
+}
+
+.calendar-title::after {
+  content: "";
+  width: 60px;
+  height: 4px;
+  background: #007bff;
+  display: block;
+  margin: 0.5rem auto 0;
+  border-radius: 2px;
+}
+
+.calendar-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding-top: 2rem;
+}
+
+.calendar-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+}
+
+/* Circle Icon Base */
+.calendar-icon {
+  width: 75px;
+  height: 75px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin: 0 auto 1rem;
+  color: white;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  animation: bounceIn 1s ease;
+}
+
+/* Icon Color Variants */
+.icon-blue {
+  background: linear-gradient(135deg, #007bff, #00aaff);
+}
+
+.icon-green {
+  background: linear-gradient(135deg, #28a745, #48d168);
+}
+
+.icon-red {
+  background: linear-gradient(135deg, #dc3545, #ff5c6c);
+}
+
+/* Bounce animation for icons */
+@keyframes bounceIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  80% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Typing effect styling */
+.typing-date {
+  font-weight: 500;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  border-right: 2px solid #007bff;
+}
+
+/* Fade-up animation */
+[data-aos="fade-up"] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+[data-aos="fade-up"].aos-animate {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ⭐ End: Academic Calendar / Important Dates =================================================*/
+
+
+/* ⭐⭐⭐⭐⭐=====Start Exam Routine ===== */
+
+/* ==================== CSS FOR BEAUTY & ANIMATION ==================== */
+
+/* ==================== CSS FOR BEAUTY & ANIMATION ==================== */
+
+/* Fade-in for title/card */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.9s ease forwards;
+}
+@keyframes fadeInUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Smooth row entrance */
+.fade-row {
+  opacity: 0;
+  transform: translateX(-30px);
+  animation: fadeRow 0.8s ease forwards;
+}
+.fade-row:nth-child(1) { animation-delay: 0.2s; }
+.fade-row:nth-child(2) { animation-delay: 0.4s; }
+.fade-row:nth-child(3) { animation-delay: 0.6s; }
+@keyframes fadeRow {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Table look */
+.table th {
+  background: #007bff;
+  color: #fff;
+  font-weight: 600;
+}
+.table td { background: #f9f9f9; }
+
+/* Soft card wrapper */
+.card-soft {
+  border-radius: 12px;
+  background: #fff;
+}
+
+/* ⭐ End Exam Routine===================================================== */
+
+
+/* =====Start TIMELINE STYLES ===== */
+
+
+.timeline {
+  position: relative;
+  padding-left: 30px;
+  border-left: 3px solid #00bcd4;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.timeline-date {
+  position: absolute;
+  left: -130px;
+  top: 0;
+  width: 100px;
+  text-align: right;
+  font-weight: bold;
+  color: #00bcd4;
+}
+
+.timeline-content {
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 8px;
+  border-left: 5px solid #00bcd4;
+}
+
+.timeline-content h5 {
+  margin-bottom: 5px;
+}
+
+.timeline-content p {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .timeline {
+    padding-left: 15px;
+    border: none;
+  }
+
+  .timeline-date {
+    position: relative;
+    left: 0;
+    text-align: left;
+    margin-bottom: 5px;
+  }
+}
+
+/* =====End TIMELINE STYLES ===== */
+
+
+
+/* SECTION START Class Attendance Progress */
+
+.progress-circle-wrap {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.progress-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  line-height: 100px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  margin: 0 auto;
+  position: relative;
+  background: conic-gradient(#007bff 0% 100%, #e0e0e0 100% 100%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: background 0.5s ease;
+}
+
+.progress-circle.present {
+  background: conic-gradient(#28a745 0% 100%, #e0e0e0 100% 100%);
+}
+
+/* Different colors if you want */
+.progress-circle.present.class1 {
+  background: conic-gradient(#28a745 0% 100%, #e0e0e0 100% 100%);
+}
+.progress-circle.present.class2 {
+  background: conic-gradient(#ffc107 0% 100%, #e0e0e0 100% 100%);
+}
+.progress-circle.present.class3 {
+  background: conic-gradient(#dc3545 0% 100%, #e0e0e0 100% 100%);
+}
+
+.progress-circle span {
+  position: absolute;
+  width: 100%;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ===================== Start: 3D Text Effect for Class Names and Numbers ===================== */
+
+h4.mb-4 {
+  /* 3D effect for class names */
+  color: #222;
+  font-weight: 900;
+  text-shadow:
+    1px 1px 0 #aaa,
+    2px 2px 0 #999,
+    3px 3px 0 #888,
+    4px 4px 0 #777;
+}
+
+.progress-circle span {
+  /* 3D effect for numbers inside the circles */
+  color: #fff;
+  font-weight: 900;
+  text-shadow:
+    1px 1px 2px #000,
+    2px 2px 4px #444,
+    3px 3px 6px #222;
+}
+
+/* ===================== End: 3D Text Effect for Class Names and Numbers ===================== */
+
+.progress-circle-wrap p {
+  margin-top: 0.5rem;
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.container.py-5 {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.p-4.bg-white.shadow.rounded {
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 1.5rem;
+  height: 100%;
+}
+
+@media (max-width: 767px) {
+  .progress-circle {
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    font-size: 20px;
+  }
+}
+
+/*End SECTION: Class Attendance Summary================================================*/
+
+
+/* Mark Entry css=========================Start  */
+
+
+  tbody tr:hover td {
+    background-color: #f1f7ff;
+    transition: 0.3s;
+  }
+  tbody tr td:last-child:hover {
+    background-color: #d4edda !important;
+    font-weight: bold;
+    transition: 0.3s;
+  }
+
+  /* End Mark Entry style section */
+
+
+
+/*  Start SECTION : Class-wise Student Result Summary */
+
+.class-card { transition: all 0.3s ease; }
+  .class-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0,0,0,0.12); }
+  .progress-wrapper { width: 100%; }
+  .progress-bar-container { height: 20px; background-color: #e0e0e0; border-radius: 10px; overflow: hidden; }
+  .progress-bar { height: 100%; width: 0%; border-radius: 10px; transition: width 2s ease; }
+  .progress-bar.total { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+  .progress-bar.passed { background: linear-gradient(90deg, #43e97b, #38f9d7); }
+  .progress-bar.failed { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
+  .progress-number { font-weight: 600; color: #333; }
+
+
+/*                                          */
+
+/* ==================== CLASS-WISE RESULTS STYLES START ==================== */
+.result-box {
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.result-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+}
+
+.circle {
+  text-align: center;
+}
+.circular-chart {
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg); /* Rotates the chart so it starts from top */
+}
+.circle-bg {
+  fill: none;
+  stroke: #eee;
+  stroke-width: 3;
+}
+.circle-progress {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100; /* Fully hidden until animated */
+  transition: stroke-dashoffset 1.2s ease;
+}
+.blue { stroke: #0d6efd; }
+.green { stroke: #28a745; }
+.red { stroke: #dc3545; }
+
+/* Text number inside the circle */
+.count-number {
+  font-weight: bold;
+  font-size: 10px;
+  fill: #333; /* Number color */
+  text-anchor: middle;
+  alignment-baseline: middle;
+  font-family: 'Poppins', sans-serif;
+}
+/*  END CLASS-WISE RESULTS STYLES  =========================================================== */
+
+/* Form Fields */
+form input, form select {
+  border: 1px solid #ccddee;
+  border-radius: 8px;
+}
+
+form button:hover {
+  box-shadow: 0 4px 10px rgba(0, 128, 0, 0.2);
+  transform: translateY(-1px);
+  transition: 0.3s ease;
+}
+.nav-pills .nav-link {
+  border-radius: 50px;
+  padding: 10px 25px;
+  margin: 0 8px;
+  font-weight: 500;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #dc3545;
+}
+
+.tab-content form input,
+.tab-content form select {
+  border-radius: 8px;
+}
+.sidebar {
+  position: sticky;
+  top: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-left: 5px solid #00bcd4;
+}
+
+.sidebar h4 {
+  font-size: 1.2rem;
+}
+
+.sidebar ul {
+  padding-left: 0;
+}
+
+.sidebar li {
+  font-size: 0.95rem;
+}
+section ul li {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+}
+
+
+/* About List */
+section ul li:hover {
+  color: #00bcd4;
+  transform: translateX(5px);
+}
+
+  /* Background for marksheet */
+  #marksheet {
+    position: relative;
+    background: url('./img/background/marksheet-bg.png') no-repeat center center;
+    background-size: cover;
+  }
+
+  /* Make background print as well */
+ @media print {
+  body {
+    -webkit-print-color-adjust: exact !important; /* Chrome/Safari */
+    print-color-adjust: exact !important;        /* Standard syntax */
+  }
+    #marksheet {
+      background: url('./img/logo/certificate-border-pattern-.png') no-repeat center center !important;
+      background-size: cover !important;
+    }
+    .no-print {
+      display: none !important;
+    }
+  }
+
+/* ⭐ END Class-wise Student Result Summary========================================= */
+
+
+
+
+/* ⭐⭐⭐⭐⭐=========================== MARKSHEET STYLING */
+
+/* ==================== PAGE SETTINGS (YOUR CSS KEPT) ==================== */
+@page {
+  size: Letter; /* Fix page size to Letter (8.5x11 in) */
+  margin: 20mm;
+}
+body {
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  /* Screen background; change path if needed */
+  background: url("background.jpg") no-repeat center center fixed;
+  background-size: cover;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  margin: 0;
+  padding: 0;
+}
+/* Your .marksheet block mapped to our #marksheet too */
+.marksheet, #marksheet {
+  background: rgba(255, 255, 255, 0.92); /* white overlay for readability */
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0px 0px 15px rgba(0,0,0,0.3);
+  max-width: 900px;
+  margin: 40px auto;
+}
+
+/* Optional header class from your CSS (not strictly required here) */
+.header {
+  text-align: center;
+  border-bottom: 3px solid #007bff;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+.header h2 {
+  margin: 0;
+  color: #007bff;
+  font-size: 28px;
+}
+
+/* ==================== STUDENT INFO ==================== */
+.student-info { margin-bottom: 20px; }
+.student-info p { margin: 4px 0; font-size: 15px; }
+
+/* ==================== TABLE DESIGN ==================== */
+table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+th, td { border: 1px solid #333; padding: 10px; text-align: center; font-size: 14px; }
+th { background: #007bff; color: #fff; font-size: 15px; }
+tr:nth-child(even) { background: #f9f9f9; }
+tr:hover { background: #ffe599; }
+
+/* ==================== FOOTER ==================== */
+.footer {
+  text-align: center;
+  font-size: 13px;
+  margin-top: 30px;
+  border-top: 2px solid #007bff;
+  padding-top: 8px;
+  color: #555;
+}
+
+/* ====== Your earlier design touches for #marksheet background frame ====== */
+#marksheet {
+  /* If you want a decorative inside background for the marksheet box too: */
+  background-image: url('./img/background/marksheet-bg.png'); /* keep your existing asset */
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  border: 8px double #4a90e2;
+}
+
+/* Attendance pill */
+.attendance-summary {
+  margin-top: 15px;
+  font-weight: bold;
+  text-align: center;
+  background-color: #f8f9fa;
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+/* ==================== PRINT STYLING (YOUR CSS KEPT) ==================== */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    /* Print background too */
+    background: url("background.jpg") no-repeat center center fixed !important;
+    background-size: cover !important;
+  }
+  .marksheet, #marksheet {
+    box-shadow: none;
+    background: rgba(255,255,255,0.85); /* keep slight overlay so text stays readable */
+    margin: 0 !important; /* fit the Letter page */
+    max-width: unset;     /* allow full page width under @page */
+  }
+
+  /* Force Letter with tight margins for the #marksheet content area */
+  #marksheet {
+    position: absolute;
+    left: 0; top: 0;
+    width: calc(8.5in - 40mm);
+    min-height: calc(11in - 40mm);
+  }
+
+  .no-print { display: none !important; }
+}
+
+
+/* ⭐end section =================================================================================*/
+
+
+
+/* IMPORTANT! section 'Student Marksheet' does not use custom css instead it uses bootstrap */
+
+
+
+
+
+
+/* ⭐⭐⭐⭐⭐==============================Start ACADEMIC SECTION Programs & Courses STYLES ====================== */
+
+/* Section Background */
+#academics { 
+  background: #fff; 
+  padding: 60px 0;
+}
+
+/* Filter Buttons */
+#academics .filter-btn {
+  margin: 0 5px 10px 5px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+#academics .filter-btn.active {
+  background: linear-gradient(90deg,#00bcd4,#00796b);
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0,188,212,0.14);
+}
+
+/* Cards — white border around full card */
+#academics .card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f7f8ff !important ;        /* ✅ full card white border */
+  box-shadow: 0 6px 16px rgba(36, 36, 36, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+#academics .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+/* Card Images — no border now */
+#academics .card-img-top {
+  height: 180px;
+  object-fit: cover;
+  border: 6px solid #ffffff; 
+  border-radius: 10px;   /* keep image soft corners */
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  transition: transform 0.3s ease;
+}
+#academics .card-img-top:hover {
+  transform: scale(1.05);
+}
+
+/* Card Body */
+#academics .card-body {
+  padding: 15px;
+  border: 6px solid #ffffff; 
+
+}
+#academics .card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+#academics .card-text {
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* Small visual flourish for list */
+#academics ul li { 
+  margin-bottom: 6px; 
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  #academics .card-img-top {
+    height: 150px;
+  }
+}
+
+/* ⭐ End ACADEMIC SECTION Programs & Courses STYLES ============================================================= */
+
+
+
+/* SECTION START: College Function Highlights does not use css instead it uses bootstrap*/
+
+  
+/* ⭐⭐⭐⭐⭐ ====================== Start : College Function Highlights Styles */
+
+  /* Image styling with object-fit cover to maintain aspect ratio */
+
+  .function-img {
+    height: 300px;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  /* Zoom effect on image hover */
+  .media-box:hover .function-img {
+    transform: scale(1.05);
+  }
+
+  /* Overlay styling */
+  .media-overlay h4 {
+    font-weight: 700;
+    font-size: 1.5rem;
+  }
+
+  /* Function description text styling */
+  .function-description p {
+    font-size: 1.1rem;
+    color: #444;
+  }
+
+  /* Responsive vertical alignment for alternating layout */
+  @media (min-width: 768px) {
+    /* Alternate the order for even items */
+    #college-functions .order-md-1 {
+      order: 1;
+    }
+    #college-functions .order-md-2 {
+      order: 2;
+    }
+  }
+
+    /* Image & Video Frame */
+    .media-box {
+      border: 5px solid #fff;
+      box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    /* Back to home button gradient */
+    .btn-gradient {
+      background: linear-gradient(90deg, #ff7e5f, #feb47b);
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+    .btn-gradient:hover {
+      transform: scale(1.05);
+      background: linear-gradient(90deg, #feb47b, #ff7e5f);
+    }
+
+  /* Fade animations handled by AOS (Animate On Scroll) library - included in HTML via data-aos attributes */
+
+  /* ⭐ End College Function Highlights Styles */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+
+
+ /* ========================Optional CSS  */
+
+  .dashboard-card {
+    border-radius: 12px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+  }
+  .dashboard-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+
+
+
+/* ================================= */
+
+
+/* ⭐⭐⭐⭐⭐ start Online Admission Form Section Styles with animations & responsiveness --- */
+
+  #admission-form {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    animation: fadeIn 1s ease forwards;
+    position: relative;
+  }
+
+   /* Watermark style */
+  #admission-form {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    position: relative;
+  }
+  #admission-form .watermark-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 250px;
+    opacity: 0.08;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    user-select: none;
+    z-index: 1;
+  }
+
+  #admission-form .form-label {
+    font-weight: 600;
+    color: #198754; /* Bootstrap success green */
+    transition: color 0.3s ease;
+    display: inline;
+  }
+
+  #admission-form .form-label:hover {
+    color: #146c43;
+  }
+
+  #admission-form h2 {
+    font-family: 'Poppins', sans-serif;
+    letter-spacing: 1px;
+    margin-bottom: 2rem;
+    text-shadow: 1px 1px 4px rgba(25, 135, 84, 0.3);
+  }
+
+  #admission-form h4 {
+    border-left: 5px solid #198754;
+    padding-left: 12px;
+    margin-bottom: 1.2rem;
+    font-weight: 700;
+    color: #198754;
+    transition: border-color 0.3s ease;
+  }
+
+  #admission-form h4:hover {
+    border-color: #146c43;
+  }
+
+  #admission-form .card {
+    border-radius: 12px;
+    background: #fff;
+    padding: 2rem;
+    box-shadow: 0 6px 15px rgba(25, 135, 84, 0.2);
+    transition: box-shadow 0.3s ease;
+  }
+
+  #admission-form .card:hover {
+    box-shadow: 0 8px 25px rgba(25, 135, 84, 0.35);
+  }
+
+  #admission-form input[type="text"],
+  #admission-form input[type="email"],
+  #admission-form input[type="tel"],
+  #admission-form input[type="date"],
+  #admission-form input[type="time"],
+  #admission-form input[type="file"],
+  #admission-form select,
+  #admission-form textarea {
+    border-radius: 8px;
+    border: 1.5px solid #ced4da;
+    padding: 10px 12px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-size: 1rem;
+  }
+
+  #admission-form input[type="text"]:focus,
+  #admission-form input[type="email"]:focus,
+  #admission-form input[type="tel"]:focus,
+  #admission-form input[type="date"]:focus,
+  #admission-form input[type="time"]:focus,
+  #admission-form input[type="file"]:focus,
+  #admission-form select:focus,
+  #admission-form textarea:focus {
+    border-color: #198754;
+    box-shadow: 0 0 8px rgba(25, 135, 84, 0.4);
+    outline: none;
+  }
+
+  #admission-form hr {
+    border-top: 2px solid #198754;
+    opacity: 0.25;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  #admission-form button.btn-primary {
+    background-color: #198754;
+    border: none;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 25px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 3px 10px rgba(25, 135, 84, 0.3);
+  }
+
+  #admission-form button.btn-primary:hover:not(:disabled) {
+    background-color: #146c43;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(25, 135, 84, 0.5);
+  }
+
+  #admission-form button.btn-primary:disabled {
+    background-color: #a9d5b8;
+    cursor: not-allowed;
+  }
+
+  #admission-form button.btn-success {
+    background-color: #20c997;
+    border: none;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 10px 25px;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 3px 10px rgba(32, 201, 151, 0.3);
+  }
+
+  #admission-form button.btn-success:hover:not(:disabled) {
+    background-color: #198754;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(25, 135, 84, 0.5);
+  }
+
+  #admission-form button.btn-success:disabled {
+    background-color: #a1d9c7;
+    cursor: not-allowed;
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 767px) {
+    #admission-form .card {
+      padding: 1.5rem;
+    }
+  }
+
+  @media (max-width: 575px) {
+    #admission-form .row.g-3 > [class*='col-md-'] {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+    #admission-form button {
+      width: 100%;
+    }
+  }
+
+
+/* ⭐ End Online Admission Form Section Styles with animations & responsiveness ===========================--- */
+
+  
+
+/* ⭐⭐⭐⭐⭐======================== student id  ✅ CSS (only card visible in print mode) */
+
+@media print {
+  body * {
+    visibility: hidden !important; /* hide everything */
+  }
+  #idCard, #idCard * {
+    visibility: visible !important; /* show only card */
+  }
+  #idCard {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 86mm;   /* standard ID card width */
+    height: 54mm;  /* standard ID card height */
+    border: 1px solid #000;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+}
+
+
+/* ⭐============================================ */
+
+
+
+/* ⭐⭐⭐⭐⭐====================== Start: Dashboard Section CSS  */
+
+/* Dashboard Cards */
+.dashboard-card {
+  background-color: #ffffff;
+  border: 1px solid #dfefff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  text-align: center;
+  padding: 20px;
+  border-radius: 10px;
+}
+.dashboard-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(0,191,255,0.3);
+}
+.dashboard-card .card-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+.dashboard-card .card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* Members Modal */
+#membersModal .modal-body {
+  padding-top: 0;
+}
+
+/* Member Items */
+#membersModal .member-item {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  background-color: #ffffff;
+  border: 6px solid #ffffff; /* ✅ White 6px border */
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  animation: dashboardFadeIn 0.6s ease forwards;
+}
+#membersModal .member-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+/* Member Images */
+#membersModal .member-item img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+#membersModal .member-item.student img {
+  border-radius: 50%;
+}
+
+/* Member Text Content */
+#membersModal .member-item > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+#membersModal .member-item h6 {
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: #333;
+}
+#membersModal .member-item p {
+  margin-bottom: 10px;
+  color: #777;
+}
+#membersModal .member-bio {
+  background-color: #f8f8f8;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  color: #555;
+  min-height: 130px;
+}
+
+/* Pagination */
+#membersModal .pagination {
+  justify-content: center;
+  margin-top: 10px;
+}
+#membersModal .pagination .page-item .page-link {
+  border-radius: 5px;
+}
+#membersModal .pagination .page-item.active .page-link {
+  background-color: #007bff;
+  border-color: #007bff;
+  color: #fff;
+}
+
+/* Fade-in Animation */
+@keyframes dashboardFadeIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  #membersModal .member-item {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  #membersModal .member-item img {
+    margin-bottom: 15px;
+  }
+  #membersModal .member-item > div {
+    align-items: center;
+  }
+}
+
+/* Start Start Dashboard Section College Members */
+
+
+.dashboard-card {
+  background-color: white;
+  border: 1px solid #dfefff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 15px rgba(0,191,255,0.3);
+  transform: scale(1.02);
+}
+
+.card-icon {
+  font-size: 40px;
+}
+
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.card-buttons .btn {
+  margin: 2px;
+}
+
+/* ⭐ End Dashboard Section CSS ======================================================*/
+
+
+
+/*⭐⭐⭐⭐⭐============================ School Bus Information only uses bootstrap */
+
+/*<!-- Table Styling -->*/
+
+/* Start: School Bus Table Design */
+
+
+.school-bus-table {
+  background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: fadeIn 1s ease-in-out;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.school-bus-table thead {
+  background: linear-gradient(90deg, #28a745, #4caf50);
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.school-bus-table thead th i {
+  margin-right: 6px;
+}
+
+.school-bus-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.school-bus-table tbody tr:hover {
+  background-color: #eafbea;
+  transform: scale(1.01);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.school-bus-table th, 
+.school-bus-table td {
+  padding: 12px;
+  vertical-align: middle;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* ⭐ End: School Bus Table Design ============================================================*/
+
+
+
+/* ===============================================Start CONTACT SECTION STYLES */
+
+
+#contact .card {
+  border-radius: 12px;
+}
+
+#contact .form-control {
+  border-radius: 8px;
+}
+
+#contact .btn-primary {
+  background: linear-gradient(90deg, #00bcd4, #00796b);
+  border: none;
+}
+
+.map-container iframe {
+  border-radius: 12px;
+}
+
+/* End CONTACT SECTION STYLES */
+
+
+
+/* Start Footer SECTION  */
+
+.footer {
+  background: linear-gradient(to right, #002f4b, #005c97);
+}
+
+.footer a.footer-link {
+  color: #aadfff;
+}
+
+.footer a.footer-link:hover {
+  color: #ffffff;
+}
+
+.social-icon img {
+  transition: transform 0.3s ease;
+}
+
+.social-icon img:hover {
+  transform: scale(1.2);
+}
+/* End Footer SECTION  */
+
+

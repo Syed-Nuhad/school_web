@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Home · College Management System{% endblock %}
+
+{% block head %}
+<style>
+  form > div { margin-bottom: 10px; }
+  label { display: inline-block; width: 120px; font-weight: bold; }
+  input, select { width: 200px; padding: 5px; }
+  button { padding: 8px 16px; margin-top: 10px; }
+  #marksheet { border: 1px solid #ccc; padding: 15px; margin-top: 20px; display: none; }
+  #marksheet h3 { margin-top: 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+  th { background-color: #f4f4f4; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ⭐⭐⭐⭐⭐======================== START: Banner Slider Section  -->
+<section class="banner-slider">
+  <div class="slider">
+    <div class="slide active">
+      <img src="{% static 'img/download (2).jpeg' %}" alt="Campus Image 1">
+      <div class="caption">
+        <h2>Welcome to Our College</h2>
+        <p>Where dreams take shape and futures are built</p>
+      </div>
+    </div>
+
+    <div class="slide">
+      <img src="{% static 'img/download (3).jpeg' %}" alt="Campus Image 2">
+      <div class="caption">
+        <h2>Empowering Students</h2>
+        <p>Innovative learning for the leaders of tomorrow</p>
+      </div>
+    </div>
+
+    <div class="slide">
+      <img src="{% static 'img/download (1).jpeg' %}" alt="Campus Image 3">
+      <div class="caption">
+        <h2>Join Our Community</h2>
+        <p>Experience growth, knowledge, and opportunity</p>
+      </div>
+    </div>
+  </div>
+
+  <button class="prev">&#10094;</button>
+  <button class="next">&#10095;</button>
+  <div class="dots"></div>
+</section>
+<!-- ⭐ END: Banner Slider Section ====================================================================== -->
+
+<!--⭐⭐⭐⭐⭐======================== Start  Notice Board -->
+<section class="container py-5" id="notice-board">
+  <h2 class="text-center text-primary fw-bold mb-5">Latest College Notices</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <img src="{% static 'img/images (6).jpeg' %}" class="card-img-top" alt="Notice Image">
+        <div class="card-body">
+          <h5 class="card-title text-primary">📢 Admission Schedule 2025</h5>
+          <p class="card-text">The online admission form for all departments will open from September 1st. Please read the eligibility criteria carefully before applying.</p>
+        </div>
+        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+          <small class="text-muted">Published: August 5, 2025</small>
+          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <img src="{% static 'img/images (4).jpeg' %}" class="card-img-top" alt="Notice Image">
+        <div class="card-body">
+          <h5 class="card-title text-primary">🎓 Semester Final Exam</h5>
+          <p class="card-text">Semester Final Exam will begin from October 10th. Admit cards will be available online from October 1st.</p>
+        </div>
+        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+          <small class="text-muted">Published: August 3, 2025</small>
+          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm border-0">
+        <img src="{% static 'img/download (2).jpeg' %}" class="card-img-top" alt="Holiday Image">
+        <div class="card-body">
+          <h5 class="card-title text-primary">📅 Holiday Announcement</h5>
+          <p class="card-text">The college will remain closed from August 15th to August 17th on the occasion of Independence Day celebrations.</p>
+        </div>
+        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+          <small class="text-muted">Published: August 1, 2025</small>
+          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!--⭐ End: Notice Board ================================================================= -->
+
+<!-- ⭐⭐⭐⭐⭐ ================== ‍Start  Academic Calendar Timeline  -->
+<section id="academic-calendar" class="py-5">
+  <div class="container" data-aos="fade-up">
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">Academic Calendar Timeline</h2>
+      <p class="text-muted">Keep track of all important events and deadlines</p>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-item" data-aos="fade-right">
+        <div class="timeline-date">Jan 15, 2025</div>
+        <div class="timeline-content shadow-sm">
+          <h5 class="fw-bold">Spring Semester Begins</h5>
+          <p>First day of classes for all students. Orientation for new students will also be held.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-aos="fade-left">
+        <div class="timeline-date">Feb 10, 2025</div>
+        <div class="timeline-content shadow-sm">
+          <h5 class="fw-bold">Sports Day</h5>
+          <p>Annual sports day with various competitions and activities for all classes.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-aos="fade-right">
+        <div class="timeline-date">Apr 5, 2025</div>
+        <div class="timeline-content shadow-sm">
+          <h5 class="fw-bold">Midterm Exams</h5>
+          <p>Midterm examination week for all academic programs.</p>
+        </div>
+      </div>
+
+      <div class="timeline-item" data-aos="fade-up">
+        <div class="timeline-date">Jun 20, 2025</div>
+        <div class="timeline-content shadow-sm">
+          <h5 class="fw-bold">Cultural Festival</h5>
+          <p>Showcase of student talents in music, dance, drama, and art exhibitions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!--⭐ ‍End : Academic Calendar Timeline ================================================================= -->
+
+<!--⭐⭐⭐⭐⭐=====================  Start: Photo & Video Gallery  -->
+<section class="container py-5" id="gallery-section">
+  <h2 class="text-center fw-bold mb-5 fade-in">Campus Gallery</h2>
+
+  <div class="row g-3 gallery-grid">
+    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
+      <div class="gallery-item">
+        <img src="{% static 'img/download.jpeg' %}" alt="Campus Image 1" class="img-fluid rounded shadow" loading="lazy" />
+        <div class="gallery-meta">
+          <h5 class="gallery-title">Campus Image 1</h5>
+          <p class="gallery-info">Place: Main Hall</p>
+          <p class="gallery-info">Date: 2025-08-15 | Time: 10:30 AM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
+      <div class="gallery-item">
+        <img src="{% static 'img/images.jpeg' %}" alt="Campus Image 2" class="img-fluid rounded shadow" loading="lazy" />
+        <div class="gallery-meta">
+          <h5 class="gallery-title">Campus Image 2</h5>
+          <p class="gallery-info">Place: Science Lab</p>
+          <p class="gallery-info">Date: 2025-08-14 | Time: 2:00 PM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
+      <div class="gallery-item video-item" data-video="https://www.youtube.com/embed/ScMzIvxBSi4">
+        <img src="{% static 'img/images (4).jpeg' %}" alt="Campus Video 1" class="img-fluid rounded shadow" loading="lazy" />
+        <div class="play-button">&#9658;</div>
+        <div class="gallery-meta">
+          <h5 class="gallery-title">Campus Video 1</h5>
+          <p class="gallery-info">Place: Auditorium</p>
+          <p class="gallery-info">Date: 2025-08-10 | Time: 4:15 PM</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
+      <div class="gallery-item">
+        <img src="{% static 'img/images (6).jpeg' %}" alt="Campus Image 3" class="img-fluid rounded shadow" loading="lazy" />
+        <div class="gallery-meta">
+          <h5 class="gallery-title">Campus Image 3</h5>
+          <p class="gallery-info">Place: Library</p>
+          <p class="gallery-info">Date: 2025-08-12 | Time: 11:45 AM</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="lightbox" class="lightbox" style="display:none;">
+    <span class="close">&times;</span>
+    <div class="lightbox-content"></div>
+  </div>
+</section>
+<!--⭐ End: Photo & Video Gallery ===================== -->
+
+<!-- ⭐⭐⭐⭐⭐===================== Start: About the College with Multiple Fading Images (No Slider)  -->
+<section class="container py-5" data-aos="fade-up" id="about">
+  <div class="text-center">
+    <h2 class="fw-bold text-success mb-5 section-title">About My College</h2>
+  </div>
+
+  <div class="row align-items-center">
+    <div class="col-md-6 mb-4 mb-md-0">
+      <div class="image-fade-container rounded shadow" style="height:350px; overflow:hidden; position:relative;">
+        <img src="{% static 'img/images (3).jpeg' %}" alt="College Image 1" class="fade-image active" loading="lazy" style="object-fit: cover;">
+        <img src="{% static 'img/download.jpeg' %}" alt="College Image 2" class="fade-image" loading="lazy" style="object-fit: cover;">
+        <img src="{% static 'img/images.jpeg' %}" alt="College Image 3" class="fade-image" loading="lazy" style="object-fit: cover;">
+      </div>
+    </div>
+
+    <div class="col-md-6 fade-in delay-2">
+      <h2 class="text-primary fw-bold mb-3">Titu BD Science College</h2>
+      <p class="lead text-muted">
+        XYZ College is a leading educational institution dedicated to providing quality education in science, arts, and commerce.
+        Our mission is to empower students with modern knowledge, digital learning, and a strong moral foundation.
+      </p>
+      <ul class="list-unstyled mt-3">
+        <li>✅ Smart Classrooms & Digital Library</li>
+        <li>✅ Experienced Faculty and Mentors</li>
+        <li>✅ Modern Lab Facilities</li>
+        <li>✅ School Bus, Hostel, and Canteen Services</li>
+      </ul>
+    </div>
+  </div>
+</section>
+<!-- ⭐ End: About the College ========================================================================== -->
+
+<!-- ⭐⭐⭐⭐⭐========================== Start: Academic Calendar / Important Dates -->
+<section class="container py-5 academic-calendar-section" data-aos="fade-up">
+  <h2 class="text-center fw-bold mb-5 calendar-title">📅 Academic Calendar</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
+        <div class="calendar-icon icon-blue">📅</div>
+        <h5 class="fw-bold text-primary">Semester Start</h5>
+        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 10th September 2025"></p>
+        <p>The academic year officially begins. All students must attend orientation on the first day.</p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
+        <div class="calendar-icon icon-green">📅</div>
+        <h5 class="fw-bold text-success">Mid-Term Exams</h5>
+        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 15th November 2025"></p>
+        <p>Mid-term examinations will be held across all classes. Prepare your study schedules accordingly.</p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
+        <div class="calendar-icon icon-red">📅</div>
+        <h5 class="fw-bold text-danger">Winter Break</h5>
+        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 20th December 2025 - 5th January 2026"></p>
+        <p>Enjoy your winter holidays! College offices will remain closed during this period.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⭐⭐⭐⭐⭐ ===============Start [ACADEMIC SECTION] Courses & Programs -->
+<section id="academics" class="py-5">
+  <div class="container" data-aos="fade-up">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold">Programs & Courses</h2>
+      <p class="text-muted">Explore our programs — durations, eligibility, fees and downloadable syllabi.</p>
+    </div>
+
+    <div class="d-flex justify-content-center mb-4 flex-wrap gap-2">
+      <button class="btn btn-outline-primary btn-sm filter-btn active" data-filter="all">All</button>
+      <button class="btn btn-outline-primary btn-sm filter-btn" data-filter="science">Science</button>
+      <button class="btn btn-outline-primary btn-sm filter-btn" data-filter="commerce">Commerce</button>
+      <button class="btn btn-outline-primary btn-sm filter-btn" data-filter="arts">Arts</button>
+      <button class="btn btn-outline-primary btn-sm filter-btn" data-filter="vocational">Vocational</button>
+    </div>
+
+    <div class="row g-4" id="courses-grid">
+      <div class="col-md-4 course-card" data-category="science">
+        <div class="card h-100 shadow-sm border-0">
+          <img src="{% static 'img/download (2).jpeg' %}" class="card-img-top" alt="Physics">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">HSC – Science</h5>
+            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
+            <p class="card-text mb-3">Prepare for engineering and medical pathways with strong lab-based instruction and modern labs.</p>
+            <ul class="list-unstyled mb-3 small">
+              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 3.0)</li>
+              <li><strong>Monthly Fee:</strong> BDT 1,200</li>
+            </ul>
+            <div class="mt-auto d-flex gap-2">
+              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
+              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 course-card" data-category="commerce">
+        <div class="card h-100 shadow-sm border-0">
+          <img src="{% static 'img/download (3).jpeg' %}" class="card-img-top" alt="Commerce">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">HSC – Commerce</h5>
+            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
+            <p class="card-text mb-3">Accounting, Finance and Business studies with practical workshop sessions and project work.</p>
+            <ul class="list-unstyled mb-3 small">
+              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.5)</li>
+              <li><strong>Monthly Fee:</strong> BDT 1,000</li>
+            </ul>
+            <div class="mt-auto d-flex gap-2">
+              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
+              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 course-card" data-category="arts">
+        <div class="card h-100 shadow-sm border-0">
+          <img src="{% static 'img/download.jpeg' %}" class="card-img-top" alt="Arts">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">HSC – Arts</h5>
+            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
+            <p class="card-text mb-3">Strong focus on languages, social studies, and humanities with debate & research clubs.</p>
+            <ul class="list-unstyled mb-3 small">
+              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.0)</li>
+              <li><strong>Monthly Fee:</strong> BDT 900</li>
+            </ul>
+            <div class="mt-auto d-flex gap-2">
+              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
+              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 course-card" data-category="vocational">
+        <div class="card h-100 shadow-sm border-0">
+          <img src="{% static 'img/download.jpeg' %}" class="card-img-top" alt="Vocational">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">HSC – Vocational</h5>
+            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
+            <p class="card-text mb-3">Hands-on skills for industry with workshops and practicals.</p>
+            <ul class="list-unstyled mb-3 small">
+              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.0)</li>
+              <li><strong>Monthly Fee:</strong> BDT 900</li>
+            </ul>
+            <div class="mt-auto d-flex gap-2">
+              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
+              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<!--⭐ End ====[ACADEMIC SECTION] -->
+
+<!--⭐⭐⭐⭐⭐ Start : College Function Highlights -->
+<section class="container my-5" id="college-functions">
+  <h2 class="text-center fw-bold text-primary mb-5" data-aos="fade-up">College Function Highlights</h2>
+
+  <div class="row g-5 align-items-center">
+    <div class="col-md-6" data-aos="fade-right">
+      <div class="media-box position-relative shadow rounded overflow-hidden">
+        <img src="{% static 'img/images.jpeg' %}" alt="Annual Function" class="img-fluid w-100 function-img" style="height: 300px; object-fit: cover;">
+        <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
+          <h4 class="mb-0">Annual Function 2025</h4>
+          <a href="#" class="btn btn-primary align-self-end mt-2">Full View</a>
+        </div>
+      </div>
+      <div class="bg-light p-3 rounded shadow-sm mt-3">
+        <p class="mb-1"><strong>Place:</strong> College Auditorium, XYZ College</p>
+        <p class="mb-1"><strong>Date:</strong> December 20, 2025</p>
+        <p class="mb-0"><strong>Time:</strong> 4:00 PM onwards</p>
+      </div>
+    </div>
+
+    <div class="col-md-6" data-aos="fade-left">
+      <div class="function-description p-4 shadow rounded bg-light">
+        <p class="mb-0">
+          Our Annual Function 2025 was filled with colorful performances, student awards, and special guest speeches. It was a day to remember, highlighting the talents and achievements of our beloved students. Explore the full event to relive the moments.
+        </p>
+      </div>
+    </div>
+
+    <div class="col-md-6 order-md-2" data-aos="fade-left">
+      <div class="media-box position-relative shadow rounded overflow-hidden">
+        <img src="{% static 'img/images (3).jpeg' %}" alt="Cultural Fest" class="img-fluid w-100 function-img" style="height: 300px; object-fit: cover;">
+        <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
+          <h4 class="mb-0">Cultural Fest 2025</h4>
+          <a href="#" class="btn btn-primary align-self-end mt-2">Full View</a>
+        </div>
+      </div>
+      <div class="bg-light p-3 rounded shadow-sm mt-3">
+        <p class="mb-1"><strong>Place:</strong> Main Auditorium, XYZ College</p>
+        <p class="mb-1"><strong>Date:</strong> February 15, 2025</p>
+        <p class="mb-0"><strong>Time:</strong> 6:00 PM onwards</p>
+      </div>
+    </div>
+
+    <div class="col-md-6 order-md-1" data-aos="fade-right">
+      <div class="function-description p-4 shadow rounded bg-light">
+        <p class="mb-0">
+          Our Cultural Fest showcased a dazzling array of student talents including music, dance, and drama. The vibrant celebrations fostered a strong sense of community and cultural appreciation among students and staff alike.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+<!--⭐ End  College Function Highlights ================================================================= -->
+
+<!-- ⭐⭐⭐⭐⭐ Start: Cultural Fest 2025 Section -->
+<section class="container my-5" id="cultural-fest">
+  <h2 class="text-center fw-bold text-primary mb-5" data-aos="fade-up">Cultural Fest 2025</h2>
+  <div class="row g-5 align-items-center">
+    <div class="col-md-6" data-aos="fade-right">
+      <div class="media-box">
+        <video class="w-100 mt-3" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="openVideoModal('{% static 'videos/fest-video.mp4' %}')">
+          <source src="{% static 'img/video/devmunzereen 2025-04-14 03-33-29.mp4' %}" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+        <div class="p-3 bg-light">
+          <h4 class="fw-bold mb-2 text-success">Cultural Fest 2025</h4>
+          <p class="mb-1"><strong>Place:</strong> Main Auditorium, XYZ College</p>
+          <p class="mb-1"><strong>Date:</strong> February 15, 2025</p>
+          <p class="mb-1"><strong>Time:</strong> 6:00 PM onwards</p>
+        </div>
+        <div class="d-flex justify-content-between p-3 bg-white">
+          <a href="#" class="btn btn-primary px-4">Full View</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6" data-aos="fade-left">
+      <div class="p-4 shadow rounded bg-light">
+        <p class="mb-0">
+          The Cultural Fest 2025 was a grand celebration of art, music, dance, and creativity.
+          Students showcased their talents, blending traditional and modern performances.
+          The auditorium was alive with energy, making it a night to remember.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bootstrap Video Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-body p-0">
+        <video id="modalVideo" class="w-100" controls></video>
+      </div>
+      <div class="modal-footer bg-dark border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!--⭐ End College Function Highlights ================================================================= -->
+
+<!-- ⭐⭐⭐⭐⭐====================== Start: College Member Dashboard Section ====================== -->
+<section class="container py-5" id="college-members" data-aos="fade-up">
+  <h2 class="text-center mb-4 text-primary fw-bold">College Members</h2>
+
+  <div class="row g-4">
+    <div class="col-md-3">
+      <div class="card dashboard-card text-center p-3 shadow-sm">
+        <div class="card-icon mb-2 fs-1">👨‍💼</div>
+        <h5 class="card-title">Head of Department</h5>
+        <div class="card-buttons mt-3">
+          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card dashboard-card text-center p-3 shadow-sm">
+        <div class="card-icon mb-2 fs-1">👩‍🏫</div>
+        <h5 class="card-title">Teachers</h5>
+        <div class="card-buttons mt-3">
+          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card dashboard-card text-center p-3 shadow-sm">
+        <div class="card-icon mb-2 fs-1">👨‍🎓</div>
+        <h5 class="card-title">Students</h5>
+        <div class="card-buttons mt-3">
+          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card dashboard-card text-center p-3 shadow-sm">
+        <div class="card-icon mb-2 fs-1">🧑‍🔧</div>
+        <h5 class="card-title">Staff</h5>
+        <div class="card-buttons mt-3">
+          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ⭐ End: College Member Dashboard Section ================================================== -->
+
+<!--⭐⭐⭐⭐⭐================================================ Start CONTACT SECTION  -->
+<section id="contact" class="py-5 bg-light">
+  <div class="container" data-aos="fade-up">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold">Contact Us</h2>
+      <p class="text-muted">We’d love to hear from you! Reach out using the form or visit us directly.</p>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-body">
+            <h5 class="fw-bold mb-3">Get in Touch</h5>
+            <p><i class="bi bi-geo-alt-fill text-primary me-2"></i> 123 College Road, Dhaka, Bangladesh</p>
+            <p><i class="bi bi-telephone-fill text-primary me-2"></i> +880 123 456 789</p>
+            <p><i class="bi bi-envelope-fill text-primary me-2"></i> info@yourcollege.com</p>
+            <p><i class="bi bi-clock-fill text-primary me-2"></i> Mon–Sat: 8:00 AM – 5:00 PM</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+          <div class="card-body">
+            <form id="contact-form">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <input type="text" class="form-control" placeholder="Your Name" required>
+                </div>
+                <div class="col-md-6">
+                  <input type="email" class="form-control" placeholder="Your Email" required>
+                </div>
+                <div class="col-md-12">
+                  <input type="text" class="form-control" placeholder="Subject" required>
+                </div>
+                <div class="col-md-12">
+                  <textarea class="form-control" rows="5" placeholder="Your Message" required></textarea>
+                </div>
+                <div class="col-md-12 text-end">
+                  <button type="submit" class="btn btn-primary px-4">Send Message</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <div class="map-container shadow-sm">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.1721552263!2d90.42110437503967!3d23.8110586786376!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755c712b4b38a01%3A0x8e4e1f2d8f0a1b5d!2sDhaka%20College!5e0!3m2!1sen!2sbd!4v1694777851886!5m2!1sen!2sbd"
+            width="100%" height="350" style="border:0;" allowfullscreen="" loading="lazy">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- ⭐ [ End CONTACT SECTION] ================================================================================= -->
+
+{% endblock %}

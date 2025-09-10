@@ -1,0 +1,40 @@
+{% load static %}
+
+<footer class="footer bg-dark text-white pt-5 pb-3" data-aos="fade-up">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <h5 class="fw-bold text-warning">📍 Contact Us</h5>
+        <p>Titu BD Science College, Mirpur-1, Dhaka, Bangladesh</p>
+        <p>Phone: +880 1234-567890</p>
+        <p>Email: info@titubdcollege.edu</p>
+      </div>
+
+      <div class="col-md-4 mb-4">
+        <h5 class="fw-bold text-warning">🔗 Quick Links</h5>
+        <ul class="list-unstyled">
+          <li><a href="{% url 'home' %}" class="footer-link text-white">Home</a></li>
+          <li><a href="#" class="footer-link text-white">Admission</a></li>
+          <li><a href="#" class="footer-link text-white">Results</a></li>
+          <li><a href="#college-functions" class="footer-link text-white">Events</a></li>
+        </ul>
+      </div>
+
+      <div class="col-md-4 mb-4">
+        <h5 class="fw-bold text-warning">🌐 Connect with Us</h5>
+        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-2x"></i></a>
+        <a href="#" class="text-white me-3"><i class="fab fa-whatsapp fa-2x"></i></a>
+        <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-2x"></i></a>
+        <a href="mailto:info@titubdcollege.edu" class="text-white"><i class="fa-solid fa-envelope fa-2x"></i></a>
+      </div>
+    </div>
+
+    <hr class="bg-secondary">
+    <div class="d-flex justify-content-center align-items-center flex-wrap text-center">
+      <p class="mb-0 mx-3">&copy; <span id="y"></span> Titu BD Science College. All rights reserved.</p>
+      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" style="height: 30px; width: auto;" class="mx-3">
+      <span class="mx-3">Developed by <strong>DS</strong> • t2bd.com</span>
+    </div>
+  </div>
+  <script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</footer>
