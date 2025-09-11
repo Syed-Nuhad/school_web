@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 
 
@@ -44,29 +45,20 @@ class Banner(models.Model):
         return self.image_url or ""
 
 
+User = settings.AUTH_USER_MODEL
+
+
 class Notice(models.Model):
-    """
-    Teacher-posted notice for the board.
-    grade/section kept as free text for now; can be normalized later.
-    """
-    title = models.CharField(max_length=180)
-    body = models.TextField()
-    image = models.ImageField(upload_to=notice_upload_to, blank=True, null=True)
-    image_url = models.URLField(blank=True)
-    grade = models.CharField(max_length=50, blank=True)     # e.g. "Class 9"
-    section = models.CharField(max_length=20, blank=True)   # e.g. "A", "Science"
-    link_url = models.URLField(blank=True)
+    title        = models.CharField(max_length=200)
+    subtitle     = models.TextField(blank=True)                 # the paragraph under title
+    image        = models.ImageField(upload_to="notices/", blank=True, null=True)
+    image_url    = models.URLField(blank=True)                  # optional external image
+    link_url     = models.URLField(blank=True)                  # "Read More" target
+    published_at = models.DateTimeField(default=timezone.now)   # shown on the card
+    is_active    = models.BooleanField(default=True)
 
-    is_active = models.BooleanField(default=True)
-    published_at = models.DateTimeField(default=timezone.now)
-
-    posted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="notices_posted"
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-published_at", "-created_at")
@@ -74,15 +66,30 @@ class Notice(models.Model):
     def __str__(self):
         return self.title
 
+
     @property
     def image_src(self) -> str:
-        if self.image:
+        """Already in your model: returns image.url or image_url or ''."""
+        if getattr(self, "image", None):
             try:
                 return self.image.url
             except Exception:
-                return ""
-        return self.image_url or ""
+                pass
+        return getattr(self, "image_url", "") or ""
 
+    def get_absolute_url(self) -> str:
+        """Canonical internal URL (detail page)."""
+        return reverse("notice_detail", args=[self.pk])
+
+    @property
+    def url(self) -> str:
+        """
+        Preferred link target for 'Read more':
+        - if link_url is set (external or custom), use that
+        - otherwise, use the internal detail page
+        """
+        lu = getattr(self, "link_url", "") or ""
+        return lu if lu.strip() else self.get_absolute_url()
 
 
 

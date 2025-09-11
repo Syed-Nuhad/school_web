@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Notices{% endblock %}
+
+{% block content %}
+<!-- ⭐⭐⭐ Notices — List (Grid + pagination) -->
+<section class="container py-5" id="notice-board">
+  <h2 class="text-center text-primary fw-bold mb-4">Latest College Notices</h2>
+
+  {% if page_obj.object_list %}
+    <div class="row g-4">
+      {% for n in page_obj.object_list %}
+        <div class="col-md-4">
+          <div class="card h-100 shadow-sm border-0">
+            {% if n.image_src %}
+              <img src="{{ n.image_src }}" class="card-img-top" alt="{{ n.title|default:'Notice Image' }}">
+            {% endif %}
+            <div class="card-body">
+              <h5 class="card-title text-primary">{{ n.title }}</h5>
+              {% if n.subtitle %}<p class="card-text">{{ n.subtitle }}</p>{% endif %}
+            </div>
+            <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+              <small class="text-muted">Published: {{ n.published_at|date:"F j, Y" }}</small>
+              <a href="{% url 'notice_detail' n.id %}" class="btn btn-sm btn-outline-primary">Read More</a>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <nav class="mt-4" aria-label="Notices pagination">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+          </li>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% else %}
+    <p class="text-center text-muted">No notices yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -18,89 +18,106 @@
 {% endblock %}
 
 {% block content %}
-
 <!-- ⭐⭐⭐⭐⭐======================== START: Banner Slider Section  -->
 <section class="banner-slider">
-  <div class="slider">
-    <div class="slide active">
-      <img src="{% static 'img/download (2).jpeg' %}" alt="Campus Image 1">
-      <div class="caption">
-        <h2>Welcome to Our College</h2>
-        <p>Where dreams take shape and futures are built</p>
-      </div>
+  <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+
+      {% for b in banners %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+
+          <!-- Image via background so it scales nicely -->
+          <div class="d-block w-100"
+               style="height: 420px;
+                      background-image: url('{{ b.image_src|escape }}');
+                      background-size: cover;
+                      background-position: center;
+                      background-repeat: no-repeat;">
+          </div>
+
+          {% if b.title or b.subtitle or b.button_text and b.button_link %}
+            <div class="carousel-caption d-none d-md-block text-start">
+              {% if b.title %}<h2 class="h3 fw-bold mb-1">{{ b.title }}</h2>{% endif %}
+              {% if b.subtitle %}<p class="mb-2">{{ b.subtitle }}</p>{% endif %}
+              {% if b.button_text and b.button_link %}
+                <a class="btn btn-primary btn-sm" href="{{ b.button_link }}">{{ b.button_text }}</a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% empty %}
+        <!-- Minimal fallback: plain panel if no banners exist yet -->
+        <div class="carousel-item active">
+          <div class="d-block w-100 bg-secondary" style="height: 420px;"></div>
+        </div>
+      {% endfor %}
+
     </div>
 
-    <div class="slide">
-      <img src="{% static 'img/download (3).jpeg' %}" alt="Campus Image 2">
-      <div class="caption">
-        <h2>Empowering Students</h2>
-        <p>Innovative learning for the leaders of tomorrow</p>
-      </div>
-    </div>
+    <!-- Controls -->
+    <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next">
+      <span class="carousel-control-next-icon" aria-hidden="true"></span>
+      <span class="visually-hidden">Next</span>
+    </button>
 
-    <div class="slide">
-      <img src="{% static 'img/download (1).jpeg' %}" alt="Campus Image 3">
-      <div class="caption">
-        <h2>Join Our Community</h2>
-        <p>Experience growth, knowledge, and opportunity</p>
-      </div>
+    <!-- Indicators -->
+    <div class="carousel-indicators">
+      {% for b in banners %}
+        <button type="button"
+                data-bs-target="#homeCarousel"
+                data-bs-slide-to="{{ forloop.counter0 }}"
+                {% if forloop.first %}class="active" aria-current="true"{% endif %}
+                aria-label="Slide {{ forloop.counter }}">
+        </button>
+      {% endfor %}
     </div>
   </div>
-
-  <button class="prev">&#10094;</button>
-  <button class="next">&#10095;</button>
-  <div class="dots"></div>
 </section>
 <!-- ⭐ END: Banner Slider Section ====================================================================== -->
 
-<!--⭐⭐⭐⭐⭐======================== Start  Notice Board -->
-<section class="container py-5" id="notice-board">
-  <h2 class="text-center text-primary fw-bold mb-5">Latest College Notices</h2>
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <img src="{% static 'img/images (6).jpeg' %}" class="card-img-top" alt="Notice Image">
-        <div class="card-body">
-          <h5 class="card-title text-primary">📢 Admission Schedule 2025</h5>
-          <p class="card-text">The online admission form for all departments will open from September 1st. Please read the eligibility criteria carefully before applying.</p>
-        </div>
-        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
-          <small class="text-muted">Published: August 5, 2025</small>
-          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
-        </div>
-      </div>
-    </div>
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <img src="{% static 'img/images (4).jpeg' %}" class="card-img-top" alt="Notice Image">
-        <div class="card-body">
-          <h5 class="card-title text-primary">🎓 Semester Final Exam</h5>
-          <p class="card-text">Semester Final Exam will begin from October 10th. Admit cards will be available online from October 1st.</p>
-        </div>
-        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
-          <small class="text-muted">Published: August 3, 2025</small>
-          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
-        </div>
-      </div>
-    </div>
+<!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
+<!-- ⭐⭐⭐ Notices (YouTube-like grid) -->
+<section id="notice-board" class="py-5">
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm border-0">
-        <img src="{% static 'img/download (2).jpeg' %}" class="card-img-top" alt="Holiday Image">
-        <div class="card-body">
-          <h5 class="card-title text-primary">📅 Holiday Announcement</h5>
-          <p class="card-text">The college will remain closed from August 15th to August 17th on the occasion of Independence Day celebrations.</p>
-        </div>
-        <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
-          <small class="text-muted">Published: August 1, 2025</small>
-          <a href="#" class="btn btn-sm btn-outline-primary">Read More</a>
-        </div>
+
+  <div class="container">
+    <h2 class="fw-bold mb-4">Latest College Notices</h2>
+
+    {% if notices %}
+      <div class="row gy-4">
+        {% for n in notices %}
+          <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+            <article class="yt-card">
+              <a href="{% url 'notice_detail' n.pk %}" class="text-decoration-none d-block mb-2">
+                <div class="yt-thumb" style="background-image:url('{{ n.image_src|escape }}');"></div>
+              </a>
+              <h3 class="yt-title mb-1">
+                <a class="link-dark text-decoration-none" href="{% url 'notice_detail' n.pk %}">
+                  {{ n.title }}
+                </a>
+              </h3>
+              {% if n.subtitle %}
+                <p class="yt-sub mb-1">{{ n.subtitle }}</p>
+              {% endif %}
+              {% if n.published_at %}
+                <div class="yt-meta mb-2">Published {{ n.published_at|date:"F j, Y" }}</div>
+              {% endif %}
+              <a href="{% url 'notice_detail' n.pk %}" class="btn btn-outline-primary btn-sm">Read More</a>
+            </article>
+          </div>
+        {% endfor %}
       </div>
-    </div>
+    {% else %}
+      <p class="text-muted mb-0">No notices yet.</p>
+    {% endif %}
   </div>
 </section>
-<!--⭐ End: Notice Board ================================================================= -->
+<!-- ⭐ End: Notice Board ================================================================= -->
 
 <!-- ⭐⭐⭐⭐⭐ ================== ‍Start  Academic Calendar Timeline  -->
 <section id="academic-calendar" class="py-5">

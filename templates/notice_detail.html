@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}{{ notice.title }}{% endblock %}
+
+{% block content %}
+<section id="notice-detail" class="py-4">
+  <style>
+
+  </style>
+
+  <div class="container">
+    <div class="row g-4">
+      <!-- Left: main content -->
+      <div class="col-lg-8">
+        {% if notice.image_src %}
+          <a href="#" id="openZoom" class="d-block text-decoration-none" title="Click to zoom">
+            <div class="yt-hero mb-3" style="background-image:url('{{ notice.image_src|escape }}');"></div>
+          </a>
+        {% endif %}
+
+        <h1 class="h3 fw-bold mb-1">{{ notice.title }}</h1>
+        {% if notice.published_at %}
+          <div class="text-muted small mb-3">Published {{ notice.published_at|date:"F j, Y" }}</div>
+        {% endif %}
+        {% if notice.subtitle %}
+          <p class="lead mb-4">{{ notice.subtitle }}</p>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+          <a href="{% url 'notices_list' %}" class="btn btn-outline-secondary">Back to Notices</a>
+        </div>
+      </div>
+
+      <!-- Right: sidebar (Up next) -->
+      <aside class="col-lg-4">
+        {% if more_notices %}
+          <h2 class="h6 text-uppercase text-muted mb-3">Up next</h2>
+          <div class="vstack gap-3">
+            {% for m in more_notices %}
+              <a href="{% url 'notice_detail' m.pk %}" class="d-flex gap-3 text-decoration-none">
+                {% if m.image_src %}
+                  <img src="{{ m.image_src }}" alt="{{ m.title }}" class="yt-side-thumb">
+                {% endif %}
+                <div class="flex-grow-1">
+                  <div class="yt-side-title link-dark">{{ m.title }}</div>
+                  {% if m.published_at %}
+                    <div class="yt-side-meta">Published {{ m.published_at|date:"M j, Y" }}</div>
+                  {% endif %}
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </aside>
+    </div>
+  </div>
+
+  <!-- Zoom Modal -->
+  <div class="modal fade" id="zoomModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content border-0">
+        <div class="modal-body p-0">
+          <div class="zoom-wrapper">
+            <img id="zoomImg" src="{{ notice.image_src }}" alt="{{ notice.title }}">
+          </div>
+        </div>
+        <div class="modal-footer bg-body-tertiary d-flex justify-content-between">
+          <div class="btn-group">
+            <button class="btn btn-outline-secondary btn-sm" id="zoomOut" type="button">−</button>
+            <button class="btn btn-outline-secondary btn-sm" id="zoomReset" type="button">100%</button>
+            <button class="btn btn-outline-secondary btn-sm" id="zoomIn" type="button">+</button>
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</section>
+{% endblock %}

@@ -89,32 +89,36 @@ def _ensure_groups():
     for name in ["Admin", "Teacher", "Student"]:
         Group.objects.get_or_create(name=name)
 
+
 def _assign_role_or_group(user: User, role: str):
     """
-    (5) Assign role & group cleanly.
-        - If your custom User has a `role` field -> set it.
-        - Always also add the corresponding Django Group.
-        - For Admin, also set is_staff=True (optional if you want Django admin).
+    Give the user a role (if your model has a `role` field),
+    put them in the matching Django group, and
+    mark teachers/admins as staff so they can log into /dj-admin/.
     """
-    # set role field when available
+    # 1) Save role if your User has a 'role' field
     if hasattr(user, "role"):
         user.role = role
-        user.save(update_fields=["role"])
-    else:
-        user.save()  # no specific role field; still persist user before groups
 
+    # 2) Allow admin-site access for teachers/admins
+    if role in (ROLE_TEACHER, ROLE_ADMIN):
+        user.is_staff = True     # <--- THIS lets them access /dj-admin/
+
+    # Optional: if you want true superuser for admins, uncomment:
+    # if role == ROLE_ADMIN:
+    #     user.is_superuser = True
+
+    user.save()  # single save is fine
+
+    # 3) Ensure group exists and add the user to it
     _ensure_groups()
-
+    from django.contrib.auth.models import Group
     if role == ROLE_ADMIN:
         grp = Group.objects.get(name="Admin")
-        if not user.is_staff:
-            user.is_staff = True
-            user.save(update_fields=["is_staff"])
     elif role == ROLE_TEACHER:
         grp = Group.objects.get(name="Teacher")
     else:
         grp = Group.objects.get(name="Student")
-
     user.groups.add(grp)
 
 def _user_has_role(user: User, role: str) -> bool:

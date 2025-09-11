@@ -1,13 +1,19 @@
 from django.contrib import admin
-from django.contrib.auth.models import User
-from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth import get_user_model
 
-# Register your models here.
+User = get_user_model()
+
 @admin.register(User)
-class UserAdmin(DjangoUserAdmin):
-    list_display = ("username", "email", "role", "is_active", "last_login")
-    list_filter = ("role", "is_active", "is_staff", "is_superuser")
-    search_fields = ("username", "email")
-    fieldsets = DjangoUserAdmin.fieldsets + (
-        ("Role & Preferences", {"fields": ("role", "pref_language", "pref_theme")}),
+class UserAdmin(BaseUserAdmin):
+    search_fields = ("username", "email", "first_name", "last_name")
+    ordering = ("username",)
+
+    # Optional: if your custom User has extra fields like `role`, add them:
+    # If you DON'T have a `role` field, delete this `fieldsets +=` block.
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ("App Fields", {"fields": ("role",)}),
     )
+
+    # Optional display tweaks
+    list_display = ("username", "email", "is_staff", "is_active")

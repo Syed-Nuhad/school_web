@@ -1806,4 +1806,90 @@ header {
 }
 /* End Footer SECTION  */
 
+/* New banner css*/
 
+
+/* 1) Slider box behaves like a responsive banner */
+.banner-slider { position: relative; overflow: hidden; }
+.banner-slider .slide img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+/* Keep a flexible aspect ratio (≈ 9:4 on desktop, taller on phones) */
+.banner-slider .slider { aspect-ratio: 21 / 9; }
+@media (max-width: 576px) { .banner-slider .slider { aspect-ratio: 16 / 9; } }
+
+/* 2) Captions scale & stay readable */
+.banner-slider .caption {
+  position: absolute; inset: auto 0 8% 0; /* bottom */
+  text-align: center; color: #fff;
+  padding: .75rem 1rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+.banner-slider .caption h2 { font-size: clamp(1.1rem, 2.5vw + .6rem, 2rem); margin: 0 0 .25rem; }
+.banner-slider .caption p  { font-size: clamp(.85rem, 1.8vw + .4rem, 1.1rem); margin: 0; }
+
+/* 3) Prev/Next bigger hit area */
+.banner-slider .prev,
+.banner-slider .next {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(0,0,0,.35); border: 0; color: #fff;
+  width: 44px; height: 44px; border-radius: 999px; line-height: 44px;
+  cursor: pointer;
+}
+.banner-slider .prev { left: .5rem; }
+.banner-slider .next { right: .5rem; }
+@media (max-width: 576px) { .banner-slider .prev, .banner-slider .next { width: 40px; height: 40px; } }
+
+/* 4) Dots tap-friendly */
+.banner-slider .dots { position: absolute; left: 0; right: 0; bottom: .75rem; display: flex; gap: .5rem; justify-content: center; }
+.banner-slider .dots button {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,.6);
+}
+.banner-slider .dots button.active { background: #fff; }
+
+/* END New banner css*/
+
+
+/*START new notice  css*/
+.card { border-radius: 14px; }
+.card:hover { transform: translateY(-2px); transition: .18s; box-shadow: 0 12px 28px rgba(0,0,0,.08); }
+.card-img-top { object-fit: cover; }
+/*END new notice css*/
+
+    /* YouTube-like thumbnail & text clamping (no gradients) */
+    .yt-thumb {
+      position: relative; width: 100%; padding-top: 56.25%; /* 16:9 */
+      background-size: cover; background-position: center; border-radius: 12px;
+    }
+    .yt-title {
+      font-weight: 600; font-size: 1rem; line-height: 1.3;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .yt-sub {
+      color: #6c757d; font-size: .925rem;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .yt-meta { font-size: .85rem; color: #6c757d; }
+    .yt-card:hover .yt-title { text-decoration: underline; }
+
+
+        /* ===== hero (16:9) like a video player */
+    .yt-hero{
+      position:relative;width:100%;padding-top:56.25%;
+      background-size:cover;background-position:center;border-radius:12px;
+    }
+    /* right rail (up next) */
+    .yt-side-thumb{width:168px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;}
+    .yt-side-title{
+      font-weight:600;line-height:1.25;margin-bottom:.25rem;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    }
+    .yt-side-meta{font-size:.85rem;color:#6c757d;}
+    /* zoom modal */
+    .zoom-wrapper{
+      width:100%;height:min(80vh,85dvh);background:#000;
+      display:flex;align-items:center;justify-content:center;overflow:hidden;
+    }
+    #zoomImg{max-width:none;width:auto;height:auto;cursor:grab;user-select:none;-webkit-user-drag:none;}

@@ -4,12 +4,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-from ui.views import HomeView
+from ui import views as ui_views
 from accounts import views as acc_views  # for honeypots
 
 urlpatterns = [
     # Public site
-    path("", HomeView.as_view(), name="home"),
+    path("", ui_views.home, name="home"),
 
     path("content/", include(("content.urls", "content"), namespace="content")),
 
@@ -24,6 +24,8 @@ urlpatterns = [
     path("admin/login/", acc_views.honeypot, name="hp_admin_login"),
     path("teacher/login/", acc_views.honeypot, name="hp_teacher_login"),
     path("teacher/signup/", acc_views.honeypot, name="hp_teacher_signup"),
+    path("notices/", ui_views.notices_list, name="notices_list"),
+    path("notices/<int:pk>/", ui_views.notice_detail, name="notice_detail"),
 ]
 
 # Serve static & media in development
