@@ -81,43 +81,43 @@
 
 
 <!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
-<!-- ⭐⭐⭐ Notices (YouTube-like grid) -->
-<section id="notice-board" class="py-5">
-
-
-  <div class="container">
-    <h2 class="fw-bold mb-4">Latest College Notices</h2>
-
-    {% if notices %}
-      <div class="row gy-4">
-        {% for n in notices %}
-          <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
-            <article class="yt-card">
-              <a href="{% url 'notice_detail' n.pk %}" class="text-decoration-none d-block mb-2">
-                <div class="yt-thumb" style="background-image:url('{{ n.image_src|escape }}');"></div>
-              </a>
-              <h3 class="yt-title mb-1">
-                <a class="link-dark text-decoration-none" href="{% url 'notice_detail' n.pk %}">
-                  {{ n.title }}
-                </a>
-              </h3>
-              {% if n.subtitle %}
-                <p class="yt-sub mb-1">{{ n.subtitle }}</p>
-              {% endif %}
-              {% if n.published_at %}
-                <div class="yt-meta mb-2">Published {{ n.published_at|date:"F j, Y" }}</div>
-              {% endif %}
-              <a href="{% url 'notice_detail' n.pk %}" class="btn btn-outline-primary btn-sm">Read More</a>
-            </article>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted mb-0">No notices yet.</p>
-    {% endif %}
+<section class="container py-5" id="notice-board">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h2 class="h4 fw-bold mb-0">Latest College Notices</h2>
+    <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
   </div>
+
+  {% if notices %}
+    <div class="row g-4">
+      {% for n in notices %}
+        <div class="col-12 col-sm-6 col-lg-4">
+          <article class="h-100 border rounded-3 shadow-sm overflow-hidden">
+            {% if n.image_src %}
+              <a class="ratio ratio-16x9 d-block" href="{% url 'notice_detail' n.pk %}" aria-label="Open notice">
+                <div class="w-100 h-100"
+                     style="background-image:url('{{ n.image_src|escape }}');
+                            background-size:cover;background-position:center;"></div>
+              </a>
+            {% endif %}
+            <div class="p-3">
+              <h3 class="h6 mb-2 text-primary">{{ n.title }}</h3>
+              {% if n.subtitle %}
+                <p class="text-muted small mb-3">{{ n.subtitle|truncatechars:120 }}</p>
+              {% endif %}
+              <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Published: {{ n.published_at|date:"M j, Y" }}</small>
+                <a href="{% url 'notice_detail' n.pk %}" class="btn btn-sm btn-outline-primary">Read More</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center text-muted">No notices yet.</div>
+  {% endif %}
 </section>
-<!-- ⭐ End: Notice Board ================================================================= -->
+<!-- ⭐ End: Notice Board -->
 
 <!-- ⭐⭐⭐⭐⭐ ================== ‍Start  Academic Calendar Timeline  -->
 <section id="academic-calendar" class="py-5">

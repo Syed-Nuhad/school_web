@@ -1,49 +1,77 @@
 {% load static %}
-<nav class="navbar">
-  <div class="logo">
-      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" style="height: 30px; width: auto;" class="mx-3">
-    <h1>Titu BD Science College</h1>
+<!-- ===== Modern Navbar (Bootstrap 5) ===== -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top border-bottom shadow-sm">
+  <div class="container">
+    <!-- Brand -->
+    <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
+      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" class="me-2" style="height:36px;width:auto;">
+      <span class="fw-semibold">Titu BD Science College</span>
+    </a>
+
+    <!-- Toggler -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
+            aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Nav links -->
+    <div class="collapse navbar-collapse" id="siteNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center">
+        <li class="nav-item">
+          <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Home</a>
+        </li>
+
+        <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="#academics">Courses</a></li>
+
+        <!-- Cultural -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="culturalDropdown" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">
+            Cultural
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="culturalDropdown">
+            <li><a class="dropdown-item" href="#college-functions">Events</a></li>
+            <li><a class="dropdown-item" href="#gallery-section">Gallery</a></li>
+          </ul>
+        </li>
+
+        <!-- Student Corner -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="studentDropdown" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">
+            Student Corner
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="studentDropdown">
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Online Admission Form</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Student ID Card</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Apply for Hostel</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Library Catalog</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Class Attendance Overview</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">School Bus Information</a></li>
+          </ul>
+        </li>
+
+        <!-- Exam Corner -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="examDropdown" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">
+            Exam Corner
+          </a>
+          <ul class="dropdown-menu" aria-labelledby="examDropdown">
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Exam Routine</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Class-wise Result Overview</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Student Mark Entry</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Parent Dashboard</a></li>
+            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Mark Sheet</a></li>
+          </ul>
+        </li>
+
+        <!-- Contact as a CTA button -->
+        <li class="nav-item ms-lg-2">
+          <a class="btn btn-primary btn-sm px-3" href="#contact">Contact</a>
+        </li>
+      </ul>
+    </div>
   </div>
-
-  <ul class="nav-links">
-    <li><a href="{% url 'home' %}" class="active">Home</a></li>
-    <li><a href="#about">About</a></li>
-    <li><a href="#academics">Courses</a></li>
-
-    <li class="dropdown">
-      <a href="#" class="has-caret">Cultural</a>
-      <ul class="dropdown-menu">
-        <li><a href="#college-functions">Events</a></li>
-        <li><a href="#gallery-section">Gallery</a></li>
-      </ul>
-    </li>
-
-    <li class="dropdown">
-      <a href="#" class="has-caret">Student Corner</a>
-      <ul class="dropdown-menu">
-        <li><a href="#" target="_blank" rel="noopener">Online Admission Form</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Student ID Card</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Apply for Hostel</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Library Catalog</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Class Attendance Overview</a></li>
-        <li><a href="#" target="_blank" rel="noopener">School Bus Information</a></li>
-      </ul>
-    </li>
-
-    <li class="dropdown">
-      <a href="#" class="has-caret">Exam Corner</a>
-      <ul class="dropdown-menu">
-        <li><a href="#" target="_blank" rel="noopener">Exam Routine</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Class-wise Result Overview</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Student Mark Entry</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Parent Dashboard</a></li>
-        <li><a href="#" target="_blank" rel="noopener">Mark Sheet</a></li>
-      </ul>
-    </li>
-
-    <li><a href="#contact">Contact</a></li>
-  </ul>
-
-  <!-- Mobile menu button -->
-  <div class="menu-toggle" id="mobile-menu">☰</div>
 </nav>

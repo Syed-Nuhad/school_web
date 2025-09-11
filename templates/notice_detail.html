@@ -2,79 +2,129 @@
 {% block title %}{{ notice.title }}{% endblock %}
 
 {% block content %}
-<section id="notice-detail" class="py-4">
+<!-- ⭐⭐⭐ Notice — Detail (YouTube-like layout, soft dark image shadow) -->
+<section class="container py-4" id="notice-detail">
+  <!-- local styles for this section only -->
   <style>
-
+    #notice-detail .shadow-soft {
+      /* subtle, dark drop shadow */
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    }
+    /* Slightly stronger in dark mode so it still reads */
+    @media (prefers-color-scheme: dark) {
+      #notice-detail .shadow-soft {
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.38);
+      }
+    }
+    #notice-detail .notice-title {
+      line-height: 1.25;
+    }
+    #notice-detail .sidebar-item img {
+      width: 168px;
+      height: 94px; /* ~16:9 thumbnail */
+      object-fit: cover;
+      border-radius: .5rem;
+    }
+    #notice-detail .sidebar-item .title {
+      font-size: 0.95rem;
+      line-height: 1.25rem;
+      margin-bottom: .25rem;
+    }
+    #notice-detail .sidebar-item time {
+      font-size: .85rem;
+    }
   </style>
 
-  <div class="container">
-    <div class="row g-4">
-      <!-- Left: main content -->
-      <div class="col-lg-8">
-        {% if notice.image_src %}
-          <a href="#" id="openZoom" class="d-block text-decoration-none" title="Click to zoom">
-            <div class="yt-hero mb-3" style="background-image:url('{{ notice.image_src|escape }}');"></div>
-          </a>
-        {% endif %}
+  <div class="row g-4">
+    <!-- Main content -->
+    <div class="col-lg-8">
+      <!-- Hero image with subtle dark shadow -->
+      {% if notice.image_src %}
+      <figure class="mb-3">
+        <img
+          src="{{ notice.image_src|escape }}"
+          alt="{{ notice.title }}"
+          class="img-fluid w-100 rounded-3 shadow-soft"
+          style="max-height: 440px; object-fit: cover; cursor: zoom-in;"
+          data-bs-toggle="modal"
+          data-bs-target="#imageZoomModal"
+        >
+      </figure>
+      {% endif %}
 
-        <h1 class="h3 fw-bold mb-1">{{ notice.title }}</h1>
-        {% if notice.published_at %}
-          <div class="text-muted small mb-3">Published {{ notice.published_at|date:"F j, Y" }}</div>
-        {% endif %}
-        {% if notice.subtitle %}
-          <p class="lead mb-4">{{ notice.subtitle }}</p>
-        {% endif %}
-
-        <div class="d-flex gap-2">
-          <a href="{% url 'notices_list' %}" class="btn btn-outline-secondary">Back to Notices</a>
-        </div>
+      <!-- Title + meta -->
+      <h1 class="h3 fw-semibold notice-title mb-2">{{ notice.title }}</h1>
+      <div class="text-muted mb-3">
+        <time datetime="{{ notice.published_at|date:'c' }}">
+          Published: {{ notice.published_at|date:"F j, Y" }}
+        </time>
       </div>
 
-      <!-- Right: sidebar (Up next) -->
-      <aside class="col-lg-4">
-        {% if more_notices %}
-          <h2 class="h6 text-uppercase text-muted mb-3">Up next</h2>
-          <div class="vstack gap-3">
-            {% for m in more_notices %}
-              <a href="{% url 'notice_detail' m.pk %}" class="d-flex gap-3 text-decoration-none">
-                {% if m.image_src %}
-                  <img src="{{ m.image_src }}" alt="{{ m.title }}" class="yt-side-thumb">
+      <!-- Subtitle / body text -->
+      {% if notice.subtitle %}
+        <p class="lead mb-4">{{ notice.subtitle }}</p>
+      {% endif %}
+
+      <!-- Back link -->
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <a href="{% url 'notices_list' %}" class="btn btn-outline-secondary">
+          ← Back to all notices
+        </a>
+      </div>
+    </div>
+
+    <!-- Right sidebar: more notices -->
+    <aside class="col-lg-4">
+      <div class="sticky-top" style="top: 88px;">
+        <h2 class="h6 text-uppercase text-muted mb-3">More notices</h2>
+
+        <div class="vstack gap-3">
+          {% for n in more_notices %}
+            <a href="{{ n.url }}" class="text-decoration-none text-reset">
+              <div class="d-flex sidebar-item">
+                {% if n.image_src %}
+                  <img src="{{ n.image_src|escape }}" alt="{{ n.title }}" class="me-3">
+                {% else %}
+                  <div class="me-3 bg-light rounded-3 d-flex align-items-center justify-content-center"
+                       style="width:168px;height:94px;">
+                    <span class="text-muted">No image</span>
+                  </div>
                 {% endif %}
                 <div class="flex-grow-1">
-                  <div class="yt-side-title link-dark">{{ m.title }}</div>
-                  {% if m.published_at %}
-                    <div class="yt-side-meta">Published {{ m.published_at|date:"M j, Y" }}</div>
+                  <div class="title fw-medium">{{ n.title }}</div>
+                  {% if n.subtitle %}
+                    <div class="text-muted small mb-1">{{ n.subtitle|truncatechars:90 }}</div>
                   {% endif %}
+                  <time class="text-muted">{{ n.published_at|date:"M j, Y" }}</time>
                 </div>
-              </a>
-            {% endfor %}
-          </div>
-        {% endif %}
-      </aside>
-    </div>
+              </div>
+            </a>
+          {% empty %}
+            <p class="text-muted small mb-0">No other notices.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
   </div>
 
-  <!-- Zoom Modal -->
-  <div class="modal fade" id="zoomModal" tabindex="-1" aria-hidden="true">
+  <!-- Zoom modal -->
+  <div class="modal fade" id="imageZoomModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-      <div class="modal-content border-0">
+      <div class="modal-content bg-dark border-0">
         <div class="modal-body p-0">
-          <div class="zoom-wrapper">
-            <img id="zoomImg" src="{{ notice.image_src }}" alt="{{ notice.title }}">
-          </div>
+          <img
+            src="{{ notice.image_src|escape }}"
+            alt="{{ notice.title }}"
+            class="img-fluid w-100"
+            style="max-height: 85vh; object-fit: contain;"
+          >
         </div>
-        <div class="modal-footer bg-body-tertiary d-flex justify-content-between">
-          <div class="btn-group">
-            <button class="btn btn-outline-secondary btn-sm" id="zoomOut" type="button">−</button>
-            <button class="btn btn-outline-secondary btn-sm" id="zoomReset" type="button">100%</button>
-            <button class="btn btn-outline-secondary btn-sm" id="zoomIn" type="button">+</button>
-          </div>
-          <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Close</button>
+        <div class="modal-footer bg-dark border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
   </div>
-
-
 </section>
+
 {% endblock %}
