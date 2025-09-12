@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 from django.core.paginator import Paginator, EmptyPage
+from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
 from content.models import Banner, Notice
 
-
 def home(request):
-    """
-    Render index.html with dynamic banners and latest notices.
-    """
-    banners_qs = Banner.objects.filter(is_active=True).order_by("order", "-created_at")
+    banners_qs = (
+        Banner.objects
+        .filter(is_active=True)
+        .filter(Q(image__isnull=False) | ~Q(image_url=""))   # only banners with an image source
+        .order_by("order", "-created_at")
+    )
     notices_qs = (
         Notice.objects.filter(is_active=True)
         .order_by("-published_at", "-created_at")[:6]
@@ -19,31 +21,24 @@ def home(request):
 
     context = {
         "banners": banners_qs,
-        "banners_flat": [
-            {
-                "title": b.title,
-                "subtitle": b.subtitle,
-                "image": b.image_src,            # property on model (file URL or external URL)
-                "button_text": b.button_text,
-                "button_link": b.button_link,
-                "order": b.order,
-            }
-            for b in banners_qs
-        ],
+        "banners_flat": [{
+            "title": b.title,
+            "subtitle": b.subtitle,
+            "image": b.image_src,
+            "button_text": b.button_text,
+            "button_link": b.button_link,
+            "order": b.order,
+        } for b in banners_qs],
         "notices": notices_qs,
-        "notices_flat": [
-            {
-                "title": n.title,
-                "subtitle": n.subtitle,
-                "image": n.image_src,            # property on model
-                "published_at": n.published_at,
-                "url": reverse("notice_detail", args=[n.pk]),
-            }
-            for n in notices_qs
-        ],
+        "notices_flat": [{
+            "title": n.title,
+            "subtitle": n.subtitle,
+            "image": n.image_src,
+            "published_at": n.published_at,
+            "url": reverse("notice_detail", args=[n.pk]),
+        } for n in notices_qs],
     }
     return render(request, "index.html", context)
-
 
 def notices_list(request):
     """

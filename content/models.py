@@ -15,10 +15,14 @@ class Banner(models.Model):
     """Homepage slider banner with optional image file or external URL."""
     title = models.CharField(max_length=150)
     subtitle = models.CharField(max_length=300, blank=True)
+
     image = models.ImageField(upload_to=banner_upload_to, blank=True, null=True)
     image_url = models.URLField(blank=True)  # used if no file
+
     button_text = models.CharField(max_length=40, blank=True)
-    button_link = models.URLField(blank=True)
+    # CharField so you can use internal paths/anchors (e.g., "/admission" or "#apply")
+    button_link = models.CharField(max_length=300, blank=True)
+
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
@@ -37,12 +41,24 @@ class Banner(models.Model):
 
     @property
     def image_src(self) -> str:
+        """Prefer uploaded file; fall back to external URL; never crash."""
         if self.image:
             try:
                 return self.image.url
             except Exception:
-                return ""
+                pass
         return self.image_url or ""
+
+    def clean(self):
+        """Trim fields and require at least one image source."""
+        for f in ("title", "subtitle", "button_text", "button_link", "image_url"):
+            v = getattr(self, f, "")
+            if isinstance(v, str):
+                setattr(self, f, v.strip())
+
+        if not self.image and not (self.image_url or "").strip():
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Provide an image file or an image URL.")
 
 
 User = settings.AUTH_USER_MODEL
