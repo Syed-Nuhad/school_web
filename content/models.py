@@ -10,7 +10,9 @@ def banner_upload_to(instance, filename):
 def notice_upload_to(instance, filename):
     return f"notices/{timezone.now():%Y/%m}/{filename}"
 
-
+# //////////////////////////////////
+# Banner Section
+# //////////////////////////////////
 class Banner(models.Model):
     """Homepage slider banner with optional image file or external URL."""
     title = models.CharField(max_length=150)
@@ -63,6 +65,10 @@ class Banner(models.Model):
 
 User = settings.AUTH_USER_MODEL
 
+
+# //////////////////////////////////
+# Notice Section
+# //////////////////////////////////
 
 class Notice(models.Model):
     title        = models.CharField(max_length=200)
@@ -123,19 +129,32 @@ def banner_upload_to(instance, filename):
 def notice_upload_to(instance, filename):
     return f"notices/{timezone.now():%Y/%m}/{filename}"
 
-class TimelineEvent(TimeStampedMixin):
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True,
-        on_delete=models.SET_NULL, related_name="events_created"
-    )
-    title = models.CharField(max_length=200)
-    date = models.DateField()  # the big date on the timeline (e.g., 2025-01-15)
+
+
+
+
+
+# //////////////////////////////////
+# Timeline Section
+# //////////////////////////////////
+class TimelineEvent(models.Model):
+    title = models.CharField(max_length=150)
     description = models.TextField(blank=True)
+    date = models.DateField()
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="timeline_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
-        ordering = ("date", "order", "created_at")
+        ordering = ("date", "order", "-created_at")
 
     def __str__(self):
         return f"{self.date} — {self.title}"

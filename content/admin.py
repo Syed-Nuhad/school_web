@@ -196,13 +196,29 @@ class NoticeAdmin(admin.ModelAdmin):
 # -------------------------------------------------------------------
 @admin.register(TimelineEvent)
 class TimelineEventAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "date", "order", "is_active")
+    list_display = ("title", "date", "order", "is_active")
     list_editable = ("order", "is_active")
     search_fields = ("title", "description")
     list_filter = ("is_active", "date")
+    date_hierarchy = "date"
+    raw_id_fields = ("created_by",)  # avoids admin.E039 if User admin isn’t registered
+    readonly_fields = ("created_by", "created_at", "updated_at")
 
-    # Avoid admin.E039 when User admin isn't registered.
-    raw_id_fields = ("created_by",)
+    fields = (
+        "title", "description", "date",
+        "order", "is_active",
+        "created_by", "created_at", "updated_at",
+    )
+
+    # Auto-assign creator on first save
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by_id:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    # Permissions: Admins & Teachers can see; Teachers can only edit their own
+    def has_module_permission(self, request):
+        return is_admin_user(request.user) or is_teacher_user(request.user)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -211,9 +227,6 @@ class TimelineEventAdmin(admin.ModelAdmin):
         if is_teacher_user(request.user):
             return qs.filter(created_by=request.user)
         return qs.none()
-
-    def has_module_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
 
     def has_view_permission(self, request, obj=None):
         return self.has_module_permission(request)
@@ -225,9 +238,10 @@ class TimelineEventAdmin(admin.ModelAdmin):
         if is_admin_user(request.user):
             return True
         if is_teacher_user(request.user):
-            return obj is None or getattr(obj, "created_by_id", None) == request.user.id
+            return obj is None or obj.created_by_id == request.user.id
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # Only Admins can delete timeline events
+        # Only Admins can delete
         return is_admin_user(request.user)
+
