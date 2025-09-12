@@ -158,3 +158,38 @@ class TimelineEvent(models.Model):
 
     def __str__(self):
         return f"{self.date} — {self.title}"
+
+
+
+
+class GalleryItem(models.Model):
+    IMAGE = "image"
+    VIDEO = "video"
+    KIND_CHOICES = [(IMAGE, "Image"), (VIDEO, "YouTube (embed)")]
+
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=IMAGE)
+    title = models.CharField(max_length=200)
+    place = models.CharField(max_length=120, blank=True)
+    taken_at = models.DateTimeField(null=True, blank=True)
+
+    # media
+    image = models.ImageField(upload_to="gallery/", blank=True)   # for kind=image
+    youtube_embed_url = models.URLField(blank=True)               # for kind=video (e.g. https://www.youtube.com/embed/ScMzIvxBSi4)
+
+    # housekeeping
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "-taken_at", "-id"]
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def date_str(self):
+        return self.taken_at.strftime("%Y-%m-%d") if self.taken_at else ""
+
+    @property
+    def time_str(self):
+        return self.taken_at.strftime("%-I:%M %p") if self.taken_at else ""

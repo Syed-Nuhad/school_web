@@ -5,38 +5,56 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
-from content.models import Banner, Notice
+from content.models import Banner, Notice, TimelineEvent, GalleryItem
+
 
 def home(request):
     banners_qs = (
         Banner.objects
         .filter(is_active=True)
-        .filter(Q(image__isnull=False) | ~Q(image_url=""))   # only banners with an image source
+        .filter(Q(image__isnull=False) | ~Q(image_url=""))
         .order_by("order", "-created_at")
     )
+
     notices_qs = (
         Notice.objects.filter(is_active=True)
         .order_by("-published_at", "-created_at")[:6]
     )
 
+    timeline_qs = (
+        TimelineEvent.objects
+        .filter(is_active=True)
+        .order_by("date", "order")[:4]
+    )
+    gallery_qs = GalleryItem.objects.filter(is_active=True)
+
     context = {
         "banners": banners_qs,
-        "banners_flat": [{
-            "title": b.title,
-            "subtitle": b.subtitle,
-            "image": b.image_src,
-            "button_text": b.button_text,
-            "button_link": b.button_link,
-            "order": b.order,
-        } for b in banners_qs],
+        "gallery_items": gallery_qs,
+        "banners_flat": [
+            {
+                "title": b.title,
+                "subtitle": b.subtitle,
+                "image": b.image_src,
+                "button_text": b.button_text,
+                "button_link": b.button_link,
+                "order": b.order,
+            }
+            for b in banners_qs
+        ],
         "notices": notices_qs,
-        "notices_flat": [{
-            "title": n.title,
-            "subtitle": n.subtitle,
-            "image": n.image_src,
-            "published_at": n.published_at,
-            "url": reverse("notice_detail", args=[n.pk]),
-        } for n in notices_qs],
+        "notices_flat": [
+            {
+                "title": n.title,
+                "subtitle": n.subtitle,
+                "image": n.image_src,
+                "published_at": n.published_at,
+                "url": reverse("notice_detail", args=[n.pk]),
+            }
+            for n in notices_qs
+        ],
+        # ✅ put it at the top level so the template can see it
+        "timeline_events": timeline_qs,
     }
     return render(request, "index.html", context)
 

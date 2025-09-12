@@ -18,69 +18,105 @@
 {% endblock %}
 
 {% block content %}
-<!-- ⭐ Banner (Bootstrap 5) -->
-<!-- ⭐ Hero Banner (pure Bootstrap) -->
 <section class="hero-banner">
-  <div id="heroCarousel" class="carousel carousel-light slide"
-       data-bs-ride="carousel" data-bs-interval="5000">
+  <div id="heroCarousel"
+       class="carousel carousel-light slide"
+       data-bs-ride="carousel"
+       data-bs-interval="5000"
+       style="display:block;visibility:visible;">
+    <div class="carousel-inner" style="display:block;">
 
-    <div class="carousel-inner">
-      {% if banners %}
-        {% for b in banners %}
-          <div class="carousel-item {% if forloop.first %}active{% endif %}">
-            <img src="{{ b.image_src }}" alt="{{ b.title|default:'Banner' }}"
-                 class="d-block w-100 hero-banner-img">
-            {% if b.title or b.subtitle or b.button_text and b.button_link %}
-              <div class="carousel-caption hero-center">
-                {% if b.title %}<h2 class="h3 fw-semibold mb-1">{{ b.title }}</h2>{% endif %}
-                {% if b.subtitle %}<p class="mb-2">{{ b.subtitle }}</p>{% endif %}
-                {% if b.button_text and b.button_link %}
-                  <a class="btn btn-primary btn-sm" href="{{ b.button_link }}">{{ b.button_text }}</a>
-                {% endif %}
-              </div>
-            {% endif %}
+      {% for b in banners %}
+        <div class="carousel-item {% if forloop.first %}active{% endif %}"
+             style="height:clamp(360px,52vw,560px);position:relative;">
+          {% if b.image_src %}
+            <img src="{{ b.image_src }}"
+                 alt="{{ b.title|default:'Banner' }}"
+                 class="d-block w-100"
+                 style="width:100%;height:100%;object-fit:cover;">
+          {% endif %}
+
+          <!-- Dark overlay -->
+          <div style="
+               position:absolute;inset:0;
+               background:rgba(0,0,0,.55);
+               z-index:1;"></div>
+
+          <!-- Centered caption -->
+          <div class="carousel-caption p-0"
+               style="
+                 position:absolute;inset:0;
+                 display:flex;align-items:center;justify-content:center;
+                 text-align:center;background:none;z-index:2;">
+            <div class="px-3">
+              {% if b.title %}
+                <h2 class="mb-2 text-white"
+                    style="font-weight:800;
+                           font-size:clamp(1.9rem,3.6vw + 1rem,3.6rem);
+                           letter-spacing:.2px;">
+                  {{ b.title }}
+                </h2>
+              {% endif %}
+              {% if b.subtitle %}
+                <p class="mb-3"
+                   style="font-size:clamp(1.05rem,1.2vw + .6rem,1.5rem);opacity:.98;">
+                  {{ b.subtitle }}
+                </p>
+              {% endif %}
+              {% if b.button_text and b.button_link %}
+                <a class="btn btn-primary btn-lg"
+                   href="{{ b.button_link }}"
+                   style="padding:.6rem 1.25rem;font-weight:600;">
+                  {{ b.button_text }}
+                </a>
+              {% endif %}
+            </div>
           </div>
-        {% endfor %}
-      {% else %}
-        <div class="carousel-item active">
-          <div class="d-block w-100" style="height:420px;background:#e9ecef;"></div>
         </div>
-      {% endif %}
+      {% empty %}
+        <div class="carousel-item active"
+             style="height:clamp(360px,52vw,560px);position:relative;">
+          <div class="d-block w-100 bg-light" style="width:100%;height:100%;"></div>
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);"></div>
+        </div>
+      {% endfor %}
+
     </div>
 
-    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev">
+    <!-- Controls -->
+    <button class="carousel-control-prev" type="button" data-bs-target="#heroCarousel" data-bs-slide="prev" aria-label="Previous">
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Previous</span>
     </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next">
+    <button class="carousel-control-next" type="button" data-bs-target="#heroCarousel" data-bs-slide="next" aria-label="Next">
       <span class="carousel-control-next-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">Next</span>
     </button>
 
-    {% if banners %}
-      <div class="carousel-indicators hero-banner-indicators">
-        {% for b in banners %}
-          <button type="button"
-                  data-bs-target="#heroCarousel"
-                  data-bs-slide-to="{{ forloop.counter0 }}"
-                  {% if forloop.first %}class="active" aria-current="true"{% endif %}
-                  aria-label="Slide {{ forloop.counter }}"></button>
-        {% endfor %}
-      </div>
-    {% endif %}
+    <!-- Dots (indicators) -->
+    <div class="carousel-indicators" style="bottom:12px;">
+      {% for _ in banners %}
+        <button type="button"
+                data-bs-target="#heroCarousel"
+                data-bs-slide-to="{{ forloop.counter0 }}"
+                {% if forloop.first %}class="active" aria-current="true"{% endif %}
+                aria-label="Slide {{ forloop.counter }}"
+                style="width:12px;height:12px;border-radius:50%;
+                       background-color:rgba(255,255,255,.8);">
+        </button>
+      {% endfor %}
+    </div>
   </div>
 </section>
 
-
 <!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
-<section class="container py-5" id="notice-board">
-  <div class="mb-4 text-center">
-    <h2 class="fw-bold mb-1 text-center">Notices</h2>
-    <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+<section class="container py-5" id="notice">
+<div class="d-flex align-items-center justify-content-between pb-5">
+  <h2 class="fw-bold mb-0">Notices</h2>
+  <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
+</div>
+  <div class="text-end align">
   </div>
-
   {% if notices %}
-    <div class="row">
+    <div class="row align-items-start justify-content-start">
       {% for n in notices %}
         <div class="col-12 col-sm-6 col-lg-4">
           <article class="h-100 border rounded-3 overflow-hidden">
@@ -118,139 +154,81 @@
       <p class="text-muted mb-0">All the key dates at a glance</p>
     </div>
 
-    <!-- Item 1 -->
-    <div class="row gx-4 gy-3 align-items-start mb-4">
-      <!-- Date (left) -->
-      <div class="col-12 col-md-3 text-md-end">
-        <span class="badge rounded-pill text-bg-info" style="font-weight:600;">Jan 15, 2025</span>
-      </div>
-      <!-- Content (right with rail) -->
-      <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
-        <!-- Dot on rail -->
-        <span class="position-absolute d-none d-md-inline-block"
-              style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
-        <span class="position-absolute d-inline-block d-md-none"
-              style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
+    {% for e in timeline_events %}
+      <div class="row gx-4 gy-3 align-items-start justify-content-start mb-4">
+        <!-- Date (left) -->
+        <div class="col-12 col-md-3 text-md-end">
+          <span class="badge rounded-pill text-bg-info" style="font-weight:600;">
+            {{ e.date|date:"M j, Y" }}
+          </span>
+        </div>
 
-        <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
-          <h5 class="mb-1" style="font-weight:700;">Spring Semester Begins</h5>
-          <p class="mb-0 text-muted">First day of classes for all students. Orientation for new students will also be held.</p>
+        <!-- Content (right with rail) -->
+        <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
+          <!-- Dot on rail -->
+          <span class="position-absolute d-none d-md-inline-block"
+                style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
+          <span class="position-absolute d-inline-block d-md-none"
+                style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
+
+          <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
+            <h5 class="mb-1" style="font-weight:700;">{{ e.title }}</h5>
+            {% if e.description %}
+              <p class="mb-0 text-muted">{{ e.description }}</p>
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-
-    <!-- Item 2 -->
-    <div class="row gx-4 gy-3 align-items-start mb-4">
-      <div class="col-12 col-md-3 text-md-end">
-        <span class="badge rounded-pill text-bg-info" style="font-weight:600;">Feb 10, 2025</span>
-      </div>
-      <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
-        <span class="position-absolute d-none d-md-inline-block"
-              style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
-        <span class="position-absolute d-inline-block d-md-none"
-              style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
-
-        <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
-          <h5 class="mb-1" style="font-weight:700;">Sports Day</h5>
-          <p class="mb-0 text-muted">Annual sports day with various competitions and activities for all classes.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Item 3 -->
-    <div class="row gx-4 gy-3 align-items-start mb-4">
-      <div class="col-12 col-md-3 text-md-end">
-        <span class="badge rounded-pill text-bg-info" style="font-weight:600;">Apr 5, 2025</span>
-      </div>
-      <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
-        <span class="position-absolute d-none d-md-inline-block"
-              style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
-        <span class="position-absolute d-inline-block d-md-none"
-              style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
-
-        <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
-          <h5 class="mb-1" style="font-weight:700;">Midterm Exams</h5>
-          <p class="mb-0 text-muted">Midterm examination week for all academic programs.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Item 4 -->
-    <div class="row gx-4 gy-3 align-items-start">
-      <div class="col-12 col-md-3 text-md-end">
-        <span class="badge rounded-pill text-bg-info" style="font-weight:600;">Jun 20, 2025</span>
-      </div>
-      <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
-        <span class="position-absolute d-none d-md-inline-block"
-              style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
-        <span class="position-absolute d-inline-block d-md-none"
-              style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
-
-        <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
-          <h5 class="mb-1" style="font-weight:700;">Cultural Festival</h5>
-          <p class="mb-0 text-muted">Showcase of student talents in music, dance, drama, and art exhibitions.</p>
-        </div>
-      </div>
-    </div>
+    {% empty %}
+      <div class="text-start text-muted">No upcoming items yet.</div>
+    {% endfor %}
   </div>
 </section>
-<!--⭐⭐⭐⭐⭐=====================  Start: Photo & Video Gallery  -->
+<!--END-->
+
+
+
+<!-- ⭐⭐⭐⭐⭐=====================  Start: Photo & Video Gallery  -->
 <section class="container py-5" id="gallery-section">
   <h2 class="text-center fw-bold mb-5 fade-in">Campus Gallery</h2>
 
   <div class="row g-3 gallery-grid">
-    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
-      <div class="gallery-item">
-        <img src="{% static 'img/download.jpeg' %}" alt="Campus Image 1" class="img-fluid rounded shadow" loading="lazy" />
-        <div class="gallery-meta">
-          <h5 class="gallery-title">Campus Image 1</h5>
-          <p class="gallery-info">Place: Main Hall</p>
-          <p class="gallery-info">Date: 2025-08-15 | Time: 10:30 AM</p>
-        </div>
-      </div>
-    </div>
+    {% for g in gallery_items %}
+      <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
+        <div class="gallery-item {% if g.kind == 'video' %}video-item{% endif %}"
+             {% if g.kind == 'video' and g.youtube_embed_url %}data-video="{{ g.youtube_embed_url }}"{% endif %}>
+          {% if g.kind == 'image' and g.image %}
+            <img src="{{ g.image.url }}" alt="{{ g.title }}" class="img-fluid rounded shadow" loading="lazy">
+          {% elif g.kind == 'video' and g.youtube_embed_url %}
+            <!-- thumbnail fallback: use a placeholder or a static image -->
+            <img src="{% static 'img/images (4).jpeg' %}" alt="{{ g.title }}" class="img-fluid rounded shadow" loading="lazy">
+            <div class="play-button">&#9658;</div>
+          {% else %}
+            <img src="{% static 'img/download.jpeg' %}" alt="{{ g.title }}" class="img-fluid rounded shadow" loading="lazy">
+          {% endif %}
 
-    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
-      <div class="gallery-item">
-        <img src="{% static 'img/images.jpeg' %}" alt="Campus Image 2" class="img-fluid rounded shadow" loading="lazy" />
-        <div class="gallery-meta">
-          <h5 class="gallery-title">Campus Image 2</h5>
-          <p class="gallery-info">Place: Science Lab</p>
-          <p class="gallery-info">Date: 2025-08-14 | Time: 2:00 PM</p>
+          <div class="gallery-meta">
+            <h5 class="gallery-title">{{ g.title }}</h5>
+            {% if g.place %}<p class="gallery-info">Place: {{ g.place }}</p>{% endif %}
+            {% if g.taken_at %}
+              <p class="gallery-info">Date: {{ g.taken_at|date:"Y-m-d" }} | Time: {{ g.taken_at|time:"g:i A" }}</p>
+            {% endif %}
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
-      <div class="gallery-item video-item" data-video="https://www.youtube.com/embed/ScMzIvxBSi4">
-        <img src="{% static 'img/images (4).jpeg' %}" alt="Campus Video 1" class="img-fluid rounded shadow" loading="lazy" />
-        <div class="play-button">&#9658;</div>
-        <div class="gallery-meta">
-          <h5 class="gallery-title">Campus Video 1</h5>
-          <p class="gallery-info">Place: Auditorium</p>
-          <p class="gallery-info">Date: 2025-08-10 | Time: 4:15 PM</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-sm-6 col-md-4 col-lg-3 fade-in">
-      <div class="gallery-item">
-        <img src="{% static 'img/images (6).jpeg' %}" alt="Campus Image 3" class="img-fluid rounded shadow" loading="lazy" />
-        <div class="gallery-meta">
-          <h5 class="gallery-title">Campus Image 3</h5>
-          <p class="gallery-info">Place: Library</p>
-          <p class="gallery-info">Date: 2025-08-12 | Time: 11:45 AM</p>
-        </div>
-      </div>
-    </div>
+    {% empty %}
+      <div class="col-12 text-center text-muted py-5">No gallery items yet.</div>
+    {% endfor %}
   </div>
 
+  <!-- Lightbox -->
   <div id="lightbox" class="lightbox" style="display:none;">
     <span class="close">&times;</span>
     <div class="lightbox-content"></div>
   </div>
 </section>
-<!--⭐ End: Photo & Video Gallery ===================== -->
+<!-- ⭐ End: Photo & Video Gallery -->
+
 
 <!-- ⭐⭐⭐⭐⭐===================== Start: About the College with Multiple Fading Images (No Slider)  -->
 <section class="container py-5" data-aos="fade-up" id="about">

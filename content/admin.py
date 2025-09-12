@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Banner, Notice, TimelineEvent
+from .models import Banner, Notice, TimelineEvent, GalleryItem
 
 
 # -------------------------------------------------------------------
@@ -244,4 +244,21 @@ class TimelineEventAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Only Admins can delete
         return is_admin_user(request.user)
+
+
+@admin.register(GalleryItem)
+class GalleryItemAdmin(admin.ModelAdmin):
+    list_display = ("title", "kind", "place", "taken_at", "order", "is_active")
+    list_filter = ("kind", "is_active")
+    search_fields = ("title", "place")
+    ordering = ("order", "-taken_at", "-id")
+    fieldsets = (
+        (None, {
+            "fields": ("is_active", "order", "title", "place", "taken_at", "kind")
+        }),
+        ("Media", {
+            "fields": ("image", "youtube_embed_url"),
+            "description": "Use <b>image</b> for Images; <b>YouTube embed URL</b> for Videos."
+        }),
+    )
 
