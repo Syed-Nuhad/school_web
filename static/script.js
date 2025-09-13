@@ -443,63 +443,8 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
 
 //⭐⭐⭐⭐⭐===================== Start: Photo & Video Gallery Script 
 
-  // Fade-in animation on scroll
 
-  document.addEventListener("DOMContentLoaded", () => {
-    const fadeElems = document.querySelectorAll(".fade-in");
-
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("show");
-        }
-      });
-    }, { threshold: 0.2 });
-
-    fadeElems.forEach(el => observer.observe(el));
-  });
-
-  // Lightbox functionality
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const lightbox = document.getElementById('lightbox');
-    const lightboxContent = lightbox.querySelector('.lightbox-content');
-    const closeBtn = lightbox.querySelector('.close');
-
-    // Open lightbox on click
-
-    document.querySelectorAll('.gallery-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if(item.classList.contains('video-item')) {
-          const videoUrl = item.dataset.video;
-          lightboxContent.innerHTML = `<iframe src="${videoUrl}?autoplay=1" frameborder="0" allowfullscreen allow="autoplay"></iframe>`;
-        } else {
-          const imgSrc = item.querySelector('img').src;
-          lightboxContent.innerHTML = `<img src="${imgSrc}" alt="Gallery Image" />`;
-        }
-        lightbox.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-      });
-    });
-
-    // Close lightbox
-
-    closeBtn.addEventListener('click', () => {
-      lightbox.style.display = 'none';
-      lightboxContent.innerHTML = '';
-      document.body.style.overflow = 'auto';
-    });
-
-    // Close on outside click
-
-    lightbox.addEventListener('click', (e) => {
-      if(e.target === lightbox) {
-        closeBtn.click();
-      }
-    });
-  });
-
-  // ⭐ End: Photo & Video Gallery Script ====================================================
+// ⭐ End: Photo & Video Gallery Script ====================================================
 
 
   // ⭐⭐⭐⭐⭐===================== Start About Section Image Fade-in animation and cycling images  

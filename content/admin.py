@@ -1,4 +1,3 @@
-# content/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
 
@@ -11,14 +10,13 @@ from .models import Banner, Notice, TimelineEvent, GalleryItem
 def is_admin_user(user):
     return user.is_superuser or user.groups.filter(name="Admin").exists()
 
+
 def is_teacher_user(user):
     return user.groups.filter(name="Teacher").exists()
 
+
 def _img_url(obj):
-    """
-    Return a usable image URL from either ImageField `image` or text field `image_url`.
-    Safe if either/both are missing.
-    """
+    """Return a usable image URL from either ImageField `image` or text field `image_url`."""
     url = ""
     if hasattr(obj, "image") and getattr(obj, "image"):
         try:
@@ -28,14 +26,6 @@ def _img_url(obj):
     if not url and hasattr(obj, "image_url"):
         url = obj.image_url or ""
     return url
-
-def _filter_existing_fields(model, names):
-    """
-    Return only the field names that actually exist on `model`.
-    Prevents admin from breaking if optional fields (like `image_url`) are not present.
-    """
-    existing = set(f.name for f in model._meta.get_fields())
-    return tuple(n for n in names if n in existing)
 
 
 class OwnableAdminMixin(admin.ModelAdmin):
@@ -55,10 +45,8 @@ class OwnableAdminMixin(admin.ModelAdmin):
 
 
 # -------------------------------------------------------------------
-# Banner admin (Teachers + Admin; teacher edits own, admin edits all)
+# Banner admin
 # -------------------------------------------------------------------
-
-
 @admin.register(Banner)
 class BannerAdmin(OwnableAdminMixin):
     list_display = ("title", "order", "is_active", "created_by", "thumb", "updated_at")
@@ -67,30 +55,25 @@ class BannerAdmin(OwnableAdminMixin):
     ordering = ("order", "-created_at")
     readonly_fields = ("created_by", "preview", "created_at", "updated_at")
 
-    def get_fields(self, request, obj=None):
-        base = (
-            "title", "subtitle",
-            "image",        # optional ImageField
-            "image_url",    # optional URL/text field
-            "preview",
-            "button_text", "button_link",
-            "order", "is_active",
-            "created_by", "created_at", "updated_at",
-        )
-        return _filter_existing_fields(Banner, base)
+    fieldsets = (
+        (None, {
+            "fields": ("title", "subtitle", "image", "image_url", "button_text", "button_link", "order", "is_active"),
+            "description": "Tip: If both <b>Image</b> and <b>Image URL</b> are set, the uploaded image is used."
+        }),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
+        ("Preview", {"fields": ("preview",)}),
+    )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if is_admin_user(request.user):
             return qs
         if is_teacher_user(request.user):
-            # teacher sees only their banners
             if "created_by" in {f.name for f in Banner._meta.get_fields()}:
                 return qs.filter(created_by=request.user)
             return qs.none()
         return qs.none()
 
-    # permissions: teachers + admin can access; only admin can delete
     def has_module_permission(self, request):
         return is_admin_user(request.user) or is_teacher_user(request.user)
 
@@ -98,15 +81,14 @@ class BannerAdmin(OwnableAdminMixin):
         return self.has_module_permission(request)
 
     def has_add_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
+        return self.has_module_permission(request)
 
     def has_change_permission(self, request, obj=None):
         if is_admin_user(request.user):
             return True
         if is_teacher_user(request.user):
-            # teacher may edit only their own banner
             if obj is None:
-                return True  # needed to render change list
+                return True
             if hasattr(obj, "created_by_id"):
                 return obj.created_by_id == request.user.id
         return False
@@ -114,6 +96,7 @@ class BannerAdmin(OwnableAdminMixin):
     def has_delete_permission(self, request, obj=None):
         return is_admin_user(request.user)
 
+    # thumbnails
     def thumb(self, obj):
         url = _img_url(obj)
         return format_html('<img src="{}" style="height:38px">', url) if url else "—"
@@ -126,43 +109,24 @@ class BannerAdmin(OwnableAdminMixin):
 
 
 # -------------------------------------------------------------------
-# Notice admin (Teachers + Admin; teacher edits own, admin edits all)
+# Notice admin
 # -------------------------------------------------------------------
-
-
-
-def is_admin_user(user):
-    return user.is_superuser or user.groups.filter(name="Admin").exists()
-
-def is_teacher_user(user):
-    return user.groups.filter(name="Teacher").exists()
-
-def _img_url(obj):
-    if getattr(obj, "image", None):
-        try:
-            return obj.image.url
-        except Exception:
-            pass
-    return getattr(obj, "image_url", "") or ""
-
 @admin.register(Notice)
 class NoticeAdmin(admin.ModelAdmin):
-    list_display  = ("title", "is_active", "published_at", "thumb")
-    list_filter   = ("is_active", "published_at")
+    list_display = ("title", "is_active", "published_at", "thumb")
+    list_filter = ("is_active", "published_at")
     search_fields = ("title", "subtitle")
     date_hierarchy = "published_at"
     ordering = ("-published_at", "-created_at")
     readonly_fields = ("preview", "created_at", "updated_at")
 
-    fields = (
-        "title",
-        "subtitle",
-        "image", "image_url",
-        "preview",
-        "link_url",
-        "published_at",
-        "is_active",
-        "created_at", "updated_at",
+    fieldsets = (
+        (None, {
+            "fields": ("title", "subtitle", "image", "image_url", "link_url", "published_at", "is_active"),
+            "description": "‘Read more’ uses <b>Link URL</b> if provided; otherwise the internal detail page."
+        }),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+        ("Preview", {"fields": ("preview",)}),
     )
 
     def thumb(self, obj):
@@ -175,7 +139,6 @@ class NoticeAdmin(admin.ModelAdmin):
         return format_html('<img src="{}" style="max-width:100%;max-height:220px">', url) if url else "—"
     preview.short_description = "Preview"
 
-    # permissions: teachers + admins can view/add/edit; delete stays admin-only
     def has_module_permission(self, request):
         return is_admin_user(request.user) or is_teacher_user(request.user)
 
@@ -191,8 +154,9 @@ class NoticeAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return is_admin_user(request.user)
 
+
 # -------------------------------------------------------------------
-# TimelineEvent admin (Teachers + Admin; teacher edits own, admin edits all)
+# TimelineEvent admin
 # -------------------------------------------------------------------
 @admin.register(TimelineEvent)
 class TimelineEventAdmin(admin.ModelAdmin):
@@ -201,22 +165,22 @@ class TimelineEventAdmin(admin.ModelAdmin):
     search_fields = ("title", "description")
     list_filter = ("is_active", "date")
     date_hierarchy = "date"
-    raw_id_fields = ("created_by",)  # avoids admin.E039 if User admin isn’t registered
+    raw_id_fields = ("created_by",)
     readonly_fields = ("created_by", "created_at", "updated_at")
 
-    fields = (
-        "title", "description", "date",
-        "order", "is_active",
-        "created_by", "created_at", "updated_at",
+    fieldsets = (
+        (None, {
+            "fields": ("title", "description", "date", "order", "is_active"),
+            "description": "Sorted by <b>Date</b>, then <b>Order</b> (lower first)."
+        }),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
-    # Auto-assign creator on first save
     def save_model(self, request, obj, form, change):
         if not obj.created_by_id:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-    # Permissions: Admins & Teachers can see; Teachers can only edit their own
     def has_module_permission(self, request):
         return is_admin_user(request.user) or is_teacher_user(request.user)
 
@@ -232,7 +196,7 @@ class TimelineEventAdmin(admin.ModelAdmin):
         return self.has_module_permission(request)
 
     def has_add_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
+        return self.has_module_permission(request)
 
     def has_change_permission(self, request, obj=None):
         if is_admin_user(request.user):
@@ -242,23 +206,47 @@ class TimelineEventAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        # Only Admins can delete
         return is_admin_user(request.user)
 
 
+# -------------------------------------------------------------------
+# GalleryItem admin
+# -------------------------------------------------------------------
 @admin.register(GalleryItem)
 class GalleryItemAdmin(admin.ModelAdmin):
-    list_display = ("title", "kind", "place", "taken_at", "order", "is_active")
+    list_display = ("title", "kind", "place", "taken_at", "order", "is_active", "thumb")
     list_filter = ("kind", "is_active")
     search_fields = ("title", "place")
     ordering = ("order", "-taken_at", "-id")
+    date_hierarchy = "taken_at"
+
     fieldsets = (
         (None, {
-            "fields": ("is_active", "order", "title", "place", "taken_at", "kind")
+            "fields": ("is_active", "order", "title", "place", "taken_at", "kind"),
+            "description": "Use local date/time; format: <b>YYYY-MM-DD HH:MM</b> (24-hour).",
         }),
         ("Media", {
-            "fields": ("image", "youtube_embed_url"),
-            "description": "Use <b>image</b> for Images; <b>YouTube embed URL</b> for Videos."
+            "fields": ("image", "youtube_embed_url", "thumbnail"),
+            "description": "For images, upload <b>Image</b>. For YouTube, paste an <b>embed</b> or <b>watch</b> URL. Optional <b>Thumbnail</b> overrides the auto preview.",
         }),
     )
 
+    def thumb(self, obj):
+        src = getattr(obj, "thumb_src", "") or ""
+        return format_html('<img src="{}" style="height:38px;border-radius:6px;">', src) if src else "—"
+    thumb.short_description = "Thumb"
+
+    def has_module_permission(self, request):
+        return is_admin_user(request.user) or is_teacher_user(request.user)
+
+    def has_view_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_add_permission(self, request):
+        return self.has_module_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return self.has_module_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return is_admin_user(request.user)
