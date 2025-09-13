@@ -442,7 +442,148 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
 
 
 //⭐⭐⭐⭐⭐===================== Start: Photo & Video Gallery Script 
+  (function(){
+    const modalEl = document.getElementById('galleryModal');
+    const bsModal = new bootstrap.Modal(modalEl);
 
+    const gmTitle = document.getElementById('gmTitle');
+    const gmMeta  = document.getElementById('gmMeta');
+
+    const imgWrap = document.getElementById('gmImageWrap');
+    const imgEl   = document.getElementById('gmImage');
+
+    const vidWrap = document.getElementById('gmVideoWrap');
+    const iframe  = document.getElementById('gmIframe');
+
+    const btnIn   = document.getElementById('gmZoomIn');
+    const btnOut  = document.getElementById('gmZoomOut');
+    const btnReset= document.getElementById('gmReset');
+    const btnDl   = document.getElementById('gmDownload');
+
+    let scale = 1, pos = {x:0,y:0}, dragging = false, dragStart = {x:0,y:0}, posStart = {x:0,y:0};
+
+    // --- helpers ---
+    function ytEmbed(url){
+      if(!url) return '';
+      try{
+        const u = new URL(url);
+        // youtu.be/ID
+        if(u.hostname.includes('youtu.be')) return `https://www.youtube.com/embed/${u.pathname.slice(1)}?autoplay=1&rel=0`;
+        // watch?v=ID
+        if(u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}?autoplay=1&rel=0`;
+        // already embed
+        if(u.pathname.includes('/embed/')) return url.includes('autoplay=') ? url : url + (url.includes('?')?'&':'?') + 'autoplay=1&rel=0';
+        // fallback: return original
+        return url;
+      }catch(e){ return url; }
+    }
+    function showImage(src, title, meta){
+      // toolbar for images
+      btnIn.classList.remove('d-none');
+      btnOut.classList.remove('d-none');
+      btnReset.classList.remove('d-none');
+      btnDl.classList.remove('d-none');
+
+      imgWrap.classList.remove('d-none');
+      vidWrap.classList.add('d-none');
+
+      iframe.src = ''; // stop any video
+
+      imgEl.src = src;
+      gmTitle.textContent = title || 'Image';
+      gmMeta.textContent  = meta || '';
+
+      btnDl.href = src;
+      // filename for download
+      try{ btnDl.download = src.split('/').pop().split('?')[0] || 'image'; }catch(e){}
+
+      resetImageTransform();
+      bsModal.show();
+    }
+    function showVideo(url, title, meta){
+      btnIn.classList.add('d-none');
+      btnOut.classList.add('d-none');
+      btnReset.classList.add('d-none');
+      btnDl.classList.add('d-none');
+
+      imgWrap.classList.add('d-none');
+      vidWrap.classList.remove('d-none');
+
+      iframe.src = ytEmbed(url);
+      gmTitle.textContent = title || 'Video';
+      gmMeta.textContent  = meta || '';
+
+      bsModal.show();
+    }
+    function resetImageTransform(){
+      scale = 1; pos = {x:0,y:0};
+      applyTransform();
+    }
+    function applyTransform(){
+      imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+    }
+
+    // --- grid click ---
+    document.querySelectorAll('.gallery-card').forEach(card=>{
+      card.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const kind = card.dataset.kind;
+        const title = card.dataset.title || '';
+        const meta = [card.dataset.place, card.dataset.datetime].filter(Boolean).join(' · ');
+
+        if(kind === 'video'){
+          const v = card.dataset.video;
+          if(!v){ return; }
+          showVideo(v, title, meta);
+        }else{
+          const src = card.dataset.image || card.querySelector('img')?.src;
+          if(!src){ return; }
+          showImage(src, title, meta);
+        }
+      });
+    });
+
+    // --- zoom & pan (image) ---
+    btnIn.addEventListener('click', ()=>{ scale = Math.min(scale+0.2, 6); applyTransform(); });
+    btnOut.addEventListener('click', ()=>{ scale = Math.max(scale-0.2, 0.3); applyTransform(); });
+    btnReset.addEventListener('click', resetImageTransform);
+
+    // mouse drag
+    imgEl.addEventListener('mousedown', (ev)=>{
+      dragging = true; imgEl.style.cursor='grabbing';
+      dragStart = {x: ev.clientX, y: ev.clientY};
+      posStart  = {...pos};
+    });
+    window.addEventListener('mousemove', (ev)=>{
+      if(!dragging) return;
+      pos.x = posStart.x + (ev.clientX - dragStart.x);
+      pos.y = posStart.y + (ev.clientY - dragStart.y);
+      applyTransform();
+    });
+    window.addEventListener('mouseup', ()=>{ dragging=false; imgEl.style.cursor='grab'; });
+
+    // wheel zoom (desktop)
+    imgWrap.addEventListener('wheel', (ev)=>{
+      ev.preventDefault();
+      const delta = Math.sign(ev.deltaY);
+      scale += (delta < 0 ? 0.15 : -0.15);
+      scale = Math.min(Math.max(scale, 0.3), 6);
+      applyTransform();
+    }, { passive:false });
+
+    // double-click to toggle zoom
+    imgEl.addEventListener('dblclick', ()=>{
+      scale = (scale > 1.01) ? 1 : 2;
+      applyTransform();
+    });
+
+    // cleanup on close
+    modalEl.addEventListener('hidden.bs.modal', ()=>{
+      iframe.src = '';
+      imgEl.src = '';
+      resetImageTransform();
+    });
+  })();
 
 // ⭐ End: Photo & Video Gallery Script ====================================================
 
