@@ -187,91 +187,72 @@
 <!--END-->
 
 
-<!-- ✅ Campus Gallery -->
-<section class="container py-5" id="gallery-section">
-  <div class="d-flex align-items-center justify-content-between mb-4">
-    <h2 class="fw-bold mb-0">Campus Gallery</h2>
-    <span class="text-muted small">Tap any item to view</span>
-  </div>
+<section id="gallery-section" class="container py-5">
+  <h2 class="text-center fw-bold mb-5">Campus Gallery</h2>
 
   <div class="row g-3">
     {% for item in gallery_items %}
       <div class="col-6 col-md-4 col-lg-3">
-        <a href="#"
-           class="gallery-card text-decoration-none"
-           data-kind="{{ item.kind }}"
-           data-image="{% if item.image %}{{ item.image.url }}{% endif %}"
-           data-video="{% if item.youtube_embed_url %}{{ item.youtube_embed_url }}{% endif %}"
-           data-title="{{ item.title|escape }}"
-           data-place="{{ item.place|default:''|escape }}"
-           data-datetime="{{ item.taken_at|date:'Y-m-d H:i' }}">
-          <div class="card border-0 shadow-sm h-100 hover-lift">
-            <div class="position-relative rounded overflow-hidden">
-              <img
-                src="{{ item.thumb_src }}"
-                alt="{{ item.title|escape }}"
-                class="w-100"
-                style="aspect-ratio:4/3; object-fit:cover;">
-              {% if item.kind == 'video' %}
-                <span class="play-pill position-absolute top-50 start-50 translate-middle">▶</span>
-              {% endif %}
-            </div>
-            <div class="card-body">
-              <div class="small text-muted mb-1">
-                {% if item.place %}{{ item.place }} · {% endif %}
-                {% if item.taken_at %}{{ item.taken_at|date:"Y-m-d H:i" }}{% endif %}
-              </div>
-              <div class="fw-semibold text-dark">{{ item.title }}</div>
-            </div>
-          </div>
-        </a>
+        {% if item.kind == "video" %}
+          <a class="gallery-card d-block text-decoration-none position-relative"
+             data-kind="video"
+             data-video="{{ item.youtube_embed_url }}"
+             data-title="{{ item.title }}"
+             data-place="{{ item.place }}"
+             data-datetime="{{ item.taken_at|date:'Y-m-d' }} {{ item.taken_at|time:'g:i A' }}">
+            <img
+              src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
+              class="img-fluid rounded-3 shadow-sm" alt="{{ item.title }}">
+            <span class="position-absolute top-50 start-50 translate-middle fs-2 text-white">▶</span>
+          </a>
+        {% else %}
+          <a class="gallery-card d-block text-decoration-none"
+             data-kind="image"
+             data-image="{% if item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
+             data-title="{{ item.title }}"
+             data-place="{{ item.place }}"
+             data-datetime="{{ item.taken_at|date:'Y-m-d' }} {{ item.taken_at|time:'g:i A' }}">
+            <img
+              src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
+              class="img-fluid rounded-3 shadow-sm" alt="{{ item.title }}">
+          </a>
+        {% endif %}
       </div>
     {% empty %}
-      <div class="col-12 text-muted">No items yet.</div>
+      <div class="col-12 text-center text-muted">No gallery items yet.</div>
     {% endfor %}
   </div>
 </section>
 
-<!-- 🔍 Viewer Modal (image & video) -->
+<!-- Modal IDs/classes exactly what your JS expects -->
 <div class="modal fade" id="galleryModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-fullscreen-md-down modal-xl modal-dialog-centered">
-    <div class="modal-content">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content border-0">
       <div class="modal-header">
-        <div>
-          <h5 class="modal-title mb-0" id="gmTitle">Preview</h5>
-          <div class="text-muted small" id="gmMeta"></div>
+        <div class="me-auto">
+          <h5 id="gmTitle" class="modal-title fw-semibold"></h5>
+          <small id="gmMeta" class="text-muted"></small>
         </div>
-        <div class="ms-auto d-flex align-items-center gap-2" id="gmToolbar">
-          <!-- Image tools -->
-          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="gmZoomOut" title="Zoom out">−</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="gmZoomIn" title="Zoom in">+</button>
-          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="gmReset" title="Reset">Reset</button>
-          <a class="btn btn-primary btn-sm d-none" id="gmDownload" download title="Download image">Download</a>
-          <!-- Close -->
-          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <div class="d-flex align-items-center gap-2 me-2">
+          <button id="gmZoomOut" type="button" class="btn btn-sm btn-outline-secondary d-none">−</button>
+          <button id="gmZoomIn"  type="button" class="btn btn-sm btn-outline-secondary d-none">+</button>
+          <button id="gmReset"   type="button" class="btn btn-sm btn-outline-secondary d-none">Reset</button>
+          <a id="gmDownload" class="btn btn-sm btn-primary d-none" download>Download</a>
         </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
 
       <div class="modal-body p-0">
-        <!-- Image canvas -->
-        <div id="gmImageWrap" class="d-none" style="background:#000; display:flex; align-items:center; justify-content:center; height:min(80vh,85dvh); overflow:hidden;">
-          <img id="gmImage"
-               alt=""
-               style="max-width:none; width:auto; height:auto; user-select:none; -webkit-user-drag:none; cursor:grab; transform-origin:center center;">
+        <div id="gmImageWrap" class="d-none" style="cursor:grab; overflow:hidden; height:70vh; display:flex; align-items:center; justify-content:center; background:#000;">
+          <img id="gmImage" alt="" style="max-width:none; max-height:100%; transform:translate(0,0) scale(1); user-select:none; -webkit-user-drag:none;">
         </div>
-
-        <!-- Video (YouTube) -->
-        <div id="gmVideoWrap" class="d-none p-2">
-          <div class="ratio ratio-16x9">
-            <iframe id="gmIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen title="YouTube video"></iframe>
-          </div>
+        <div id="gmVideoWrap" class="d-none ratio ratio-16x9">
+          <iframe id="gmIframe" src="" title="YouTube video" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </div>
       </div>
     </div>
   </div>
 </div>
-
 <!-- ⭐ End: Photo & Video Gallery -->
 
 

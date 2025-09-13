@@ -1,9 +1,5 @@
   
 
-  //⭐⭐⭐⭐⭐======== Initialize AOS
-  
-  AOS.init();
-
 // ⭐ END Initialize AOS ==============================================================================
 
 
@@ -439,154 +435,6 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
 });
 
 // ⭐ End CONTACT SECTION STYLES ====================================================================================
-
-
-//⭐⭐⭐⭐⭐===================== Start: Photo & Video Gallery Script 
-  (function(){
-    const modalEl = document.getElementById('galleryModal');
-    const bsModal = new bootstrap.Modal(modalEl);
-
-    const gmTitle = document.getElementById('gmTitle');
-    const gmMeta  = document.getElementById('gmMeta');
-
-    const imgWrap = document.getElementById('gmImageWrap');
-    const imgEl   = document.getElementById('gmImage');
-
-    const vidWrap = document.getElementById('gmVideoWrap');
-    const iframe  = document.getElementById('gmIframe');
-
-    const btnIn   = document.getElementById('gmZoomIn');
-    const btnOut  = document.getElementById('gmZoomOut');
-    const btnReset= document.getElementById('gmReset');
-    const btnDl   = document.getElementById('gmDownload');
-
-    let scale = 1, pos = {x:0,y:0}, dragging = false, dragStart = {x:0,y:0}, posStart = {x:0,y:0};
-
-    // --- helpers ---
-    function ytEmbed(url){
-      if(!url) return '';
-      try{
-        const u = new URL(url);
-        // youtu.be/ID
-        if(u.hostname.includes('youtu.be')) return `https://www.youtube.com/embed/${u.pathname.slice(1)}?autoplay=1&rel=0`;
-        // watch?v=ID
-        if(u.searchParams.get('v')) return `https://www.youtube.com/embed/${u.searchParams.get('v')}?autoplay=1&rel=0`;
-        // already embed
-        if(u.pathname.includes('/embed/')) return url.includes('autoplay=') ? url : url + (url.includes('?')?'&':'?') + 'autoplay=1&rel=0';
-        // fallback: return original
-        return url;
-      }catch(e){ return url; }
-    }
-    function showImage(src, title, meta){
-      // toolbar for images
-      btnIn.classList.remove('d-none');
-      btnOut.classList.remove('d-none');
-      btnReset.classList.remove('d-none');
-      btnDl.classList.remove('d-none');
-
-      imgWrap.classList.remove('d-none');
-      vidWrap.classList.add('d-none');
-
-      iframe.src = ''; // stop any video
-
-      imgEl.src = src;
-      gmTitle.textContent = title || 'Image';
-      gmMeta.textContent  = meta || '';
-
-      btnDl.href = src;
-      // filename for download
-      try{ btnDl.download = src.split('/').pop().split('?')[0] || 'image'; }catch(e){}
-
-      resetImageTransform();
-      bsModal.show();
-    }
-    function showVideo(url, title, meta){
-      btnIn.classList.add('d-none');
-      btnOut.classList.add('d-none');
-      btnReset.classList.add('d-none');
-      btnDl.classList.add('d-none');
-
-      imgWrap.classList.add('d-none');
-      vidWrap.classList.remove('d-none');
-
-      iframe.src = ytEmbed(url);
-      gmTitle.textContent = title || 'Video';
-      gmMeta.textContent  = meta || '';
-
-      bsModal.show();
-    }
-    function resetImageTransform(){
-      scale = 1; pos = {x:0,y:0};
-      applyTransform();
-    }
-    function applyTransform(){
-      imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
-    }
-
-    // --- grid click ---
-    document.querySelectorAll('.gallery-card').forEach(card=>{
-      card.addEventListener('click', (e)=>{
-        e.preventDefault();
-        const kind = card.dataset.kind;
-        const title = card.dataset.title || '';
-        const meta = [card.dataset.place, card.dataset.datetime].filter(Boolean).join(' · ');
-
-        if(kind === 'video'){
-          const v = card.dataset.video;
-          if(!v){ return; }
-          showVideo(v, title, meta);
-        }else{
-          const src = card.dataset.image || card.querySelector('img')?.src;
-          if(!src){ return; }
-          showImage(src, title, meta);
-        }
-      });
-    });
-
-    // --- zoom & pan (image) ---
-    btnIn.addEventListener('click', ()=>{ scale = Math.min(scale+0.2, 6); applyTransform(); });
-    btnOut.addEventListener('click', ()=>{ scale = Math.max(scale-0.2, 0.3); applyTransform(); });
-    btnReset.addEventListener('click', resetImageTransform);
-
-    // mouse drag
-    imgEl.addEventListener('mousedown', (ev)=>{
-      dragging = true; imgEl.style.cursor='grabbing';
-      dragStart = {x: ev.clientX, y: ev.clientY};
-      posStart  = {...pos};
-    });
-    window.addEventListener('mousemove', (ev)=>{
-      if(!dragging) return;
-      pos.x = posStart.x + (ev.clientX - dragStart.x);
-      pos.y = posStart.y + (ev.clientY - dragStart.y);
-      applyTransform();
-    });
-    window.addEventListener('mouseup', ()=>{ dragging=false; imgEl.style.cursor='grab'; });
-
-    // wheel zoom (desktop)
-    imgWrap.addEventListener('wheel', (ev)=>{
-      ev.preventDefault();
-      const delta = Math.sign(ev.deltaY);
-      scale += (delta < 0 ? 0.15 : -0.15);
-      scale = Math.min(Math.max(scale, 0.3), 6);
-      applyTransform();
-    }, { passive:false });
-
-    // double-click to toggle zoom
-    imgEl.addEventListener('dblclick', ()=>{
-      scale = (scale > 1.01) ? 1 : 2;
-      applyTransform();
-    });
-
-    // cleanup on close
-    modalEl.addEventListener('hidden.bs.modal', ()=>{
-      iframe.src = '';
-      imgEl.src = '';
-      resetImageTransform();
-    });
-  })();
-
-// ⭐ End: Photo & Video Gallery Script ====================================================
-
 
   // ⭐⭐⭐⭐⭐===================== Start About Section Image Fade-in animation and cycling images  
 
@@ -1394,4 +1242,183 @@ window.addEventListener('resize', wireMobileDropdowns);
       }, { passive: false });
     })();
 
+document.addEventListener('DOMContentLoaded', function() {
+  // Element references
+  const modalEl = document.getElementById('galleryModal');
+  const imgWrap = document.getElementById('gmImageWrap');
+  const imgEl   = document.getElementById('gmImage');
+  const vidWrap = document.getElementById('gmVideoWrap');
+  const iframe  = document.getElementById('gmIframe');
+  const titleEl = document.getElementById('gmTitle');
+  const metaEl  = document.getElementById('gmMeta');
+  const btnClose = document.getElementById('gmClose');
+  const btnZoomIn  = document.getElementById('gmZoomIn');
+  const btnZoomOut = document.getElementById('gmZoomOut');
+  const btnReset   = document.getElementById('gmReset');
+  const btnDownload= document.getElementById('gmDownload');
 
+  // Helper: convert YouTube URLs to embed URL
+  function toEmbed(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      // Short link youtu.be/ID
+      if (u.hostname.includes('youtu.be')) {
+        const videoId = u.pathname.slice(1);
+        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+      }
+      // Long link youtube.com/watch?v=ID
+      const v = u.searchParams.get('v');
+      if (v) {
+        return `https://www.youtube.com/embed/${v}?autoplay=1&rel=0`;
+      }
+      // Shorts link youtube.com/shorts/ID
+      const m = u.pathname.match(/\/shorts\/([^\/]+)/);
+      if (m) {
+        return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0`;
+      }
+      // If already an embed link or other URL, append autoplay=1 if not present
+      return url.includes('autoplay=') ? url :
+             url + (url.includes('?') ? '&' : '?') + 'autoplay=1&rel=0';
+    } catch {
+      return url;
+    }
+  }
+
+  // Open image in modal
+  function openImage({ src, title, meta }) {
+    // Show image container, hide video
+    imgWrap.style.display = '';
+    vidWrap.style.display = 'none';
+    iframe.src = '';  // stop any previously playing video
+    // Set image source and text
+    imgEl.src = src;
+    titleEl.textContent = title || 'Image';
+    metaEl.textContent  = meta || '';
+    // Prepare download link
+    btnDownload.href = src;
+    try {
+      // Set download filename from URL
+      btnDownload.download = src.split('/').pop().split('?')[0] || 'image';
+    } catch {}
+    // Reset zoom/pan to default
+    resetTransform();
+    // Show zoom/download controls for images
+    btnZoomIn.style.display = '';
+    btnZoomOut.style.display = '';
+    btnReset.style.display   = '';
+    btnDownload.style.display= '';
+    // Display the modal overlay
+    modalEl.classList.add('open');
+  }
+
+  // Open video in modal
+  function openVideo({ url, title, meta }) {
+    // Show video container, hide image
+    vidWrap.style.display = '';
+    imgWrap.style.display = 'none';
+    // Set video iframe source (converted to embed URL with autoplay)
+    iframe.src = toEmbed(url);
+    titleEl.textContent = title || 'Video';
+    metaEl.textContent  = meta || '';
+    // Hide image-specific controls
+    btnZoomIn.style.display = 'none';
+    btnZoomOut.style.display = 'none';
+    btnReset.style.display   = 'none';
+    btnDownload.style.display= 'none';
+    // Display the modal overlay
+    modalEl.classList.add('open');
+  }
+
+  // Close the modal
+  function closeModal() {
+    modalEl.classList.remove('open');
+    iframe.src = '';             // stop video
+    imgEl.src = '';              // release image
+    // (Zoom state reset when opening images next time)
+  }
+
+  // Click handlers for each gallery item
+  document.querySelectorAll('.gallery-item').forEach(card => {
+    card.addEventListener('click', e => {
+      e.preventDefault();
+      const kind  = card.dataset.kind;
+      const title = card.dataset.title || '';
+      const meta  = [card.dataset.place, card.dataset.datetime].filter(Boolean).join(' · ');
+      if (kind === 'video') {
+        const url = card.dataset.video;
+        if (url) openVideo({ url, title, meta });
+      } else {
+        // kind "image"
+        const src = card.dataset.image || card.querySelector('img')?.src;
+        if (src) openImage({ src, title, meta });
+      }
+    });
+  });
+
+  // Zoom and pan functionality for images
+  let scale = 1;
+  let pos = { x: 0, y: 0 };
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+
+  function applyTransform() {
+    imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+  }
+  function resetTransform() {
+    scale = 1;
+    pos = { x: 0, y: 0 };
+    applyTransform();
+  }
+
+  // Zoom control buttons
+  btnZoomIn.addEventListener('click', () => {
+    scale = Math.min(5, scale + 0.25);
+    applyTransform();
+  });
+  btnZoomOut.addEventListener('click', () => {
+    scale = Math.max(0.5, scale - 0.25);
+    applyTransform();
+  });
+  btnReset.addEventListener('click', () => {
+    resetTransform();
+  });
+
+  // Drag to pan image
+  imgEl.addEventListener('mousedown', e => {
+    isDragging = true;
+    dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    imgEl.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mouseup', () => {
+    isDragging = false;
+    imgEl.style.cursor = 'grab';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    pos.x = e.clientX - dragStart.x;
+    pos.y = e.clientY - dragStart.y;
+    applyTransform();
+  });
+
+  // Zoom with mouse wheel
+  imgEl.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.1 : -0.1;
+    scale = Math.min(5, Math.max(0.5, scale + delta));
+    applyTransform();
+  }, { passive: false });
+
+  // Close modal on close button, backdrop click, or Escape key
+  btnClose.addEventListener('click', closeModal);
+  modalEl.addEventListener('click', e => {
+    if (e.target === modalEl) {
+      closeModal();
+    }
+  });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  });
+});
