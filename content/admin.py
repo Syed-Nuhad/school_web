@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
+from .models import Course
 
 from .models import (
     Banner,
@@ -277,3 +278,53 @@ class AcademicCalendarItemAdmin(OwnableAdminMixin):
         if not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
         return super().save_model(request, obj, form, change)
+
+
+#
+# If you already have OwnableAdminMixin in this file, reuse it. Otherwise remove the mixin.
+
+@admin.register(Course)
+class CourseAdmin(OwnableAdminMixin):
+    list_display  = ("title", "category", "monthly_fee_display", "order", "is_active", "updated_at", "thumb")
+    list_filter   = ("is_active", "category")
+    search_fields = ("title", "eligibility", "duration", "shift", "description")
+    ordering      = ("order", "-updated_at")
+    readonly_fields = ("created_by", "created_at", "updated_at", "preview")
+
+    fieldsets = (
+        ("Visibility & Order", {"fields": ("is_active", "order")}),
+        ("Basic Info", {"fields": ("title", "category", "duration", "shift", "eligibility")}),
+        ("Media", {"fields": ("image", "syllabus_file", "preview")}),
+        ("Details", {"fields": ("description",)}),
+        ("Fees", {"fields": ("monthly_fee",)}),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
+    )
+
+    # thumbnails / preview
+    def thumb(self, obj):
+        try:
+            if obj.image and obj.image.url:
+                return format_html('<img src="{}" style="height:38px;border-radius:6px;">', obj.image.url)
+        except Exception:
+            pass
+        return "—"
+    thumb.short_description = "Image"
+
+    def preview(self, obj):
+        try:
+            if obj.image and obj.image.url:
+                return format_html('<img src="{}" style="max-height:160px;max-width:100%;border-radius:8px;">', obj.image.url)
+        except Exception:
+            pass
+        return "—"
+    preview.short_description = "Preview"
+
+    def monthly_fee_display(self, obj):
+        return f"৳ {float(obj.monthly_fee):,.0f}" if obj.monthly_fee is not None else "—"
+    monthly_fee_display.short_description = "Monthly Fee"
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)
+

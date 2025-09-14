@@ -26,6 +26,7 @@ urlpatterns = [
     path("teacher/signup/", acc_views.honeypot, name="hp_teacher_signup"),
     path("notices/", ui_views.notices_list, name="notices_list"),
     path("notices/<int:pk>/", ui_views.notice_detail, name="notice_detail"),
+
 ]
 
 # Serve static & media in development

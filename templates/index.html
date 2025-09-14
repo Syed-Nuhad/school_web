@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-
+{% load humanize %}
 {% block title %}Home · College Management System{% endblock %}
 
 {% block head %}
@@ -342,7 +342,11 @@
     {% endfor %}
   </div>
 </section>
+
+
+
 <!-- ⭐⭐⭐⭐⭐ ===============Start [ACADEMIC SECTION] Courses & Programs -->
+
 <section id="academics" class="py-5">
   <div class="container" data-aos="fade-up">
     <div class="text-center mb-4">
@@ -359,85 +363,95 @@
     </div>
 
     <div class="row g-4" id="courses-grid">
-      <div class="col-md-4 course-card" data-category="science">
-        <div class="card h-100 shadow-sm border-0">
-          <img src="{% static 'img/download (2).jpeg' %}" class="card-img-top" alt="Physics">
-          <div class="card-body d-flex flex-column">
-            <h5 class="card-title">HSC – Science</h5>
-            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
-            <p class="card-text mb-3">Prepare for engineering and medical pathways with strong lab-based instruction and modern labs.</p>
-            <ul class="list-unstyled mb-3 small">
-              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 3.0)</li>
-              <li><strong>Monthly Fee:</strong> BDT 1,200</li>
-            </ul>
+      {% for course in courses %}
+        <div class="col-12 col-md-6 col-lg-4 course-card" data-category="{{ course.category|lower }}">
+          <div class="card h-100 shadow-sm border-0">
+            {% if course.image %}
+              <img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.title }}">
+            {% else %}
+              <img src="{% static 'img/default_course.jpg' %}" class="card-img-top" alt="{{ course.title }}">
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ course.title }}</h5>
+
+              {% if course.duration or course.shift %}
+                <p class="text-muted small mb-2">
+                  {% if course.duration %}Duration: {{ course.duration }}{% endif %}
+                  {% if course.shift %}{% if course.duration %} • {% endif %}Shift: {{ course.shift }}{% endif %}
+                </p>
+              {% endif %}
+
+              {% if course.description %}
+                <p class="card-text mb-3">{{ course.description }}</p>
+              {% endif %}
+
+              <ul class="list-unstyled mb-3 small">
+                {% if course.eligibility %}
+                  <li><strong>Eligibility:</strong> {{ course.eligibility }}</li>
+                {% endif %}
+                {% if course.monthly_fee %}
+                  <li><strong>Monthly Fee:</strong> BDT {{ course.monthly_fee|intcomma }}</li>
+                {% endif %}
+              </ul>
+
             <div class="mt-auto d-flex gap-2">
-              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
+              {% if course.syllabus_file %}
+                <a
+                  href="#"
+                  class="btn btn-outline-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#syllabusModal"
+                  data-file-url="{{ course.syllabus_file.url }}"
+                >
+                  View Syllabus
+                </a>
+              {% else %}
+                <button type="button" class="btn btn-outline-primary btn-sm" disabled>
+                  View Syllabus
+                </button>
+              {% endif %}
               <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            </div>
+
+            </div>
+
+            <div class="card-footer bg-transparent border-0 pt-0 small text-muted d-flex justify-content-between">
+              {% if course.created_by %}<span>By {{ course.created_by.get_username }}</span>{% else %}<span>&nbsp;</span>{% endif %}
+              <span>Updated {{ course.updated_at|date:"M j, Y" }}</span>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="col-md-4 course-card" data-category="commerce">
-        <div class="card h-100 shadow-sm border-0">
-          <img src="{% static 'img/download (3).jpeg' %}" class="card-img-top" alt="Commerce">
-          <div class="card-body d-flex flex-column">
-            <h5 class="card-title">HSC – Commerce</h5>
-            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
-            <p class="card-text mb-3">Accounting, Finance and Business studies with practical workshop sessions and project work.</p>
-            <ul class="list-unstyled mb-3 small">
-              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.5)</li>
-              <li><strong>Monthly Fee:</strong> BDT 1,000</li>
-            </ul>
-            <div class="mt-auto d-flex gap-2">
-              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
-              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4 course-card" data-category="arts">
-        <div class="card h-100 shadow-sm border-0">
-          <img src="{% static 'img/download.jpeg' %}" class="card-img-top" alt="Arts">
-          <div class="card-body d-flex flex-column">
-            <h5 class="card-title">HSC – Arts</h5>
-            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
-            <p class="card-text mb-3">Strong focus on languages, social studies, and humanities with debate & research clubs.</p>
-            <ul class="list-unstyled mb-3 small">
-              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.0)</li>
-              <li><strong>Monthly Fee:</strong> BDT 900</li>
-            </ul>
-            <div class="mt-auto d-flex gap-2">
-              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
-              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4 course-card" data-category="vocational">
-        <div class="card h-100 shadow-sm border-0">
-          <img src="{% static 'img/download.jpeg' %}" class="card-img-top" alt="Vocational">
-          <div class="card-body d-flex flex-column">
-            <h5 class="card-title">HSC – Vocational</h5>
-            <p class="text-muted small mb-2">Duration: 2 years • Shift: Day</p>
-            <p class="card-text mb-3">Hands-on skills for industry with workshops and practicals.</p>
-            <ul class="list-unstyled mb-3 small">
-              <li><strong>Eligibility:</strong> SSC pass (GPA &gt;= 2.0)</li>
-              <li><strong>Monthly Fee:</strong> BDT 900</li>
-            </ul>
-            <div class="mt-auto d-flex gap-2">
-              <a href="#" class="btn btn-outline-primary btn-sm syllabus-btn">View Syllabus (PDF)</a>
-              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {% empty %}
+        <div class="col-12 text-center text-muted">No courses yet. Add some in the admin.</div>
+      {% endfor %}
     </div>
   </div>
 </section>
+
+
+
+<!-- Syllabus Viewer Modal -->
+<div class="modal fade" id="syllabusModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-lg-down modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Syllabus Viewer</h5>
+        <a id="syllabusDownload" class="btn btn-success btn-sm d-none" download>Download</a>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-0" style="height:80vh;">
+        <!-- We load the full PDF.js viewer in an iframe -->
+        <iframe id="syllabusFrame"
+                title="Syllabus"
+                style="border:0;width:100%;height:100%;"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allow="fullscreen">
+        </iframe>
+      </div>
+    </div>
+  </div>
+</div>
 <!--⭐ End ====[ACADEMIC SECTION] -->
 
 <!--⭐⭐⭐⭐⭐ Start : College Function Highlights -->

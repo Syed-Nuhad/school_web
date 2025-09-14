@@ -472,3 +472,84 @@ class AcademicCalendarItem(models.Model):
     @property
     def icon_tone_class(self) -> str:
         return f"icon-{self.tone}"
+
+
+    # Start Programs & Courses Section
+
+def course_image_upload_to(instance, filename):
+    return f"courses/{instance.category}/{filename}"
+
+def course_syllabus_upload_to(instance, filename):
+    return f"courses/syllabi/{instance.category}/{filename}"
+
+class Course(models.Model):
+    CATEGORY_CHOICES = [
+        ("science", "Science"),
+        ("commerce", "Commerce"),
+        ("arts", "Arts"),
+        ("vocational", "Vocational"),
+    ]
+
+    # Core
+    title = models.CharField(
+        max_length=150,
+        help_text="Visible title of the course/program (e.g., “HSC – Science”)."
+    )
+    category = models.CharField(
+        max_length=20, choices=CATEGORY_CHOICES,
+        help_text="Used by the front-end filter buttons."
+    )
+
+    # Media
+    image = models.ImageField(
+        upload_to=course_image_upload_to, blank=True, null=True,
+        help_text="Card image shown at the top."
+    )
+    syllabus_file = models.FileField(
+        upload_to=course_syllabus_upload_to, blank=True, null=True,
+        help_text="Optional PDF to open with 'View Syllabus (PDF)'."
+    )
+
+    # Details
+    duration = models.CharField(
+        max_length=50, blank=True,
+        help_text='Example: "2 years"'
+    )
+    shift = models.CharField(
+        max_length=50, blank=True,
+        help_text='Example: "Day", "Morning", "Evening"'
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Short paragraph shown on the card."
+    )
+    eligibility = models.CharField(
+        max_length=200, blank=True,
+        help_text='Example: "SSC pass (GPA ≥ 3.0)"'
+    )
+    monthly_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text="Monthly fee in BDT. Leave blank if not applicable."
+    )
+
+    # Ordering / lifecycle
+    order = models.PositiveIntegerField(default=0, help_text="Lower appears first.")
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name="courses_created",
+        on_delete=models.SET_NULL, null=True, blank=True, editable=False
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ("order", "title")
+        verbose_name = "Course"
+        verbose_name_plural = "Courses"
+
+    def __str__(self):
+        return self.title
+
+# End Programs & Courses Section
+
+

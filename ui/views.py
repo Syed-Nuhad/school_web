@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
-from content.models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection, AcademicCalendarItem
+from content.models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection, AcademicCalendarItem, Course
 
 
 def home(request):
@@ -34,11 +34,13 @@ def home(request):
         .first()
     )
     calendar_items = AcademicCalendarItem.objects.filter(is_active=True).order_by("order")
+    courses = Course.objects.filter(is_active=True).order_by("order", "title")
     context = {
         "banners": banners_qs,
         "gallery_items": gallery_qs,
         "about": about,
         "calendar_items": calendar_items,
+        "courses": courses,
         "banners_flat": [
             {
                 "title": b.title,

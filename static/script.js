@@ -1511,3 +1511,144 @@ document.addEventListener("DOMContentLoaded", function () {
 
   els.forEach(el => io.observe(el));
 })();
+
+///////////////////////////////////
+//Courses sylabus modal
+///////////////////////////////////
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl   = document.getElementById('syllabusModal');
+  const modal     = new bootstrap.Modal(modalEl);
+  const titleEl   = document.getElementById('syllabusTitle');
+  const dlBtn     = document.getElementById('dlBtn');
+
+  // PDF elements
+  const pdfWrap   = document.getElementById('pdfWrap');
+  const pdfCanvas = document.getElementById('pdfCanvas');
+  const pdfCtrls  = document.getElementById('pdfCtrls');
+  const prevPage  = document.getElementById('prevPage');
+  const nextPage  = document.getElementById('nextPage');
+  const pageNumEl = document.getElementById('pageNum');
+  const pageCountEl = document.getElementById('pageCount');
+  const pdfZoomIn = document.getElementById('pdfZoomIn');
+  const pdfZoomOut= document.getElementById('pdfZoomOut');
+  const pdfReset  = document.getElementById('pdfReset');
+
+  // Image elements
+  const imgWrap   = document.getElementById('imgWrap');
+  const imgEl     = document.getElementById('imgEl');
+  const imgCtrls  = document.getElementById('imgCtrls');
+  const imgZoomIn = document.getElementById('imgZoomIn');
+  const imgZoomOut= document.getElementById('imgZoomOut');
+  const imgReset  = document.getElementById('imgReset');
+
+  const isImage = (url) => /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url);
+  const isPdf   = (url) => /\.pdf(\?|$)/i.test(url);
+
+  // ---------- PDF state ----------
+  let pdfDoc = null, pdfScale = 1.1, pdfPage = 1, pdfRendering = false;
+  async function loadPdf(url) {
+    // Show PDF viewport/controls
+    pdfWrap.classList.remove('d-none');
+    pdfCtrls.classList.remove('d-none');
+    imgWrap.classList.add('d-none');
+    imgCtrls.classList.add('d-none');
+
+    const loadingTask = window.pdfjsLib.getDocument({ url });
+    pdfDoc = await loadingTask.promise;
+    pageCountEl.textContent = pdfDoc.numPages;
+    pdfPage = 1;
+    pdfScale = 1.1;
+    await renderPage();
+  }
+
+  async function renderPage() {
+    if (!pdfDoc || pdfRendering) return;
+    pdfRendering = true;
+    const page = await pdfDoc.getPage(pdfPage);
+    const viewport = page.getViewport({ scale: pdfScale });
+    const ctx = pdfCanvas.getContext('2d');
+    pdfCanvas.width = viewport.width;
+    pdfCanvas.height = viewport.height;
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    pageNumEl.textContent = pdfPage;
+    pdfRendering = false;
+  }
+
+  prevPage.addEventListener('click', async () => {
+    if (!pdfDoc || pdfPage <= 1) return;
+    pdfPage--; await renderPage();
+  });
+  nextPage.addEventListener('click', async () => {
+    if (!pdfDoc || pdfPage >= pdfDoc.numPages) return;
+    pdfPage++; await renderPage();
+  });
+  pdfZoomIn.addEventListener('click', async () => { pdfScale = Math.min(4, pdfScale + 0.15); await renderPage(); });
+  pdfZoomOut.addEventListener('click', async () => { pdfScale = Math.max(0.5, pdfScale - 0.15); await renderPage(); });
+  pdfReset.addEventListener('click', async () => { pdfScale = 1.1; await renderPage(); });
+
+  // ---------- Image state (Panzoom) ----------
+  let panzoom = null;
+  function loadImage(url) {
+    imgEl.src = url;
+    imgWrap.classList.remove('d-none');
+    imgCtrls.classList.remove('d-none');
+    pdfWrap.classList.add('d-none');
+    pdfCtrls.classList.add('d-none');
+
+    // init Panzoom on wrapper so dragging space works nicely
+    if (panzoom) { panzoom.destroy(); panzoom = null; }
+    panzoom = Panzoom(imgEl, {
+      maxScale: 6,
+      minScale: 0.4,
+      step: 0.2,
+      contain: 'outside' // start fully visible
+    });
+    // center/fit-ish
+    panzoom.reset();
+  }
+  imgZoomIn.addEventListener('click', () => panzoom && panzoom.zoomIn());
+  imgZoomOut.addEventListener('click', () => panzoom && panzoom.zoomOut());
+  imgReset.addEventListener('click', () => panzoom && panzoom.reset());
+
+  // ---------- Open modal from any "View Syllabus" button ----------
+  document.querySelectorAll('.syllabus-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const url   = btn.dataset.url;
+      const title = btn.dataset.title || 'Syllabus';
+      if (!url) return;
+
+      titleEl.textContent = title;
+      dlBtn.href = url;
+      try { dlBtn.download = url.split('/').pop().split('?')[0] || 'syllabus'; } catch {}
+
+      // Reset previous state
+      pdfDoc = null;
+      if (panzoom) { panzoom.destroy(); panzoom = null; }
+      imgEl.src = '';
+      pdfCanvas.width = pdfCanvas.height = 0;
+
+      // Decide by extension; default to PDF if unknown
+      const type = isImage(url) ? 'image' : (isPdf(url) ? 'pdf' : 'pdf');
+
+      modal.show();
+
+      if (type === 'image') {
+        loadImage(url);
+      } else {
+        // NOTE: If the file is on another domain, ensure CORS headers are set.
+        await loadPdf(url);
+      }
+    });
+  });
+
+  // Cleanup on close
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    if (panzoom) { panzoom.destroy(); panzoom = null; }
+    imgEl.src = '';
+    pdfDoc = null;
+    pdfCanvas.width = pdfCanvas.height = 0;
+  });
+});
