@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Application Submitted{% endblock %}
+
+{% block content %}
+<section class="container py-5 text-center" data-aos="fade-up">
+  <div class="mb-3">
+    <svg width="64" height="64" viewBox="0 0 24 24" class="text-success">
+      <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+  </div>
+  <h1 class="fw-bold mb-2">Application Submitted</h1>
+  <p class="text-muted mb-4">Thank you! We’ve received your application. You’ll get an email/SMS once it’s reviewed.</p>
+  <a href="{% url 'home' %}" class="btn btn-primary">Back to Home</a>
+</section>
+{% endblock %}

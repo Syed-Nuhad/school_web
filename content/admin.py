@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
-from .models import Course
+from .models import Course, AdmissionApplication
 
 from .models import (
     Banner,
@@ -327,4 +327,16 @@ class CourseAdmin(OwnableAdminMixin):
         if not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
         return super().save_model(request, obj, form, change)
+
+
+
+
+
+@admin.register(AdmissionApplication)
+class AdmissionApplicationAdmin(admin.ModelAdmin):
+    list_display = ("full_name", "desired_course", "shift", "status", "created_at")
+    list_filter  = ("status", "shift", "desired_course")
+    search_fields = ("full_name", "email", "phone", "guardian_name", "previous_school")
+    readonly_fields = ("created_at", "updated_at", "created_by")
+    ordering = ("-created_at",)
 

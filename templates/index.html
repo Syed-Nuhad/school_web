@@ -408,7 +408,9 @@
               <button class="btn btn-outline-secondary btn-sm" disabled>View Syllabus</button>
             {% endif %}
 
-            <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+            <a href="{% url 'admissions:apply' %}?course={{ course.id }}" class="btn btn-primary btn-sm ms-auto">
+              Apply Now
+            </a>
           </div>
 
             </div>

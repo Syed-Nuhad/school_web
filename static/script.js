@@ -1441,3 +1441,87 @@ document.addEventListener('click', function (e) {
     holder.remove();
   }, { once: true });
 });
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('admission-form');
+  if (!form) return;
+
+  // inputs & textareas → form-control (except checkbox/radio)
+  form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')
+      .forEach(el => el.classList.add('form-control'));
+
+  // file inputs → form-control
+  form.querySelectorAll('input[type=file]').forEach(el => el.classList.add('form-control'));
+
+  // selects → form-select
+  form.querySelectorAll('select').forEach(el => el.classList.add('form-select'));
+
+  // checkboxes / radios → form-check-input (label already rendered)
+  form.querySelectorAll('input[type=checkbox], input[type=radio]')
+      .forEach(el => el.classList.add('form-check-input'));
+
+  // If server provided errors, add is-invalid to any field with aria-invalid="true"
+  form.querySelectorAll('[aria-invalid="true"]').forEach(el => {
+    if (el.matches('select')) el.classList.add('is-invalid');
+    else if (el.matches('input[type=checkbox],input[type=radio]')) el.classList.add('is-invalid');
+    else el.classList.add('is-invalid');
+  });
+});
+
+
+
+
+
+/* Pure Bootstrap upgrade for raw Django widgets (no custom CSS) */
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('admissionForm');
+  if (!form) return;
+
+  // Text-like controls
+  form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')
+      .forEach(el => el.classList.add('form-control','w-100'));
+
+  // File inputs
+  form.querySelectorAll('input[type=file]').forEach(el => el.classList.add('form-control','w-100'));
+
+  // Selects
+  form.querySelectorAll('select').forEach(el => el.classList.add('form-select','w-100'));
+
+  // Checkboxes & radios
+  form.querySelectorAll('input[type=checkbox], input[type=radio]').forEach(el => {
+    el.classList.add('form-check-input');
+    const label = form.querySelector('label[for="'+ (el.id || '') +'"]');
+    if (label && !label.classList.contains('form-check-label')) label.classList.add('form-check-label');
+    if (el.type === 'radio' && !el.closest('.form-check')) {
+      const wrap = document.createElement('div'); wrap.className = 'form-check';
+      el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
+      if (label) wrap.appendChild(label);
+    }
+  });
+
+  // Payment gating demo
+  const method = document.getElementById('payment-method');
+  const status = document.getElementById('payment-status');
+  const confirmBtn = document.getElementById('confirm-payment-btn');
+  const submitBtn = document.getElementById('submit-btn');
+  const printBtn = document.getElementById('print-btn');
+
+  confirmBtn?.addEventListener('click', () => {
+    if (!method?.value) {
+      status.className = 'alert alert-warning py-2';
+      status.textContent = 'Pick a payment method first.';
+      return;
+    }
+    status.className = 'alert alert-success py-2';
+    status.textContent = 'Payment confirmed. You can submit now.';
+    submitBtn.disabled = false;
+    printBtn.disabled = false;
+  });
+
+  printBtn?.addEventListener('click', () => window.print());
+});

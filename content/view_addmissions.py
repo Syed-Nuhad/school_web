@@ -31,6 +31,11 @@ class AdmissionApplyView(FormView):
             obj.created_by = self.request.user
         obj.save()
         return super().form_valid(form)
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        cid = self.request.GET.get("course")
+        ctx["selected_course"] = Course.objects.filter(pk=cid).first()
+        return ctx
 
 class AdmissionSuccessView(TemplateView):
     template_name = "admissions/success.html"  # frontend later
