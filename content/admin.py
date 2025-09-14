@@ -1,12 +1,19 @@
 # content/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
+from django.conf import settings
 
-from .models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection
-
+from .models import (
+    Banner,
+    Notice,
+    TimelineEvent,
+    GalleryItem,
+    AboutSection,
+    AcademicCalendarItem,
+)
 
 # -------------------------------------------------------------------
-# Access helpers (updated)
+# Access helpers (single source of truth)
 # -------------------------------------------------------------------
 def is_student_user(user):
     return user.groups.filter(name__iexact="Student").exists()
@@ -23,9 +30,13 @@ def can_delete_admin(user):
     """
     return user.is_superuser or user.groups.filter(name__iexact="Admin").exists()
 
-
+# -------------------------------------------------------------------
+# Small utilities
+# -------------------------------------------------------------------
 def _img_url(obj):
-    """Return a usable image URL from either ImageField `image` or text field `image_url`."""
+    """
+    Return an image URL from either ImageField `image` or text field `image_url`.
+    """
     url = ""
     if hasattr(obj, "image") and getattr(obj, "image"):
         try:
@@ -36,23 +47,25 @@ def _img_url(obj):
         url = obj.image_url or ""
     return url
 
+def _img_preview(file_field, height=70):
+    try:
+        if file_field and file_field.url:
+            return format_html('<img src="{}" style="height:{}px;border-radius:6px;">',
+                               file_field.url, height)
+    except Exception:
+        pass
+    return "—"
 
+# -------------------------------------------------------------------
+# Base mixin: unifies permissions + auto-ownership
+# -------------------------------------------------------------------
 class OwnableAdminMixin(admin.ModelAdmin):
     """
-    Auto-set created_by / posted_by on first save if the model has those fields.
-    Also populate published_at for Notice on first save if missing.
+    - Grants view/add/change to any staff user not in 'Student'.
+    - Keeps delete restricted (superuser or 'Admin' group).
+    - Auto-sets created_by/posted_by/published_at if those fields exist.
     """
-    def save_model(self, request, obj, form, change):
-        if hasattr(obj, "created_by") and not getattr(obj, "created_by_id", None):
-            obj.created_by = request.user
-        if hasattr(obj, "posted_by") and not getattr(obj, "posted_by_id", None):
-            obj.posted_by = request.user
-        if hasattr(obj, "published_at") and not getattr(obj, "published_at", None):
-            from django.utils import timezone
-            obj.published_at = timezone.now()
-        super().save_model(request, obj, form, change)
-
-    # ===== unified permissions =====
+    # unified permissions
     def has_module_permission(self, request):
         return can_access_admin(request.user)
 
@@ -68,6 +81,16 @@ class OwnableAdminMixin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return can_delete_admin(request.user)
 
+    # auto-ownership & published_at (if present)
+    def save_model(self, request, obj, form, change):
+        if hasattr(obj, "created_by") and not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        if hasattr(obj, "posted_by") and not getattr(obj, "posted_by_id", None):
+            obj.posted_by = request.user
+        if hasattr(obj, "published_at") and not getattr(obj, "published_at", None):
+            from django.utils import timezone
+            obj.published_at = timezone.now()
+        super().save_model(request, obj, form, change)
 
 # -------------------------------------------------------------------
 # Banner admin
@@ -89,11 +112,6 @@ class BannerAdmin(OwnableAdminMixin):
         ("Preview", {"fields": ("preview",)}),
     )
 
-    # let all non-student staff see everything
-    def get_queryset(self, request):
-        return super().get_queryset(request)
-
-    # thumbnails
     def thumb(self, obj):
         url = _img_url(obj)
         return format_html('<img src="{}" style="height:38px">', url) if url else "—"
@@ -103,7 +121,6 @@ class BannerAdmin(OwnableAdminMixin):
         url = _img_url(obj)
         return format_html('<img src="{}" style="max-width:100%;max-height:200px">', url) if url else "—"
     preview.short_description = "Preview"
-
 
 # -------------------------------------------------------------------
 # Notice admin
@@ -136,7 +153,6 @@ class NoticeAdmin(OwnableAdminMixin):
         return format_html('<img src="{}" style="max-width:100%;max-height:220px">', url) if url else "—"
     preview.short_description = "Preview"
 
-
 # -------------------------------------------------------------------
 # TimelineEvent admin
 # -------------------------------------------------------------------
@@ -159,10 +175,9 @@ class TimelineEventAdmin(OwnableAdminMixin):
     )
 
     def save_model(self, request, obj, form, change):
-        if not obj.created_by_id:
+        if not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
-
 
 # -------------------------------------------------------------------
 # GalleryItem admin
@@ -191,19 +206,9 @@ class GalleryItemAdmin(OwnableAdminMixin):
         return format_html('<img src="{}" style="height:38px;border-radius:6px;">', src) if src else "—"
     thumb.short_description = "Thumb"
 
-
 # -------------------------------------------------------------------
-# AboutSection admin (no permission overrides needed thanks to mixin)
+# AboutSection admin
 # -------------------------------------------------------------------
-def _img_preview(file_field, height=70):
-    try:
-        if file_field and file_field.url:
-            return format_html('<img src="{}" style="height:{}px;border-radius:6px;">', file_field.url, height)
-    except Exception:
-        pass
-    return "—"
-
-
 @admin.register(AboutSection)
 class AboutSectionAdmin(OwnableAdminMixin):
     list_display = ("title", "college_name", "order", "is_active", "updated_at")
@@ -242,3 +247,33 @@ class AboutSectionAdmin(OwnableAdminMixin):
     preview_3.short_description = "Preview #3"
     def preview_4(self, obj): return _img_preview(getattr(obj, "image_4", None))
     preview_4.short_description = "Preview #4"
+
+# -------------------------------------------------------------------
+# AcademicCalendarItem admin
+# -------------------------------------------------------------------
+@admin.register(AcademicCalendarItem)
+class AcademicCalendarItemAdmin(OwnableAdminMixin):
+    list_display  = ("title", "date_text", "tone", "icon_class", "order", "is_active", "updated_at")
+    list_filter   = ("is_active", "tone")
+    search_fields = ("title", "date_text", "description")
+    ordering      = ("order", "-updated_at")
+    readonly_fields = ("created_by", "created_at", "updated_at")
+
+    # IMPORTANT: do NOT include computed properties (like icon_tone_class) in `fields`
+    fields = (
+        "is_active",
+        "order",
+        "title",
+        "date_text",
+        "description",
+        "icon_class",
+        "tone",
+        "created_by",
+        "created_at",
+        "updated_at",
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)

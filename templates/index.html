@@ -212,20 +212,15 @@
            data-datetime="{% if item.taken_at %}{{ item.taken_at|date:'M j, Y, g:i A' }}{% endif %}">
 
           <!-- Big thumbnail, cropped nicely, no custom CSS -->
-          <div class="ratio ratio-16x9 rounded-3 overflow-hidden mb-3 position-relative bg-body-tertiary">
+          <div class="glx-thumb ratio rounded-4 overflow-hidden mb-3 position-relative">
             <img
               src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder-16x9.jpg' %}{% endif %}"
               alt="{{ item.title }}"
-              class="w-100 h-100 object-fit-cover"
+              class="w-100 h-100"
+              style="object-fit:cover"
               loading="lazy">
-
             {% if item.kind == 'video' %}
-              <!-- Simple, modern play pill (no gradients) -->
-              <span class="position-absolute top-50 start-50 translate-middle
-                           rounded-pill bg-dark bg-opacity-75 text-white fw-semibold small
-                           px-3 py-2">
-                ▶ Play
-              </span>
+              <span class="glx-play" aria-hidden="true">▶</span>
             {% endif %}
           </div>
 
@@ -319,41 +314,34 @@
 {% endif %}
 
 <!--END-->
-
-
-<!-- ⭐⭐⭐⭐⭐========================== Start: Academic Calendar / Important Dates -->
 <section class="container py-5 academic-calendar-section" data-aos="fade-up">
-  <h2 class="text-center fw-bold mb-5 calendar-title">📅 Academic Calendar</h2>
+  <h2 class="text-center fw-bold mb-5">Academic Calendar</h2>
+
   <div class="row g-4">
-    <div class="col-md-4">
-      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
-        <div class="calendar-icon icon-blue">📅</div>
-        <h5 class="fw-bold text-primary">Semester Start</h5>
-        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 10th September 2025"></p>
-        <p>The academic year officially begins. All students must attend orientation on the first day.</p>
+    {% for item in calendar_items %}
+      <div class="col-md-4">
+        <div class="shadow rounded p-4 h-100 text-center calendar-card">
+          <div class="calendar-icon {{ item.icon_tone_class }}">
+            <i class="{{ item.icon_class }} text-white" aria-hidden="true"></i>
+          </div>
+          <h5 class="fw-bold mb-1">{{ item.title }}</h5>
+          <p class="text-muted mb-2">{{ item.date_text }}</p>
+          {% if item.description %}
+            <p class="mb-3">{{ item.description }}</p>
+          {% endif %}
+          <div class="small text-secondary">
+            {% if item.created_by %}
+              Created by {{ item.created_by.get_full_name|default:item.created_by.username }} ·
+            {% endif %}
+            {{ item.created_at|date:"M j, Y, g:i A" }}
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
-        <div class="calendar-icon icon-green">📅</div>
-        <h5 class="fw-bold text-success">Mid-Term Exams</h5>
-        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 15th November 2025"></p>
-        <p>Mid-term examinations will be held across all classes. Prepare your study schedules accordingly.</p>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="bg-white shadow rounded p-4 h-100 calendar-card text-center">
-        <div class="calendar-icon icon-red">📅</div>
-        <h5 class="fw-bold text-danger">Winter Break</h5>
-        <p class="text-muted mb-1 typing-date" data-text="📍 Date: 20th December 2025 - 5th January 2026"></p>
-        <p>Enjoy your winter holidays! College offices will remain closed during this period.</p>
-      </div>
-    </div>
+    {% empty %}
+      <div class="col-12 text-center text-muted">No academic calendar items yet.</div>
+    {% endfor %}
   </div>
 </section>
-
 <!-- ⭐⭐⭐⭐⭐ ===============Start [ACADEMIC SECTION] Courses & Programs -->
 <section id="academics" class="py-5">
   <div class="container" data-aos="fade-up">

@@ -1482,3 +1482,32 @@ document.addEventListener("DOMContentLoaded", function () {
     dragging = false;
   }, { passive: true });
 });
+
+
+
+(() => {
+  const els = document.querySelectorAll('#academic-calendar .typing-date');
+
+  function type(el, text) {
+    el.textContent = '';
+    let i = 0;
+    const tick = () => {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i++);
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        type(entry.target, entry.target.getAttribute('data-text') || '');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.4 });
+
+  els.forEach(el => io.observe(el));
+})();

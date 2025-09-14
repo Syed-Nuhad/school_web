@@ -399,3 +399,76 @@ class AboutSection(models.Model):
     @property
     def image_count(self):
         return len(self.image_list)
+
+# ACADEMIC CALENDAR
+
+class AcademicCalendarItem(models.Model):
+    TONE_CHOICES = [
+        ("blue", "Blue"),
+        ("green", "Green"),
+        ("red", "Red"),
+        ("purple", "Purple"),
+        ("orange", "Orange"),
+    ]
+
+    # Content
+    title = models.CharField(
+        max_length=150,
+        help_text="Short heading (e.g., ‘Semester Start’)."
+    )
+    date_text = models.CharField(
+        max_length=150,
+        help_text="Human-friendly date or range (e.g., ‘10 Sep 2025’ or ‘20 Dec 2025 – 5 Jan 2026’)."
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Optional brief description shown under the date."
+    )
+
+    # Appearance
+    icon_class = models.CharField(
+        max_length=80,
+        default="bi bi-calendar-event",
+        help_text=(
+            "CSS class for the icon.\n"
+            "• Bootstrap Icons (load BI in base.html): e.g. bi bi-calendar-week\n"
+            "• Font Awesome (if you load FA): e.g. fa-solid fa-calendar-days"
+        ),
+    )
+    tone = models.CharField(
+        max_length=10,
+        choices=TONE_CHOICES,
+        default="blue",
+        help_text="Color accent for the round icon badge."
+    )
+
+    # Placement / lifecycle
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first."
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Uncheck to hide this item from the site."
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="calendar_items",
+        help_text="Auto-filled on first save."
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ("order", "-updated_at")
+        verbose_name = "Academic Calendar Item"
+        verbose_name_plural = "Academic Calendar Items"
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def icon_tone_class(self) -> str:
+        return f"icon-{self.tone}"

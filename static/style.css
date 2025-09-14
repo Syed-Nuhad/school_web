@@ -417,7 +417,6 @@ body.section .sticky-section {
 /* ⭐ =====================================Start: Academic Calendar / Important Dates */
 
 .academic-calendar-section {
-  background: linear-gradient(to bottom right, #f9fafb, #eef2f7);
   border-radius: 12px;
   padding: 3rem 1rem;
 }
@@ -1773,6 +1772,43 @@ header {
   .glx-fit-cover { object-fit: cover; }
   #glxImage { cursor: grab; }
 
+/* Make gallery thumbs taller but consistent for BOTH image & video cards */
+.glx-thumb { --bs-aspect-ratio: 70%; }          /* ~7:10 (taller than 16:9) */
+@media (min-width: 992px) {
+  .glx-thumb { --bs-aspect-ratio: 75%; }        /* ~3:4 on lg+ for extra height */
+}
+
+/* Tiny play marker (no dark overlay) */
+/* — Gallery thumb height (taller and same for img+video) — */
+#glx-gallery .glx-thumb.ratio { --bs-aspect-ratio: 75%; }      /* 4:3, taller than 16:9 */
+@media (min-width: 1200px){
+  #glx-gallery .glx-thumb.ratio { --bs-aspect-ratio: 66.6667%; }/* 3:2 on very wide */
+}
+
+/* — Nuke any dark/gradient overlay some themes add — */
+#glx-gallery .glx-thumb::after,
+#glx-gallery .ratio::after {          /* many templates darken with ::after */
+  content: none !important;
+}
+
+#glx-gallery .glx-thumb::before {     /* keep ratio’s ::before but ensure no bg */
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#glx-gallery .glx-thumb,
+#glx-gallery .glx-thumb img {
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  opacity: 1 !important;
+}
+
+/* keep the little ▶ marker, no big overlay */
+#glx-gallery .glx-play{
+  position:absolute; top:.5rem; left:.75rem;
+  color:#fff; font-weight:700; font-size:1rem; line-height:1;
+  text-shadow:0 2px 6px rgba(0,0,0,.6); pointer-events:none;
+}
 
 /* ==== Normalize hero caption & visibility ==== */
 .hero-banner .carousel-caption{ background:none !important; }
@@ -1794,3 +1830,24 @@ header {
 #notice-board .card:hover,
 .yt-card:hover,
 .dashboard-card:hover{ transform:translateY(-2px) !important; box-shadow:0 12px 28px rgba(0,0,0,.08) !important; }
+
+
+
+
+/* Academic Calendar */
+#academic-calendar .calendar-card.card { border-radius: 1rem; }
+#academic-calendar .calendar-card .card-body { padding: 1.75rem; }
+#academic-calendar .calendar-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 .5rem 1.25rem rgba(0,0,0,.08);
+  transition: .2s ease;
+}
+
+/* Icon size + tones */
+#academic-calendar .calendar-icon { line-height: 1; }
+#academic-calendar .calendar-icon i { font-size: 2.5rem; }
+.icon-blue   { color: var(--bs-primary); }
+.icon-green  { color: var(--bs-success); }
+.icon-red    { color: var(--bs-danger); }
+.icon-purple { color: #6f42c1; }
+.icon-orange { color: #fd7e14; }
