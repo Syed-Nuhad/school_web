@@ -19,6 +19,12 @@
     crossorigin="anonymous"
     referrerpolicy="no-referrer"
   />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/css/lightgallery-bundle.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/zoom/lg-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/download/lg-download.min.js"></script>
 
 
   <!-- AOS CSS (Animate On Scroll library) -->
@@ -35,34 +41,28 @@
   {% block content %}{% endblock %}
 
   {% include "partials/footer.html" %}
-  <!-- Bootstrap 5 (bundle) -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+<!-- Bootstrap 5 (bundle) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 
-  <!-- AOS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" defer></script>
-  <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.js" crossorigin="anonymous"></script>
-  <!-- Panzoom for images -->
-  <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@9.4.0/dist/panzoom.min.js"></script>
-  <!-- jsPDF: load synchronously (NO defer) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    // Bridge so AutoTable can attach to jsPDF.API
-    if (window.jspdf && window.jspdf.jsPDF) {
-      window.jsPDF = window.jspdf.jsPDF;
-    }
-  </script>
+<!-- AOS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" defer></script>
 
-  <!-- AutoTable: must come AFTER jsPDF + bridge (NO defer) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- LightGallery (CSS + JS + plugins) — REQUIRED for the syllabus image modal -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/css/lightgallery-bundle.min.css">
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/zoom/lg-zoom.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/download/lg-download.min.js" defer></script>
 
-  <!-- Your scripts (safe to defer) -->
-  <script src="{% static 'js/common.js' %}" defer></script>
-  <script src="{% static 'js/fees.js' %}" defer></script>
-  <script src="{% static 'script.js' %}" defer></script>
+<!-- jsPDF (only if you still generate PDFs like marksheets) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>if (window.jspdf && window.jspdf.jsPDF) { window.jsPDF = window.jspdf.jsPDF; }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => AOS.init());
-  </script>
+<!-- Your scripts (defer to keep order after libraries) -->
+<script src="{% static 'js/common.js' %}" defer></script>
+<script src="{% static 'js/fees.js' %}" defer></script>
+<script src="{% static 'script.js' %}" defer></script>
+
+<script>document.addEventListener('DOMContentLoaded', () => AOS.init());</script>
 </body>
 </html>

@@ -1036,10 +1036,7 @@ tr:hover { background: #ffe599; }
 }
 
 
-#academics .card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-}
+
 
 /* Card Images — no border now */
 #academics .card-img-top {
@@ -1050,9 +1047,7 @@ tr:hover { background: #ffe599; }
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
   transition: transform 0.3s ease;
 }
-#academics .card-img-top:hover {
-  transform: scale(1.05);
-}
+
 
 /* Card Body */
 #academics .card-body {

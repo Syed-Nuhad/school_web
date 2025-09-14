@@ -394,24 +394,22 @@
                 {% endif %}
               </ul>
 
-            <div class="mt-auto d-flex gap-2">
-              {% if course.syllabus_file %}
-                <a
-                  href="#"
-                  class="btn btn-outline-primary btn-sm"
-                  data-bs-toggle="modal"
-                  data-bs-target="#syllabusModal"
-                  data-file-url="{{ course.syllabus_file.url }}"
-                >
-                  View Syllabus
-                </a>
-              {% else %}
-                <button type="button" class="btn btn-outline-primary btn-sm" disabled>
-                  View Syllabus
-                </button>
-              {% endif %}
-              <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
-            </div>
+          <div class="mt-auto d-flex gap-2">
+            {% if course.syllabus_file %}
+              <a
+                href="{{ course.syllabus_file.url }}"
+                class="btn btn-outline-primary btn-sm js-open-syllabus"
+                data-img="{{ course.syllabus_file.url }}"
+                data-title="{{ course.title|escape }}"
+              >
+                View Syllabus
+              </a>
+            {% else %}
+              <button class="btn btn-outline-secondary btn-sm" disabled>View Syllabus</button>
+            {% endif %}
+
+            <a href="#admission-form" class="btn btn-primary btn-sm ms-auto">Apply Now</a>
+          </div>
 
             </div>
 

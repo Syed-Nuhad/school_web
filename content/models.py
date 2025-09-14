@@ -553,3 +553,78 @@ class Course(models.Model):
 # End Programs & Courses Section
 
 
+# Admission app
+
+def admission_photo_upload_to(instance, filename):
+    return f"admissions/photos/{instance.created_at:%Y/%m}/{filename}"
+
+def admission_doc_upload_to(instance, filename):
+    return f"admissions/docs/{instance.created_at:%Y/%m}/{filename}"
+
+class AdmissionApplication(models.Model):
+    SHIFT_CHOICES = [
+        ("day", "Day"),
+        ("morning", "Morning"),
+        ("evening", "Evening"),
+    ]
+    STATUS_CHOICES = [
+        ("new", "New"),
+        ("review", "In review"),
+        ("accepted", "Accepted"),
+        ("rejected", "Rejected"),
+    ]
+
+    # Core
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30)
+    date_of_birth = models.DateField(null=True, blank=True)
+    address = models.TextField(blank=True)
+
+    guardian_name = models.CharField(max_length=150, blank=True)
+    guardian_phone = models.CharField(max_length=30, blank=True)
+
+    # Course desired
+    desired_course = models.ForeignKey(
+        "content.Course",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="applications",
+        help_text="Course the applicant is applying for."
+    )
+    shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, blank=True)
+
+    # Academics
+    previous_school = models.CharField(max_length=150, blank=True)
+    ssc_gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+
+    # Attachments
+    photo = models.ImageField(upload_to=admission_photo_upload_to, null=True, blank=True)
+    transcript = models.FileField(upload_to=admission_doc_upload_to, null=True, blank=True)
+
+    # Extra
+    message = models.TextField(blank=True)
+
+    # Admin workflow
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="new")
+
+    # Audit
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True, editable=False,
+        related_name="admissions_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Admission Application"
+        verbose_name_plural = "Admission Applications"
+
+    def __str__(self):
+        return f"{self.full_name} ({self.desired_course or '—'})"
+
+
+# END

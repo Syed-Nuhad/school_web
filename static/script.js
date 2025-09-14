@@ -191,135 +191,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // ---- Syllabus data (example, multi-page friendly) ----
 
-const SYLLABUS_DATA = {
-  "HSC – Science": {
-    overview: "This syllabus covers core science subjects with emphasis on lab work, problem solving, and exam preparation.",
-    modules: [
-      ["Physics: Mechanics", "Kinematics, Dynamics, Work-Energy, Power"],
-      ["Physics: Waves & Optics", "Wave motion, Sound, Mirrors, Lenses"],
-      ["Physics: Electricity", "Current, Circuits, EMF, Kirchhoff's laws"],
-      ["Chemistry: Physical", "Mole concept, Thermodynamics, Kinetics"],
-      ["Chemistry: Inorganic", "Periodic table, Bonding, Coordination"],
-      ["Chemistry: Organic", "Hydrocarbons, Functional groups, Reactions"],
-      ["Mathematics: Algebra", "Sets, Functions, Quadratics, Progressions"],
-      ["Mathematics: Calculus", "Limits, Derivatives, Basic Integrals"],
-      ["Biology: Cell Biology", "Cell structure, Transport, Division"],
-      ["Biology: Genetics", "Mendelian genetics, DNA, Gene expression"],
-      // duplicate some rows to force multiple pages
-      ["Lab Work", "Physics/Chemistry/Biology practicals & reports"],
-      ["Project", "Science fair participation & presentation"],
-      ["Revision", "Mock tests, question banks, past papers"],
-      ["Soft Skills", "Time management, presentation, note-taking"],
-      ["ICT Basics", "Spreadsheets, Presentations, Internet safety"],
-      ["Seminars", "Guest lectures from academicians"],
-      ["Career Guidance", "Engineering/Medical admissions roadmap"],
-      ["Ethics", "Academic integrity & lab safety"],
-      ["Field Visit", "Local science museum/industry visit"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  },
-  "HSC – Commerce": {
-    overview: "Focus on Accounting, Business Studies, and Economics with practical projects.",
-    modules: [
-      ["Accounting I", "Journal, Ledger, Trial Balance"],
-      ["Accounting II", "Financial statements, Ratios"],
-      ["Business Studies", "Management, Marketing, HRM"],
-      ["Economics I", "Microeconomics basics"],
-      ["Economics II", "Macroeconomics basics"],
-      ["ICT for Commerce", "Spreadsheets & presentations"],
-      ["Entrepreneurship", "Business plan & pitching"],
-      ["Project", "Case study on a local business"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  },
-  "HSC – Arts": {
-    overview: "Languages, Social Sciences, and Humanities with emphasis on reading & research.",
-    modules: [
-      ["Bangla Literature", "Poetry, drama, prose"],
-      ["English", "Grammar, composition, comprehension"],
-      ["History", "Regional & world history themes"],
-      ["Civics", "Governance, constitution, rights"],
-      ["Geography", "Physical & human geography"],
-      ["Sociology", "Society & culture basics"],
-      ["Research Skills", "Referencing & reports"],
-      ["Debate Club", "Public speaking & debating"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  }
-};
-
-// ---- Generate PDF (A4, multi-page) ----
-function generateSyllabusPdf(courseTitle) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-
-  const course = SYLLABUS_DATA[courseTitle] || {
-    overview: "Detailed syllabus will be provided by the department.",
-    modules: [["Overview", "Content will be announced soon."]]
-  };
-
-  const margin = 15;
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  // Header & footer for every page
-  const drawHeader = () => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("College Syllabus", margin, 14);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(courseTitle, margin, 21);
-  };
-
-  const applyFooters = () => {
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 8, { align: "right" });
-    }
-  };
-
-  // First page body
-  drawHeader();
-  doc.setFontSize(11);
-  doc.text("Overview:", margin, 32);
-  doc.setFont("helvetica", "normal");
-  doc.text(course.overview, margin, 39, { maxWidth: pageW - margin * 2 });
-
-  // Modules table (autoTable handles page breaks)
-  const tableStartY = 52;
-  doc.autoTable({
-    startY: tableStartY,
-    margin: { left: margin, right: margin },
-    headStyles: { fillColor: [13, 110, 253] },  // Bootstrap primary
-    styles: { fontSize: 10, cellPadding: 3 },
-    head: [["Module", "Key Topics"]],
-    body: course.modules,
-    didDrawPage: () => {
-      drawHeader();
-    }
-  });
-
-  applyFooters();
-  const filename = `${courseTitle.replace(/\s+/g, "_")}_Syllabus.pdf`;
-  doc.save(filename);
-}
-
-// ---- Wire the buttons ----
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll('#academics .syllabus-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const card = btn.closest('.card');
-      const title = card.querySelector('.card-title')?.textContent?.trim() || "Syllabus";
-      generateSyllabusPdf(title);
-    });
-  });
-});
-
-
 // ⭐ End Accademy section :Course filter (pure front-end) ========================================================
 
 
@@ -1515,140 +1386,58 @@ document.addEventListener("DOMContentLoaded", function () {
 ///////////////////////////////////
 //Courses sylabus modal
 ///////////////////////////////////
+// Open syllabus image in LightGallery (zoom + download)
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.js-open-syllabus');
+  if (!btn) return;
 
+  e.preventDefault();
 
-document.addEventListener('DOMContentLoaded', () => {
-  const modalEl   = document.getElementById('syllabusModal');
-  const modal     = new bootstrap.Modal(modalEl);
-  const titleEl   = document.getElementById('syllabusTitle');
-  const dlBtn     = document.getElementById('dlBtn');
-
-  // PDF elements
-  const pdfWrap   = document.getElementById('pdfWrap');
-  const pdfCanvas = document.getElementById('pdfCanvas');
-  const pdfCtrls  = document.getElementById('pdfCtrls');
-  const prevPage  = document.getElementById('prevPage');
-  const nextPage  = document.getElementById('nextPage');
-  const pageNumEl = document.getElementById('pageNum');
-  const pageCountEl = document.getElementById('pageCount');
-  const pdfZoomIn = document.getElementById('pdfZoomIn');
-  const pdfZoomOut= document.getElementById('pdfZoomOut');
-  const pdfReset  = document.getElementById('pdfReset');
-
-  // Image elements
-  const imgWrap   = document.getElementById('imgWrap');
-  const imgEl     = document.getElementById('imgEl');
-  const imgCtrls  = document.getElementById('imgCtrls');
-  const imgZoomIn = document.getElementById('imgZoomIn');
-  const imgZoomOut= document.getElementById('imgZoomOut');
-  const imgReset  = document.getElementById('imgReset');
-
-  const isImage = (url) => /\.(png|jpe?g|webp|gif|bmp|svg)(\?|$)/i.test(url);
-  const isPdf   = (url) => /\.pdf(\?|$)/i.test(url);
-
-  // ---------- PDF state ----------
-  let pdfDoc = null, pdfScale = 1.1, pdfPage = 1, pdfRendering = false;
-  async function loadPdf(url) {
-    // Show PDF viewport/controls
-    pdfWrap.classList.remove('d-none');
-    pdfCtrls.classList.remove('d-none');
-    imgWrap.classList.add('d-none');
-    imgCtrls.classList.add('d-none');
-
-    const loadingTask = window.pdfjsLib.getDocument({ url });
-    pdfDoc = await loadingTask.promise;
-    pageCountEl.textContent = pdfDoc.numPages;
-    pdfPage = 1;
-    pdfScale = 1.1;
-    await renderPage();
+  const src = btn.dataset.img;
+  const title = btn.dataset.title || 'Syllabus';
+  if (!src) {
+    console.warn('No data-img on syllabus button.');
+    return;
   }
 
-  async function renderPage() {
-    if (!pdfDoc || pdfRendering) return;
-    pdfRendering = true;
-    const page = await pdfDoc.getPage(pdfPage);
-    const viewport = page.getViewport({ scale: pdfScale });
-    const ctx = pdfCanvas.getContext('2d');
-    pdfCanvas.width = viewport.width;
-    pdfCanvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    pageNumEl.textContent = pdfPage;
-    pdfRendering = false;
+  // Make sure LG is available
+  if (typeof window.lightGallery !== 'function') {
+    console.error('lightGallery not loaded.');
+    return;
   }
 
-  prevPage.addEventListener('click', async () => {
-    if (!pdfDoc || pdfPage <= 1) return;
-    pdfPage--; await renderPage();
-  });
-  nextPage.addEventListener('click', async () => {
-    if (!pdfDoc || pdfPage >= pdfDoc.numPages) return;
-    pdfPage++; await renderPage();
-  });
-  pdfZoomIn.addEventListener('click', async () => { pdfScale = Math.min(4, pdfScale + 0.15); await renderPage(); });
-  pdfZoomOut.addEventListener('click', async () => { pdfScale = Math.max(0.5, pdfScale - 0.15); await renderPage(); });
-  pdfReset.addEventListener('click', async () => { pdfScale = 1.1; await renderPage(); });
+  // Use plugins if present
+  const plugins = [];
+  if (window.lgZoom) plugins.push(window.lgZoom);
+  if (window.lgDownload) plugins.push(window.lgDownload);
 
-  // ---------- Image state (Panzoom) ----------
-  let panzoom = null;
-  function loadImage(url) {
-    imgEl.src = url;
-    imgWrap.classList.remove('d-none');
-    imgCtrls.classList.remove('d-none');
-    pdfWrap.classList.add('d-none');
-    pdfCtrls.classList.add('d-none');
+  // Temporary holder for this one-shot gallery
+  const holder = document.createElement('div');
+  document.body.appendChild(holder);
 
-    // init Panzoom on wrapper so dragging space works nicely
-    if (panzoom) { panzoom.destroy(); panzoom = null; }
-    panzoom = Panzoom(imgEl, {
-      maxScale: 6,
-      minScale: 0.4,
-      step: 0.2,
-      contain: 'outside' // start fully visible
-    });
-    // center/fit-ish
-    panzoom.reset();
-  }
-  imgZoomIn.addEventListener('click', () => panzoom && panzoom.zoomIn());
-  imgZoomOut.addEventListener('click', () => panzoom && panzoom.zoomOut());
-  imgReset.addEventListener('click', () => panzoom && panzoom.reset());
-
-  // ---------- Open modal from any "View Syllabus" button ----------
-  document.querySelectorAll('.syllabus-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      const url   = btn.dataset.url;
-      const title = btn.dataset.title || 'Syllabus';
-      if (!url) return;
-
-      titleEl.textContent = title;
-      dlBtn.href = url;
-      try { dlBtn.download = url.split('/').pop().split('?')[0] || 'syllabus'; } catch {}
-
-      // Reset previous state
-      pdfDoc = null;
-      if (panzoom) { panzoom.destroy(); panzoom = null; }
-      imgEl.src = '';
-      pdfCanvas.width = pdfCanvas.height = 0;
-
-      // Decide by extension; default to PDF if unknown
-      const type = isImage(url) ? 'image' : (isPdf(url) ? 'pdf' : 'pdf');
-
-      modal.show();
-
-      if (type === 'image') {
-        loadImage(url);
-      } else {
-        // NOTE: If the file is on another domain, ensure CORS headers are set.
-        await loadPdf(url);
+  const lg = window.lightGallery(holder, {
+    dynamic: true,
+    licenseKey: '0000-0000-000-0000', // required param
+    plugins,
+    closable: true,
+    download: true,
+    speed: 300,
+    backdropDuration: 200,
+    dynamicEl: [
+      {
+        src,
+        thumb: src,
+        subHtml: `<h4 class="mb-0">${title}</h4>`,
+        downloadUrl: src
       }
-    });
+    ]
   });
 
-  // Cleanup on close
-  modalEl.addEventListener('hidden.bs.modal', () => {
-    if (panzoom) { panzoom.destroy(); panzoom = null; }
-    imgEl.src = '';
-    pdfDoc = null;
-    pdfCanvas.width = pdfCanvas.height = 0;
-  });
+  lg.openGallery(0);
+
+  // Clean up when closed
+  holder.addEventListener('lgAfterClose', () => {
+    lg.destroy(true);
+    holder.remove();
+  }, { once: true });
 });
