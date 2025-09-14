@@ -5,7 +5,7 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
-from content.models import Banner, Notice, TimelineEvent, GalleryItem
+from content.models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection
 
 
 def home(request):
@@ -27,10 +27,16 @@ def home(request):
         .order_by("date", "order")[:4]
     )
     gallery_qs = GalleryItem.objects.filter(is_active=True)
-
+    about = (
+        AboutSection.objects
+        .filter(is_active=True)
+        .order_by("order")
+        .first()
+    )
     context = {
         "banners": banners_qs,
         "gallery_items": gallery_qs,
+        "about": about,
         "banners_flat": [
             {
                 "title": b.title,

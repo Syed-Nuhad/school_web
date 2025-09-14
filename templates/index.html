@@ -110,7 +110,7 @@
 <!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
 <section class="container py-5" id="notice">
 <div class="d-flex align-items-center justify-content-between pb-5">
-  <h2 class="fw-bold mb-0">Notices</h2>
+  <h1 class="fw-bold text-primary mb-0">Notices</h1>
   <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
 </div>
   <div class="text-end align">
@@ -150,7 +150,7 @@
 <section class="py-5" id="academic-timeline">
   <div class="container" style="max-width: 1100px;">
     <div class="text-center mb-4">
-      <h2 class="fw-bold mb-1">Academic Calendar</h2>
+      <h1 class="fw-bold text-primary mb-1">Timeline</h1>
       <p class="text-muted mb-0">All the key dates at a glance</p>
     </div>
 
@@ -187,106 +187,139 @@
 <!--END-->
 
 
-<section id="gallery-section" class="container py-5">
-  <h2 class="text-center fw-bold mb-5">Campus Gallery</h2>
+{% load static %}
 
-  <div class="row g-3">
+<section id="glx-gallery" class="container py-5">
+  <div class="mb-4">
+    <h1 class="fw-bold text-primary mb-1">Campus Gallery</h1>
+    <p class="text-muted mb-0">Photos &amp; videos from campus life</p>
+  </div>
+
+  <!-- more breathing room on big screens -->
+  <div class="row g-4 g-lg-5">
     {% for item in gallery_items %}
-      <div class="col-6 col-md-4 col-lg-3">
-        {% if item.kind == "video" %}
-          <a class="gallery-card d-block text-decoration-none position-relative"
-             data-kind="video"
-             data-video="{{ item.youtube_embed_url }}"
-             data-title="{{ item.title }}"
-             data-place="{{ item.place }}"
-             data-datetime="{{ item.taken_at|date:'Y-m-d' }} {{ item.taken_at|time:'g:i A' }}">
+      <!-- Bigger cards on large screens: 2-up on lg, 3-up on very wide (xxl) -->
+      <div class="col-12 col-sm-6 col-lg-6 col-xxl-4">
+        <!-- Keep .glx-card and data-* for your JS -->
+        <a href="#"
+           role="button"
+           class="glx-card d-block text-decoration-none border bg-body rounded-4 shadow-sm p-3 h-100"
+           data-kind="{{ item.kind }}"
+           data-image="{% if item.image %}{{ item.image.url }}{% endif %}"
+           data-video="{{ item.youtube_embed_url }}"
+           data-title="{{ item.title|escape }}"
+           data-place="{{ item.place|default_if_none:''|escape }}"
+           data-datetime="{% if item.taken_at %}{{ item.taken_at|date:'M j, Y, g:i A' }}{% endif %}">
+
+          <!-- Big thumbnail, cropped nicely, no custom CSS -->
+          <div class="ratio ratio-16x9 rounded-3 overflow-hidden mb-3 position-relative bg-body-tertiary">
             <img
-              src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
-              class="img-fluid rounded-3 shadow-sm" alt="{{ item.title }}">
-            <span class="position-absolute top-50 start-50 translate-middle fs-2 text-white">▶</span>
-          </a>
-        {% else %}
-          <a class="gallery-card d-block text-decoration-none"
-             data-kind="image"
-             data-image="{% if item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
-             data-title="{{ item.title }}"
-             data-place="{{ item.place }}"
-             data-datetime="{{ item.taken_at|date:'Y-m-d' }} {{ item.taken_at|time:'g:i A' }}">
-            <img
-              src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder.jpg' %}{% endif %}"
-              class="img-fluid rounded-3 shadow-sm" alt="{{ item.title }}">
-          </a>
-        {% endif %}
+              src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder-16x9.jpg' %}{% endif %}"
+              alt="{{ item.title }}"
+              class="w-100 h-100 object-fit-cover"
+              loading="lazy">
+
+            {% if item.kind == 'video' %}
+              <!-- Simple, modern play pill (no gradients) -->
+              <span class="position-absolute top-50 start-50 translate-middle
+                           rounded-pill bg-dark bg-opacity-75 text-white fw-semibold small
+                           px-3 py-2">
+                ▶ Play
+              </span>
+            {% endif %}
+          </div>
+
+          <!-- Clean caption -->
+          <div class="d-flex flex-column gap-1">
+            <div class="fw-semibold fs-5 text-body text-truncate">{{ item.title }}</div>
+            <div class="text-secondary small text-truncate">
+              {% if item.place %}{{ item.place }}{% endif %}
+              {% if item.taken_at %}{% if item.place %} · {% endif %}{{ item.taken_at|date:'M j, Y, g:i A' }}{% endif %}
+            </div>
+          </div>
+        </a>
       </div>
     {% empty %}
-      <div class="col-12 text-center text-muted">No gallery items yet.</div>
+      <div class="col-12 text-muted">No gallery items yet.</div>
     {% endfor %}
   </div>
 </section>
+<!-- WhatsApp-style fullscreen viewer -->
+<div class="modal fade" id="glxModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content bg-black border-0">
+      <div class="modal-body p-0 position-relative">
 
-<!-- Modal IDs/classes exactly what your JS expects -->
-<div class="modal fade" id="galleryModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content border-0">
-      <div class="modal-header">
-        <div class="me-auto">
-          <h5 id="gmTitle" class="modal-title fw-semibold"></h5>
-          <small id="gmMeta" class="text-muted"></small>
+        <!-- Top bar (overlay) -->
+        <div class="position-absolute top-0 start-0 end-0 p-2 d-flex align-items-center" style="z-index:2;">
+          <div class="text-white">
+            <div id="glxTitle" class="fw-semibold"></div>
+            <small id="glxMeta" class="text-white-50"></small>
+          </div>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <!-- Shown for images only -->
+            <button id="glxZoomOut" type="button" class="btn btn-sm btn-outline-light d-none" title="Zoom out">−</button>
+            <button id="glxZoomIn"  type="button" class="btn btn-sm btn-outline-light d-none" title="Zoom in">+</button>
+            <button id="glxReset"   type="button" class="btn btn-sm btn-outline-light d-none" title="Reset">Reset</button>
+            <a id="glxDownload" class="btn btn-sm btn-primary d-none" download>Download</a>
+            <!-- Close -->
+            <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
         </div>
-        <div class="d-flex align-items-center gap-2 me-2">
-          <button id="gmZoomOut" type="button" class="btn btn-sm btn-outline-secondary d-none">−</button>
-          <button id="gmZoomIn"  type="button" class="btn btn-sm btn-outline-secondary d-none">+</button>
-          <button id="gmReset"   type="button" class="btn btn-sm btn-outline-secondary d-none">Reset</button>
-          <a id="gmDownload" class="btn btn-sm btn-primary d-none" download>Download</a>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
 
-      <div class="modal-body p-0">
-        <div id="gmImageWrap" class="d-none" style="cursor:grab; overflow:hidden; height:70vh; display:flex; align-items:center; justify-content:center; background:#000;">
-          <img id="gmImage" alt="" style="max-width:none; max-height:100%; transform:translate(0,0) scale(1); user-select:none; -webkit-user-drag:none;">
+        <!-- IMAGE viewport (fills screen) -->
+        <div id="glxImageWrap"
+             class="d-none w-100 vh-100 overflow-hidden d-flex align-items-center justify-content-center"
+             style="cursor:grab; touch-action:none; background:#000;">
+          <img id="glxImage" alt="" draggable="false" class="user-select-none"
+               style="will-change:transform; transform:translate(0px,0px) scale(1); max-width:none; max-height:none;">
         </div>
-        <div id="gmVideoWrap" class="d-none ratio ratio-16x9">
-          <iframe id="gmIframe" src="" title="YouTube video" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+        <!-- VIDEO viewport -->
+        <div id="glxVideoWrap" class="d-none w-100 vh-100 d-flex align-items-center justify-content-center bg-black">
+          <div class="ratio ratio-16x9 w-100" style="max-width:1000px;">
+            <iframe id="glxIframe" title="Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </div>
         </div>
+
       </div>
     </div>
   </div>
 </div>
-<!-- ⭐ End: Photo & Video Gallery -->
 
-
-<!-- ⭐⭐⭐⭐⭐===================== Start: About the College with Multiple Fading Images (No Slider)  -->
-<section class="container py-5" data-aos="fade-up" id="about">
-  <div class="text-center">
-    <h2 class="fw-bold text-success mb-5 section-title">About My College</h2>
+<!--About section-->
+{% if about %}
+<section class="container py-5" id="about" data-aos="fade-up">
+  <div class="text-start fw-bold mb-1">
+    <h1 class="fw-bold text-primary mb-5">{{ about.title }}</h1>
   </div>
 
   <div class="row align-items-center">
     <div class="col-md-6 mb-4 mb-md-0">
       <div class="image-fade-container rounded shadow" style="height:350px; overflow:hidden; position:relative;">
-        <img src="{% static 'img/images (3).jpeg' %}" alt="College Image 1" class="fade-image active" loading="lazy" style="object-fit: cover;">
-        <img src="{% static 'img/download.jpeg' %}" alt="College Image 2" class="fade-image" loading="lazy" style="object-fit: cover;">
-        <img src="{% static 'img/images.jpeg' %}" alt="College Image 3" class="fade-image" loading="lazy" style="object-fit: cover;">
+        {% for url, alt in about.image_list %}
+          <img src="{{ url }}" alt="{{ alt|default:about.title }}" class="fade-image {% if forloop.first %}active{% endif %}" loading="lazy" style="object-fit:cover;">
+        {% endfor %}
       </div>
     </div>
 
     <div class="col-md-6 fade-in delay-2">
-      <h2 class="text-primary fw-bold mb-3">Titu BD Science College</h2>
-      <p class="lead text-muted">
-        XYZ College is a leading educational institution dedicated to providing quality education in science, arts, and commerce.
-        Our mission is to empower students with modern knowledge, digital learning, and a strong moral foundation.
-      </p>
-      <ul class="list-unstyled mt-3">
-        <li>✅ Smart Classrooms & Digital Library</li>
-        <li>✅ Experienced Faculty and Mentors</li>
-        <li>✅ Modern Lab Facilities</li>
-        <li>✅ School Bus, Hostel, and Canteen Services</li>
-      </ul>
+      {% if about.college_name %}<h2 class="text-primary fw-bold mb-3">{{ about.college_name }}</h2>{% endif %}
+      {% if about.body %}<p class="lead text-muted">{{ about.body }}</p>{% endif %}
+      {% if about.bullet_list %}
+        <ul class="list-unstyled mt-3">
+          {% for b in about.bullet_list %}<li>✅ {{ b }}</li>{% endfor %}
+        </ul>
+      {% endif %}
     </div>
   </div>
 </section>
-<!-- ⭐ End: About the College ========================================================================== -->
+{% endif %}
+
+<!--END-->
+
 
 <!-- ⭐⭐⭐⭐⭐========================== Start: Academic Calendar / Important Dates -->
 <section class="container py-5 academic-calendar-section" data-aos="fade-up">

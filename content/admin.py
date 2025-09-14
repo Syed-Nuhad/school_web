@@ -1,18 +1,27 @@
+# content/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import Banner, Notice, TimelineEvent, GalleryItem
+from .models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection
 
 
 # -------------------------------------------------------------------
-# Helpers
+# Access helpers (updated)
 # -------------------------------------------------------------------
-def is_admin_user(user):
-    return user.is_superuser or user.groups.filter(name="Admin").exists()
+def is_student_user(user):
+    return user.groups.filter(name__iexact="Student").exists()
 
+def can_access_admin(user):
+    """
+    Allow any authenticated staff user into admin *except* members of 'Student'.
+    """
+    return user.is_authenticated and user.is_staff and not is_student_user(user)
 
-def is_teacher_user(user):
-    return user.groups.filter(name="Teacher").exists()
+def can_delete_admin(user):
+    """
+    Keep destructive delete to superusers or 'Admin' group.
+    """
+    return user.is_superuser or user.groups.filter(name__iexact="Admin").exists()
 
 
 def _img_url(obj):
@@ -43,6 +52,22 @@ class OwnableAdminMixin(admin.ModelAdmin):
             obj.published_at = timezone.now()
         super().save_model(request, obj, form, change)
 
+    # ===== unified permissions =====
+    def has_module_permission(self, request):
+        return can_access_admin(request.user)
+
+    def has_view_permission(self, request, obj=None):
+        return can_access_admin(request.user)
+
+    def has_add_permission(self, request):
+        return can_access_admin(request.user)
+
+    def has_change_permission(self, request, obj=None):
+        return can_access_admin(request.user)
+
+    def has_delete_permission(self, request, obj=None):
+        return can_delete_admin(request.user)
+
 
 # -------------------------------------------------------------------
 # Banner admin
@@ -64,37 +89,9 @@ class BannerAdmin(OwnableAdminMixin):
         ("Preview", {"fields": ("preview",)}),
     )
 
+    # let all non-student staff see everything
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if is_admin_user(request.user):
-            return qs
-        if is_teacher_user(request.user):
-            if "created_by" in {f.name for f in Banner._meta.get_fields()}:
-                return qs.filter(created_by=request.user)
-            return qs.none()
-        return qs.none()
-
-    def has_module_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
-
-    def has_view_permission(self, request, obj=None):
-        return self.has_module_permission(request)
-
-    def has_add_permission(self, request):
-        return self.has_module_permission(request)
-
-    def has_change_permission(self, request, obj=None):
-        if is_admin_user(request.user):
-            return True
-        if is_teacher_user(request.user):
-            if obj is None:
-                return True
-            if hasattr(obj, "created_by_id"):
-                return obj.created_by_id == request.user.id
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return is_admin_user(request.user)
+        return super().get_queryset(request)
 
     # thumbnails
     def thumb(self, obj):
@@ -112,7 +109,7 @@ class BannerAdmin(OwnableAdminMixin):
 # Notice admin
 # -------------------------------------------------------------------
 @admin.register(Notice)
-class NoticeAdmin(admin.ModelAdmin):
+class NoticeAdmin(OwnableAdminMixin):
     list_display = ("title", "is_active", "published_at", "thumb")
     list_filter = ("is_active", "published_at")
     search_fields = ("title", "subtitle")
@@ -139,27 +136,12 @@ class NoticeAdmin(admin.ModelAdmin):
         return format_html('<img src="{}" style="max-width:100%;max-height:220px">', url) if url else "—"
     preview.short_description = "Preview"
 
-    def has_module_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
-
-    def has_view_permission(self, request, obj=None):
-        return self.has_module_permission(request)
-
-    def has_add_permission(self, request):
-        return self.has_module_permission(request)
-
-    def has_change_permission(self, request, obj=None):
-        return self.has_module_permission(request)
-
-    def has_delete_permission(self, request, obj=None):
-        return is_admin_user(request.user)
-
 
 # -------------------------------------------------------------------
 # TimelineEvent admin
 # -------------------------------------------------------------------
 @admin.register(TimelineEvent)
-class TimelineEventAdmin(admin.ModelAdmin):
+class TimelineEventAdmin(OwnableAdminMixin):
     list_display = ("title", "date", "order", "is_active")
     list_editable = ("order", "is_active")
     search_fields = ("title", "description")
@@ -181,39 +163,12 @@ class TimelineEventAdmin(admin.ModelAdmin):
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-    def has_module_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
-
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if is_admin_user(request.user):
-            return qs
-        if is_teacher_user(request.user):
-            return qs.filter(created_by=request.user)
-        return qs.none()
-
-    def has_view_permission(self, request, obj=None):
-        return self.has_module_permission(request)
-
-    def has_add_permission(self, request):
-        return self.has_module_permission(request)
-
-    def has_change_permission(self, request, obj=None):
-        if is_admin_user(request.user):
-            return True
-        if is_teacher_user(request.user):
-            return obj is None or obj.created_by_id == request.user.id
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return is_admin_user(request.user)
-
 
 # -------------------------------------------------------------------
 # GalleryItem admin
 # -------------------------------------------------------------------
 @admin.register(GalleryItem)
-class GalleryItemAdmin(admin.ModelAdmin):
+class GalleryItemAdmin(OwnableAdminMixin):
     list_display = ("title", "kind", "place", "taken_at", "order", "is_active", "thumb")
     list_filter = ("kind", "is_active")
     search_fields = ("title", "place")
@@ -236,17 +191,54 @@ class GalleryItemAdmin(admin.ModelAdmin):
         return format_html('<img src="{}" style="height:38px;border-radius:6px;">', src) if src else "—"
     thumb.short_description = "Thumb"
 
-    def has_module_permission(self, request):
-        return is_admin_user(request.user) or is_teacher_user(request.user)
 
-    def has_view_permission(self, request, obj=None):
-        return self.has_module_permission(request)
+# -------------------------------------------------------------------
+# AboutSection admin (no permission overrides needed thanks to mixin)
+# -------------------------------------------------------------------
+def _img_preview(file_field, height=70):
+    try:
+        if file_field and file_field.url:
+            return format_html('<img src="{}" style="height:{}px;border-radius:6px;">', file_field.url, height)
+    except Exception:
+        pass
+    return "—"
 
-    def has_add_permission(self, request):
-        return self.has_module_permission(request)
 
-    def has_change_permission(self, request, obj=None):
-        return self.has_module_permission(request)
+@admin.register(AboutSection)
+class AboutSectionAdmin(OwnableAdminMixin):
+    list_display = ("title", "college_name", "order", "is_active", "updated_at")
+    list_filter = ("is_active",)
+    search_fields = ("title", "college_name", "body", "bullets")
+    ordering = ("order", "-updated_at")
 
-    def has_delete_permission(self, request, obj=None):
-        return is_admin_user(request.user)
+    readonly_fields = ("preview_1", "preview_2", "preview_3", "preview_4", "created_at", "updated_at")
+
+    fieldsets = (
+        ("Visibility & Order", {
+            "fields": ("is_active", "order"),
+            "description": "Control whether this About block is visible and where it appears."
+        }),
+        ("Text Content", {
+            "fields": ("title", "college_name", "body", "bullets"),
+            "description": "Provide heading, sub-heading, a short paragraph, and bullets (one per line)."
+        }),
+        ("Fading Images (up to 4)", {
+            "fields": (
+                ("image_1", "image_1_alt", "preview_1"),
+                ("image_2", "image_2_alt", "preview_2"),
+                ("image_3", "image_3_alt", "preview_3"),
+                ("image_4", "image_4_alt", "preview_4"),
+            ),
+            "description": "Upload 1–4 images for the fade stack. Add alt text for accessibility."
+        }),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def preview_1(self, obj): return _img_preview(getattr(obj, "image_1", None))
+    preview_1.short_description = "Preview #1"
+    def preview_2(self, obj): return _img_preview(getattr(obj, "image_2", None))
+    preview_2.short_description = "Preview #2"
+    def preview_3(self, obj): return _img_preview(getattr(obj, "image_3", None))
+    preview_3.short_description = "Preview #3"
+    def preview_4(self, obj): return _img_preview(getattr(obj, "image_4", None))
+    preview_4.short_description = "Preview #4"

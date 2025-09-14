@@ -288,3 +288,114 @@ class GalleryItem(models.Model):
             raise ValidationError("For Kind=Image, please upload an image.")
         if self.kind == self.VIDEO and not (self.youtube_embed_url or "").strip():
             raise ValidationError("For Kind=YouTube, please provide a YouTube URL.")
+
+
+
+def about_upload_to(instance, filename):
+    return f"about/{timezone.now():%Y/%m}/{filename}"
+
+
+class AboutSection(models.Model):
+    """
+    One editable 'About the College' block with up to 4 fading images.
+    (Single model by request—no separate image table.)
+    """
+    # --- content ---
+    title = models.CharField(
+        max_length=150,
+        help_text="Section heading shown above the block (e.g., 'About My College')."
+    )
+    college_name = models.CharField(
+        max_length=150,
+        blank=True,
+        help_text="Optional sub-heading inside the block (e.g., your college name)."
+    )
+    body = models.TextField(
+        blank=True,
+        help_text="Main paragraph text. Keep it concise."
+    )
+    bullets = models.TextField(
+        blank=True,
+        help_text="Bullet points — one per line. Example:\nSmart Classrooms\nExperienced Faculty\nModern Labs"
+    )
+
+    # --- images (up to 4, optional) ---
+    image_1 = models.ImageField(
+        upload_to=about_upload_to, blank=True, null=True,
+        help_text="Fading image #1 (landscape recommended)."
+    )
+    image_1_alt = models.CharField(
+        max_length=200, blank=True,
+        help_text="Alt text for image #1 (accessibility)."
+    )
+
+    image_2 = models.ImageField(
+        upload_to=about_upload_to, blank=True, null=True,
+        help_text="Fading image #2 (optional)."
+    )
+    image_2_alt = models.CharField(
+        max_length=200, blank=True,
+        help_text="Alt text for image #2 (accessibility)."
+    )
+
+    image_3 = models.ImageField(
+        upload_to=about_upload_to, blank=True, null=True,
+        help_text="Fading image #3 (optional)."
+    )
+    image_3_alt = models.CharField(
+        max_length=200, blank=True,
+        help_text="Alt text for image #3 (accessibility)."
+    )
+
+    image_4 = models.ImageField(
+        upload_to=about_upload_to, blank=True, null=True,
+        help_text="Fading image #4 (optional)."
+    )
+    image_4_alt = models.CharField(
+        max_length=200, blank=True,
+        help_text="Alt text for image #4 (accessibility)."
+    )
+
+    # --- ordering/visibility ---
+    order = models.PositiveIntegerField(default=0, help_text="Lower comes first.")
+    is_active = models.BooleanField(default=True, help_text="Uncheck to hide this section.")
+
+    # --- housekeeping ---
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ("order", "-updated_at")
+        verbose_name = "About Section"
+        verbose_name_plural = "About Sections"
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def bullet_list(self):
+        """Return bullets as a cleaned list (skip blanks)."""
+        return [b.strip() for b in (self.bullets or "").splitlines() if b.strip()]
+
+    @property
+    def image_list(self):
+        """
+        Returns a list of (url, alt) for all present images, in order.
+        Useful in templates for the fading stack.
+        """
+        out = []
+        for idx in (1, 2, 3, 4):
+            img = getattr(self, f"image_{idx}", None)
+            if img:
+                try:
+                    url = img.url
+                except Exception:
+                    url = ""
+                if url:
+                    alt = getattr(self, f"image_{idx}_alt", "") or ""
+                    out.append((url, alt))
+        return out
+
+    @property
+    def image_count(self):
+        return len(self.image_list)

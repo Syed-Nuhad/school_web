@@ -14,15 +14,6 @@ const navLinks = document.querySelector(".nav-links");
 
 
 
-// ⭐========================= START: Toggle Mobile Menu 
-
-
-mobileMenu.addEventListener("click", () => {
-  navLinks.classList.toggle("active");
-});
-// ⭐ END Toggle Mobile Menu =============================================================================
-
-// ⭐ END Navigation Menu Script =========================================================================
 
 
 
@@ -37,19 +28,6 @@ const dotsContainer = document.querySelector(".dots");
 // ===== END: Select Elements ===============================================================================
 
 let currentIndex = 0;
-
-// ⭐============================= START: Create Dots Dynamically 
-
-slides.forEach((_, index) => {
-  const dot = document.createElement("span");
-  if (index === 0) dot.classList.add("active");
-  dot.addEventListener("click", () => showSlide(index));
-  dotsContainer.appendChild(dot);
-});
-const dots = document.querySelectorAll(".dots span");
-
-// ⭐ END Create Dots Dynamically ======================================================================
-
 
 
 
@@ -69,30 +47,6 @@ function showSlide(index) {
 // ⭐ END Show Specific Slide =============================================================================
 
 
-// ⭐⭐⭐⭐⭐===================== START: Next & Previous Slide Functions 
-
-function nextSlide() {
-  currentIndex = (currentIndex + 1) % slides.length;
-  showSlide(currentIndex);
-}
-
-function prevSlide() {
-  currentIndex = (currentIndex - 1 + slides.length) % slides.length;
-  showSlide(currentIndex);
-}
-// ⭐END  Next & Previous Slide Functions ==============================================================
-
-// ⭐⭐⭐⭐⭐ ====================== START: Event Listeners 
-prevBtn.addEventListener("click", prevSlide);
-
-// ⭐ END: Event Listeners ============================================================================
-
-
-// ⭐⭐⭐⭐⭐======================== START: Auto Slide Every 5 Seconds 
-
-setInterval(nextSlide, 5000);
-
-// ⭐ END  ⭐ Auto Slide Every 5 Seconds =============================================================
 
 
 
@@ -208,61 +162,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // ⭐ End : Circle Progress  =====================================================================================
 
-
-
-
-  // ⭐⭐⭐⭐⭐=========Start : Online Admission Form Section. Smooth scroll if nav links jump to this form
-  
-// Use jsPDF from CDN to generate PDF on submit success
-  // const { jsPDF } = window.jspdf;
-
-  // ⭐⭐⭐⭐⭐ Start : Online Admission Form Payment Simulation, Feedback, and PDF Generation
-
-  // Payment confirmation simulation & UI update
-  document.getElementById('confirm-payment-btn').addEventListener('click', () => {
-    const paymentMethod = document.getElementById('payment-method').value;
-    const paymentStatus = document.getElementById('payment-status');
-    const submitBtn = document.getElementById('submit-btn');
-    const printBtn = document.getElementById('print-btn');
-
-    if (!paymentMethod) {
-      paymentStatus.className = 'alert alert-danger py-2';
-      paymentStatus.textContent = 'Please select a payment method before confirming.';
-      submitBtn.disabled = true;
-      printBtn.disabled = true;
-      return;
-    }
-
-    // For demo, randomly decide success or failure
-    const success = Math.random() > 0.3; // 70% chance success
-
-    if(success){
-      paymentStatus.className = 'alert alert-success py-2';
-      paymentStatus.textContent = 'Payment successful, please submit the form.';
-      submitBtn.disabled = false;
-      printBtn.disabled = false;
-    } else {
-      paymentStatus.className = 'alert alert-danger py-2';
-      paymentStatus.textContent = 'Payment not paid, please pay first and submit later.';
-      submitBtn.disabled = true;
-      printBtn.disabled = true;
-    }
-  });
-
-  // Submit form handler (you can add real form submission here)
-  document.querySelector('#admission-form form').addEventListener('submit', e => {
-    e.preventDefault();
-    alert('Form submitted! You will receive a PDF copy via email.');
-  });
-
-  // Print button handler
-  document.getElementById('print-btn').addEventListener('click', () => {
-    window.print();
-  });
-
-
-  // Optionally, add form submit and download PDF logic here
-  // ⭐ End : Online Admission Form Section. Smooth scroll if nav links jump to this form =========================
 
 
 
@@ -677,150 +576,176 @@ function showMarksheet(student) {
 
   marksheet.style.display = "block";
 }
+// ----- Marksheet search (safe) -----
+(() => {
+  const form = document.getElementById('searchForm');
+  if (!form) return;                 // no form on this page → do nothing
 
-// ---------------------------------------------------------------
-//   Search submit
-//----------------------------------------------------------------
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = form.name.value.trim().toLowerCase();
-  const roll = form.roll.value.trim();
-  const cls = form.class.value;
-  const section = form.section.value;
+  const marksheet       = document.getElementById('marksheet');
+  const msName          = document.getElementById('msName');
+  const msRoll          = document.getElementById('msRoll');
+  const msClass         = document.getElementById('msClass');
+  const msSection       = document.getElementById('msSection');
+  const marksBody       = document.getElementById('marksBody');
+  const totalFullMarksEl= document.getElementById('totalFullMarks');
+  const totalMarksEl    = document.getElementById('totalMarks');
+  const finalGradeEl    = document.getElementById('finalGrade');
+  const finalPositionEl = document.getElementById('finalPosition');
+  const daysPresentEl   = document.getElementById('daysPresent');
+  const daysAbsentEl    = document.getElementById('daysAbsent');
+  const printBtn        = document.getElementById('printBtn');
+  const downloadBtn     = document.getElementById('downloadPdf');
 
-  const found = students.find((student) => {
-    return (
-      (name === "" || student.name.toLowerCase().includes(name)) &&
-      (roll === "" || student.roll === roll) &&
-      (cls === "" || student.class === cls) &&
-      (section === "" || student.section === section)
+  // helper to read form inputs safely (including the field literally named "class")
+  const get = name => form.elements[name]?.value ?? '';
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name    = get('name').trim().toLowerCase();
+    const roll    = get('roll').trim();
+    const cls     = get('class').trim();     // <- read the input named "class"
+    const section = get('section').trim();
+
+    const found = students.find((s) =>
+      (name === '' || s.name.toLowerCase().includes(name)) &&
+      (roll === '' || s.roll === roll) &&
+      (cls  === '' || s.class === cls) &&
+      (section === '' || s.section === section)
     );
-  });
 
-  if (!found) {
-    alert("No student found with the given details.");
-    marksheet.style.display = "none";
-    currentStudent = null;
-    return;
-  }
-
-  currentStudent = found;
-  showMarksheet(found);
-});
-
-// ---------------------------------------------------------------
-//   Print + PDF (Letter size, with background + logo)
-//----------------------------------------------------------------
-printBtn.addEventListener("click", () => window.print());
-
-downloadBtn.addEventListener("click", async () => {
-  if (!currentStudent) return alert("Please search for a student first.");
-
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) {
-    alert("jsPDF not loaded. Please include jsPDF and jspdf-autotable.");
-    return;
-  }
-  const doc = new jsPDF({ orientation: "p", unit: "mm", format: "letter" });
-
-  if (typeof doc.autoTable !== "function") {
-    alert("jsPDF AutoTable plugin not loaded. Please include it after jsPDF.");
-    return;
-  }
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // Prepare assets
-  const collegeName = (document.getElementById("collegeName")?.textContent || "College Name").trim();
-  const examName = (document.getElementById("examName")?.textContent || "Examination").trim();
-  const logoImgEl = marksheet.querySelector("img");
-  const logoDataURL = logoImgEl ? await loadImageAsDataURL(logoImgEl) : null;
-  // Use the same background you use in CSS for consistency
-  const bgDataURL = await loadImageAsDataURL("./img/background/marksheet-bg.png");
-
-  // Page frame + background + header on every page
-  const drawFrameAndHeader = () => {
-    // Background image stretched to page
-    if (bgDataURL) {
-      doc.addImage(bgDataURL, "PNG", 0, 0, pageWidth, pageHeight, "", "FAST");
+    if (!found) {
+      alert('No student found with the given details.');
+      if (marksheet) marksheet.style.display = 'none';
+      return;
     }
-    // Decorative frame
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.6);
-    doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
 
-    // Header
-    if (logoDataURL) doc.addImage(logoDataURL, "PNG", 12, 12, 20, 20);
-    doc.setFont(undefined, "bold"); doc.setFontSize(16);
-    doc.text(collegeName, pageWidth / 2, 18, { align: "center" });
-    doc.setFont(undefined, "normal"); doc.setFontSize(12);
-    doc.text(examName, pageWidth / 2, 24, { align: "center" });
-    // Divider
-    doc.setLineWidth(0.3);
-    doc.line(10, 32, pageWidth - 10, 32);
-  };
-
-  drawFrameAndHeader();
-
-  // Student info
-  doc.setFontSize(11);
-  let y = 38;
-  doc.text(`Name: ${currentStudent.name}`, 12, y);
-  doc.text(`Roll No: ${currentStudent.roll}`, pageWidth / 2, y);
-  y += 6;
-  doc.text(`Class: ${currentStudent.class}`, 12, y);
-  doc.text(`Section: ${currentStudent.section}`, pageWidth / 2, y);
-
-  // Build table rows (repeat position column)
-  const totalFull = currentStudent.marks.reduce((s, m) => s + Number(m.full || 0), 0);
-  const totalObt = currentStudent.marks.reduce((s, m) => s + Number(m.obtained || 0), 0);
-  const position = rankInSection(currentStudent, students);
-  const finalGrade = gradeFromScore(totalObt, totalFull);
-
-  const tableBody = currentStudent.marks.map((m) => [
-    m.subject,
-    String(m.full),
-    String(m.obtained),
-    gradeFromScore(m.obtained, m.full),
-    String(position)
-  ]);
-
-  doc.autoTable({
-    head: [["Subject", "Full Marks", "Marks Obtained", "Grade Obtained", "Position"]],
-    body: tableBody,
-    foot: [["Total", String(totalFull), String(totalObt), String(finalGrade), String(position)]],
-    startY: 50,
-    theme: "grid",
-    headStyles: { fillColor: [13, 110, 253], textColor: 255 },
-    footStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: "bold" },
-    styles: { fontSize: 11, cellPadding: 2 },
-    margin: { left: 12, right: 12 },
-    didDrawPage: drawFrameAndHeader
+    // your existing render function can be called here
+    showMarksheet(found);
   });
 
-  // Attendance + signatures
-  let afterTableY = doc.lastAutoTable.finalY + 8;
-  const presentText = currentStudent.attendance?.present ?? (daysPresentEl?.textContent || "");
-  const absentText  = currentStudent.attendance?.absent  ?? (daysAbsentEl?.textContent  || "");
-  if (presentText || absentText) {
+  // bind print / pdf only if the buttons exist
+  printBtn?.addEventListener('click', () => window.print());
+  downloadBtn?.addEventListener('click', async () => {
+    // ... your existing jsPDF code ...
+  });
+})();
+// ---------------------------------------------------------------
+//   Print + PDF (Letter size, with background + logo) — SAFE
+// ---------------------------------------------------------------
+(() => {
+  const marksheet       = document.getElementById('marksheet');
+  const printBtn        = document.getElementById('printBtn');
+  const downloadBtn     = document.getElementById('downloadPdf');
+  if (!marksheet || (!printBtn && !downloadBtn)) return; // this page has no marksheet
+
+  const daysPresentEl   = document.getElementById('daysPresent');
+  const daysAbsentEl    = document.getElementById('daysAbsent');
+
+  // `currentStudent` is set by your search flow; if it isn't, we’ll guard below.
+
+  printBtn?.addEventListener('click', () => window.print());
+
+  downloadBtn?.addEventListener('click', async () => {
+    if (!window.currentStudent) {
+      alert('Please search for a student first.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) return alert('jsPDF not loaded. Please include jsPDF and jspdf-autotable.');
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
+
+    if (typeof doc.autoTable !== 'function') {
+      return alert('jsPDF AutoTable plugin not loaded. Please include it after jsPDF.');
+    }
+
+    const pageWidth  = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Read template-supplied STATIC_URL to locate assets reliably (see #2 below)
+    const STATIC = (window.STATIC_URL || '/static/').replace(/\/?$/, '/');
+
+    const collegeName = (document.getElementById('collegeName')?.textContent || 'College Name').trim();
+    const examName    = (document.getElementById('examName')?.textContent || 'Examination').trim();
+
+    const logoImgEl   = marksheet.querySelector('img');
+    const logoDataURL = logoImgEl ? await loadImageAsDataURL(logoImgEl) : null;
+
+    // ✅ Use STATIC_URL so the path works no matter where this JS file lives
+    const bgDataURL   = await loadImageAsDataURL(`${STATIC}img/background/marksheet-bg.png`);
+
+    const drawFrameAndHeader = () => {
+      if (bgDataURL) doc.addImage(bgDataURL, 'PNG', 0, 0, pageWidth, pageHeight, '', 'FAST');
+      doc.setDrawColor(0,0,0); doc.setLineWidth(0.6);
+      doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
+      if (logoDataURL) doc.addImage(logoDataURL, 'PNG', 12, 12, 20, 20);
+      doc.setFont(undefined, 'bold'); doc.setFontSize(16);
+      doc.text(collegeName, pageWidth/2, 18, { align: 'center' });
+      doc.setFont(undefined, 'normal'); doc.setFontSize(12);
+      doc.text(examName, pageWidth/2, 24, { align: 'center' });
+      doc.setLineWidth(0.3);
+      doc.line(10, 32, pageWidth - 10, 32);
+    };
+
+    drawFrameAndHeader();
+
+    // Student info
+    const s = window.currentStudent;
     doc.setFontSize(11);
-    doc.text(`Days Present: ${presentText || "—"}   |   Days Absent: ${absentText || "—"}`, 12, afterTableY);
-    afterTableY += 10;
-  }
-  const sigY = Math.min(afterTableY + 10, pageHeight - 30);
-  const leftX = 20;
-  const rightX = pageWidth - 20;
-  doc.line(leftX, sigY, leftX + 60, sigY);
-  doc.line(rightX - 60, sigY, rightX, sigY);
-  doc.setFontSize(10);
-  doc.text("Parent's Signature", leftX, sigY + 6);
-  doc.text("Class Teacher's Signature", rightX - 60, sigY + 6);
+    let y = 38;
+    doc.text(`Name: ${s.name}`, 12, y);
+    doc.text(`Roll No: ${s.roll}`, pageWidth / 2, y);
+    y += 6;
+    doc.text(`Class: ${s.class}`, 12, y);
+    doc.text(`Section: ${s.section}`, pageWidth / 2, y);
 
-  doc.save(`Marksheet_${currentStudent.name.replace(/\s+/g, "_")}.pdf`);
-});
+    const totalFull = s.marks.reduce((sum, m) => sum + Number(m.full || 0), 0);
+    const totalObt  = s.marks.reduce((sum, m) => sum + Number(m.obtained || 0), 0);
+    const position  = rankInSection(s, window.students || []);
+    const finalGrade= gradeFromScore(totalObt, totalFull);
 
-// ⭐ End =======================================================================
+    const tableBody = s.marks.map(m => [
+      m.subject,
+      String(m.full),
+      String(m.obtained),
+      gradeFromScore(m.obtained, m.full),
+      String(position)
+    ]);
 
+    doc.autoTable({
+      head: [['Subject','Full Marks','Marks Obtained','Grade Obtained','Position']],
+      body: tableBody,
+      foot: [['Total', String(totalFull), String(totalObt), String(finalGrade), String(position)]],
+      startY: 50,
+      theme: 'grid',
+      headStyles: { fillColor: [13,110,253], textColor: 255 },
+      footStyles: { fillColor: [220,220,220], textColor: 0, fontStyle: 'bold' },
+      styles: { fontSize: 11, cellPadding: 2 },
+      margin: { left: 12, right: 12 },
+      didDrawPage: drawFrameAndHeader
+    });
+
+    // Attendance + signatures
+    let afterTableY = doc.lastAutoTable.finalY + 8;
+    const presentText = s.attendance?.present ?? (daysPresentEl?.textContent || '');
+    const absentText  = s.attendance?.absent  ?? (daysAbsentEl?.textContent  || '');
+    if (presentText || absentText) {
+      doc.setFontSize(11);
+      doc.text(`Days Present: ${presentText || '—'}   |   Days Absent: ${absentText || '—'}`, 12, afterTableY);
+      afterTableY += 10;
+    }
+    const sigY = Math.min(afterTableY + 10, pageHeight - 30);
+    const leftX = 20, rightX = pageWidth - 20;
+    doc.line(leftX, sigY, leftX + 60, sigY);
+    doc.line(rightX - 60, sigY, rightX, sigY);
+    doc.setFontSize(10);
+    doc.text("Parent's Signature", leftX, sigY + 6);
+    doc.text("Class Teacher's Signature", rightX - 60, sigY + 6);
+
+    doc.save(`Marksheet_${s.name.replace(/\s+/g,'_')}.pdf`);
+  });
+})();
 
 // ⭐⭐⭐⭐⭐ Start: Academic Calendar Animations (Fade + Typing Dates)
 
@@ -962,47 +887,63 @@ document.querySelectorAll('.view-all-btn').forEach(btn => {
     new bootstrap.Modal(document.getElementById('membersModal')).show();
   });
 });
+// ---- Dashboard "members" filters (defensive) ----
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = (id) => document.getElementById(id);
 
-// Filter functionality
-document.getElementById('filterClass').addEventListener('change', applyFilters);
-document.getElementById('filterSection').addEventListener('change', applyFilters);
-document.getElementById('viewAllBtn').addEventListener('click', () => {
-  document.getElementById('filterClass').value = '';
-  document.getElementById('filterSection').value = '';
-  loadMembers(currentCategory, 1);
-});
+  const fc  = $('filterClass');
+  const fs  = $('filterSection');
+  const vab = $('viewAllBtn');
+  const box = $('membersContainer');
 
-function applyFilters() {
-  const classFilter = document.getElementById('filterClass').value;
-  const sectionFilter = document.getElementById('filterSection').value;
-  const membersContainer = document.getElementById('membersContainer');
-  membersContainer.innerHTML = '';
+  // If the members UI isn't on this page, bail early
+  if (!box || !fc || !fs || !vab) return;
 
-  const members = membersData[currentCategory];
-  const filteredMembers = members.filter(member => {
-    let matchClass = classFilter ? member.post === classFilter : true;
-    let matchSection = sectionFilter ? (member.section || '') === sectionFilter : true;
-    return matchClass && matchSection;
+  fc.addEventListener('change', applyFilters);
+  fs.addEventListener('change', applyFilters);
+  vab.addEventListener('click', (e) => {
+    e.preventDefault();
+    fc.value = '';
+    fs.value = '';
+    // Reload current list if helper is present
+    if (typeof loadMembers === 'function') {
+      const cat = window.currentCategory || Object.keys(window.membersData || {teachers:[]})[0] || 'teachers';
+      loadMembers(cat, 1);
+    } else {
+      applyFilters();
+    }
   });
 
-  filteredMembers.forEach(member => {
-    membersContainer.innerHTML += `
+  function applyFilters() {
+    const classFilter   = fc.value;
+    const sectionFilter = fs.value;
+
+    const data = (window.membersData && window.currentCategory)
+      ? (membersData[currentCategory] || [])
+      : [];
+
+    const filtered = data.filter(m => {
+      const okClass   = classFilter   ? m.post === classFilter : true;
+      const okSection = sectionFilter ? (m.section || '') === sectionFilter : true;
+      return okClass && okSection;
+    });
+
+    box.innerHTML = filtered.map(member => `
       <div class="col-md-6 mb-4">
         <div class="member-item ${member.role.toLowerCase()} ${member.role.toLowerCase() === 'student' ? 'student' : ''}">
           <img src="${member.img}" alt="${member.name}">
           <div style="flex:1">
-            <h6 class="fw-bold mb-1">${member.name} <small class="text-muted">(${member.role})</small></h6>
+            <h6 class="fw-bold mb-1">${member.name}
+              <small class="text-muted">(${member.role})</small>
+            </h6>
             <p class="text-muted mb-2">Post: ${member.post}</p>
             <div class="member-bio">${member.bio}</div>
           </div>
         </div>
       </div>
-    `;
-  });
-}
-
-// ⭐End Dashboard Section JS ============================================================
-
+    `).join('');
+  }
+});
 
 
 
@@ -1242,183 +1183,302 @@ window.addEventListener('resize', wireMobileDropdowns);
       }, { passive: false });
     })();
 
-document.addEventListener('DOMContentLoaded', function() {
-  // Element references
-  const modalEl = document.getElementById('galleryModal');
-  const imgWrap = document.getElementById('gmImageWrap');
-  const imgEl   = document.getElementById('gmImage');
-  const vidWrap = document.getElementById('gmVideoWrap');
-  const iframe  = document.getElementById('gmIframe');
-  const titleEl = document.getElementById('gmTitle');
-  const metaEl  = document.getElementById('gmMeta');
-  const btnClose = document.getElementById('gmClose');
-  const btnZoomIn  = document.getElementById('gmZoomIn');
-  const btnZoomOut = document.getElementById('gmZoomOut');
-  const btnReset   = document.getElementById('gmReset');
-  const btnDownload= document.getElementById('gmDownload');
 
-  // Helper: convert YouTube URLs to embed URL
-  function toEmbed(url) {
-    if (!url) return '';
+
+
+// ==== Gallery (images + YouTube) ===========================================
+document.addEventListener("DOMContentLoaded", function () {
+  const gallery = document.getElementById("glx-gallery");
+  const modalEl = document.getElementById("glxModal");
+  if (!modalEl) return;
+
+  // Bootstrap modal
+  const modal = (window.bootstrap && new bootstrap.Modal(modalEl, { backdrop: true })) || null;
+
+  // UI bits
+  const titleEl  = document.getElementById("glxTitle");
+  const metaEl   = document.getElementById("glxMeta");
+
+  // Image viewport + tools
+  const imgWrap  = document.getElementById("glxImageWrap");
+  const imgEl    = document.getElementById("glxImage");
+  const btnIn    = document.getElementById("glxZoomIn");
+  const btnOut   = document.getElementById("glxZoomOut");
+  const btnReset = document.getElementById("glxReset");
+  const btnDl    = document.getElementById("glxDownload");
+
+  // Video viewport
+  const vidWrap  = document.getElementById("glxVideoWrap");
+  const iframe   = document.getElementById("glxIframe");
+  const btnOpenYT = document.getElementById("glxOpenYT"); // optional external-open link (if you added one)
+
+  // ---------- YouTube helpers ----------
+  function parseYouTubeId(input) {
+    if (!input) return "";
+    if (/^[\w-]{10,}$/.test(input)) return input; // looks like an ID
     try {
-      const u = new URL(url);
-      // Short link youtu.be/ID
-      if (u.hostname.includes('youtu.be')) {
-        const videoId = u.pathname.slice(1);
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
-      }
-      // Long link youtube.com/watch?v=ID
-      const v = u.searchParams.get('v');
-      if (v) {
-        return `https://www.youtube.com/embed/${v}?autoplay=1&rel=0`;
-      }
-      // Shorts link youtube.com/shorts/ID
-      const m = u.pathname.match(/\/shorts\/([^\/]+)/);
-      if (m) {
-        return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0`;
-      }
-      // If already an embed link or other URL, append autoplay=1 if not present
-      return url.includes('autoplay=') ? url :
-             url + (url.includes('?') ? '&' : '?') + 'autoplay=1&rel=0';
-    } catch {
-      return url;
+      const u = new URL(input);
+      if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      const m = u.pathname.match(/\/(shorts|embed)\/([^/?#]+)/);
+      if (m) return m[2];
+    } catch (_) {}
+    return "";
+  }
+  function buildYTEmbed(input) {
+    const id = parseYouTubeId(input);
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1` : "";
+  }
+
+  // ---------- UI helpers ----------
+  function setMeta(title, place, datetime) {
+    if (titleEl) titleEl.textContent = title || "";
+    if (metaEl)  metaEl.textContent  = [place, datetime].filter(Boolean).join(" · ");
+  }
+  function showImgTools(show) {
+    [btnIn, btnOut, btnReset, btnDl].forEach(b => b && b.classList.toggle("d-none", !show));
+  }
+
+  // ---------- Fit / zoom / pan state ----------
+  let mode = "image";     // 'image' | 'video'
+  let base = 1;           // baseline scale to fit
+  let scale = 1;          // current scale
+  let pos = { x: 0, y: 0 };
+  let dragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let pendingFit = false;
+
+  function ensureViewportHeight() {
+    // Safety net if HTML didn't use vh-100
+    if (imgWrap && imgWrap.getBoundingClientRect().height < 40) {
+      imgWrap.style.minHeight = "100vh";
+    }
+    if (vidWrap && vidWrap.getBoundingClientRect().height < 40) {
+      vidWrap.style.minHeight = "100vh";
     }
   }
 
-  // Open image in modal
-  function openImage({ src, title, meta }) {
-    // Show image container, hide video
-    imgWrap.style.display = '';
-    vidWrap.style.display = 'none';
-    iframe.src = '';  // stop any previously playing video
-    // Set image source and text
-    imgEl.src = src;
-    titleEl.textContent = title || 'Image';
-    metaEl.textContent  = meta || '';
-    // Prepare download link
-    btnDownload.href = src;
-    try {
-      // Set download filename from URL
-      btnDownload.download = src.split('/').pop().split('?')[0] || 'image';
-    } catch {}
-    // Reset zoom/pan to default
-    resetTransform();
-    // Show zoom/download controls for images
-    btnZoomIn.style.display = '';
-    btnZoomOut.style.display = '';
-    btnReset.style.display   = '';
-    btnDownload.style.display= '';
-    // Display the modal overlay
-    modalEl.classList.add('open');
-  }
-
-  // Open video in modal
-  function openVideo({ url, title, meta }) {
-    // Show video container, hide image
-    vidWrap.style.display = '';
-    imgWrap.style.display = 'none';
-    // Set video iframe source (converted to embed URL with autoplay)
-    iframe.src = toEmbed(url);
-    titleEl.textContent = title || 'Video';
-    metaEl.textContent  = meta || '';
-    // Hide image-specific controls
-    btnZoomIn.style.display = 'none';
-    btnZoomOut.style.display = 'none';
-    btnReset.style.display   = 'none';
-    btnDownload.style.display= 'none';
-    // Display the modal overlay
-    modalEl.classList.add('open');
-  }
-
-  // Close the modal
-  function closeModal() {
-    modalEl.classList.remove('open');
-    iframe.src = '';             // stop video
-    imgEl.src = '';              // release image
-    // (Zoom state reset when opening images next time)
-  }
-
-  // Click handlers for each gallery item
-  document.querySelectorAll('.gallery-item').forEach(card => {
-    card.addEventListener('click', e => {
-      e.preventDefault();
-      const kind  = card.dataset.kind;
-      const title = card.dataset.title || '';
-      const meta  = [card.dataset.place, card.dataset.datetime].filter(Boolean).join(' · ');
-      if (kind === 'video') {
-        const url = card.dataset.video;
-        if (url) openVideo({ url, title, meta });
-      } else {
-        // kind "image"
-        const src = card.dataset.image || card.querySelector('img')?.src;
-        if (src) openImage({ src, title, meta });
-      }
-    });
-  });
-
-  // Zoom and pan functionality for images
-  let scale = 1;
-  let pos = { x: 0, y: 0 };
-  let isDragging = false;
-  let dragStart = { x: 0, y: 0 };
-
   function applyTransform() {
-    imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+    if (imgEl) {
+      imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+    }
   }
+
   function resetTransform() {
-    scale = 1;
+    scale = base;
     pos = { x: 0, y: 0 };
     applyTransform();
   }
 
-  // Zoom control buttons
-  btnZoomIn.addEventListener('click', () => {
-    scale = Math.min(5, scale + 0.25);
-    applyTransform();
-  });
-  btnZoomOut.addEventListener('click', () => {
-    scale = Math.max(0.5, scale - 0.25);
-    applyTransform();
-  });
-  btnReset.addEventListener('click', () => {
+  function fitToScreen() {
+    if (!imgWrap || !imgEl) return;
+    ensureViewportHeight();
+    const vw = imgWrap.clientWidth || 1;
+    const vh = imgWrap.clientHeight || 1;
+    const nw = imgEl.naturalWidth  || vw;
+    const nh = imgEl.naturalHeight || vh;
+    base = Math.min(vw / nw, vh / nh);
+    imgEl.style.maxWidth = "none";
+    imgEl.style.maxHeight = "none";
     resetTransform();
-  });
+    pendingFit = false;
+  }
 
-  // Drag to pan image
-  imgEl.addEventListener('mousedown', e => {
-    isDragging = true;
-    dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-    imgEl.style.cursor = 'grabbing';
-  });
-  window.addEventListener('mouseup', () => {
-    isDragging = false;
-    imgEl.style.cursor = 'grab';
-  });
-  window.addEventListener('mousemove', e => {
-    if (!isDragging) return;
-    pos.x = e.clientX - dragStart.x;
-    pos.y = e.clientY - dragStart.y;
+  function zoomAt(fx, fy, factor) {
+    if (mode !== "image" || !imgWrap) return;
+    const before = scale;
+    const next   = Math.min(6, Math.max(base * 0.5, scale * factor));
+    const rect   = imgWrap.getBoundingClientRect();
+    const cx     = fx - rect.left;
+    const cy     = fy - rect.top;
+    // keep focal point under cursor
+    pos.x = cx - ((cx - pos.x) * (next / before));
+    pos.y = cy - ((cy - pos.y) * (next / before));
+    scale = next;
     applyTransform();
+  }
+
+  // ---------- Openers ----------
+  function openImage(src, title, place, datetime) {
+    mode = "image";
+    if (vidWrap) vidWrap.classList.add("d-none");
+    if (iframe)  iframe.src = "";
+    if (imgWrap) imgWrap.classList.remove("d-none");
+    if (btnOpenYT) btnOpenYT.classList.add("d-none");
+    showImgTools(true);
+
+    if (btnDl) {
+      btnDl.href = src || "#";
+      try { btnDl.download = (src || "").split("/").pop().split("?")[0] || "image"; } catch {}
+    }
+    setMeta(title, place, datetime);
+
+    if (imgEl) {
+      imgEl.onload = () => {
+        if (modalEl.classList.contains("show")) {
+          requestAnimationFrame(fitToScreen);
+        } else {
+          pendingFit = true;
+        }
+      };
+      imgEl.src = src || "";
+      // If cached, onload may not fire
+      if (imgEl.complete) {
+        if (modalEl.classList.contains("show")) {
+          requestAnimationFrame(fitToScreen);
+        } else {
+          pendingFit = true;
+        }
+      }
+    }
+    modal && modal.show();
+  }
+
+  function openVideo(url, title, place, datetime) {
+    mode = "video";
+    if (imgWrap) imgWrap.classList.add("d-none");
+    if (imgEl)   imgEl.src = "";
+    if (vidWrap) vidWrap.classList.remove("d-none");
+    showImgTools(false);
+
+    const embed = buildYTEmbed(url);
+    if (iframe)  iframe.src = embed || "about:blank";
+
+    if (btnOpenYT) {
+      const id = parseYouTubeId(url);
+      btnOpenYT.href = id ? `https://youtu.be/${id}` : (url || "#");
+      btnOpenYT.classList.toggle("d-none", !(id || url));
+    }
+
+    setMeta(title, place, datetime);
+    modal && modal.show();
+  }
+
+  // ---------- Modal lifecycle ----------
+  modalEl.addEventListener("shown.bs.modal", () => {
+    if (mode === "image" && (pendingFit || scale === 1)) {
+      fitToScreen();
+    }
   });
 
-  // Zoom with mouse wheel
-  imgEl.addEventListener('wheel', e => {
+  modalEl.addEventListener("hidden.bs.modal", () => {
+    if (iframe) iframe.src = "";
+    if (imgEl)  imgEl.src = "";
+    pendingFit = false;
+  });
+
+  // Refit on resize
+  window.addEventListener("resize", () => {
+    if (modalEl.classList.contains("show") && mode === "image") {
+      fitToScreen();
+    }
+  });
+
+  // ---------- Bind cards ----------
+  if (gallery) {
+    gallery.querySelectorAll(".glx-card").forEach(card => {
+      card.addEventListener("click", (e) => {
+        e.preventDefault();
+        const kind  = card.dataset.kind;
+        const title = card.dataset.title || "";
+        const place = card.dataset.place || "";
+        const dt    = card.dataset.datetime || "";
+        if (kind === "video") {
+          const you = card.dataset.video;
+          if (you) openVideo(you, title, place, dt);
+        } else {
+          const src = card.dataset.image || card.querySelector("img")?.src;
+          if (src) openImage(src, title, place, dt);
+        }
+      });
+    });
+  }
+
+  // ---------- Controls / gestures ----------
+  btnIn    && btnIn.addEventListener("click",  () => zoomAt(imgWrap.clientWidth/2, imgWrap.clientHeight/2, 1.2));
+  btnOut   && btnOut.addEventListener("click", () => zoomAt(imgWrap.clientWidth/2, imgWrap.clientHeight/2, 1/1.2));
+  btnReset && btnReset.addEventListener("click", () => { scale = base; pos = {x:0,y:0}; applyTransform(); });
+
+  if (imgEl) {
+    // mouse pan
+    imgEl.addEventListener("mousedown", (e) => {
+      if (mode !== "image") return;
+      dragging = true;
+      dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+      imgEl.style.cursor = "grabbing";
+    });
+    window.addEventListener("mouseup", () => { dragging = false; imgEl.style.cursor = "grab"; });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging || mode !== "image") return;
+      pos.x = e.clientX - dragStart.x;
+      pos.y = e.clientY - dragStart.y;
+      applyTransform();
+    });
+  }
+
+  // wheel zoom under cursor
+  imgWrap && imgWrap.addEventListener("wheel", (e) => {
+    if (mode !== "image") return;
     e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.1 : -0.1;
-    scale = Math.min(5, Math.max(0.5, scale + delta));
-    applyTransform();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1/1.12);
   }, { passive: false });
 
-  // Close modal on close button, backdrop click, or Escape key
-  btnClose.addEventListener('click', closeModal);
-  modalEl.addEventListener('click', e => {
-    if (e.target === modalEl) {
-      closeModal();
-    }
+  // double-click toggle zoom
+  imgWrap && imgWrap.addEventListener("dblclick", (e) => {
+    if (mode !== "image") return;
+    e.preventDefault();
+    const target = (scale > base * 1.05) ? (base / scale) : (2 / scale);
+    zoomAt(e.clientX, e.clientY, target);
   });
-  window.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeModal();
+
+  // touch: pinch + pan
+  let pinch = null;
+  imgWrap && imgWrap.addEventListener("touchstart", (e) => {
+    if (mode !== "image") return;
+    if (e.touches.length === 2) {
+      const [a,b] = e.touches;
+      pinch = {
+        d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        cx: (a.clientX + b.clientX) / 2,
+        cy: (a.clientY + b.clientY) / 2,
+        scale,
+        pos: { ...pos }
+      };
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0];
+      dragging = true;
+      dragStart = { x: t.clientX - pos.x, y: t.clientY - pos.y };
     }
-  });
+  }, { passive: true });
+
+  imgWrap && imgWrap.addEventListener("touchmove", (e) => {
+    if (mode !== "image") return;
+    if (e.touches.length === 2 && pinch) {
+      e.preventDefault();
+      const [a,b] = e.touches;
+      const d  = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const f  = d / (pinch.d || 1);
+      const ns = Math.min(6, Math.max(base * 0.5, pinch.scale * f));
+
+      const rect = imgWrap.getBoundingClientRect();
+      const cx   = pinch.cx - rect.left;
+      const cy   = pinch.cy - rect.top;
+
+      pos.x = cx - ((cx - pinch.pos.x) * (ns / pinch.scale));
+      pos.y = cy - ((cy - pinch.pos.y) * (ns / pinch.scale));
+      scale = ns;
+      applyTransform();
+    } else if (e.touches.length === 1 && dragging) {
+      const t = e.touches[0];
+      pos.x = t.clientX - dragStart.x;
+      pos.y = t.clientY - dragStart.y;
+      applyTransform();
+    }
+  }, { passive: false });
+
+  imgWrap && imgWrap.addEventListener("touchend", () => {
+    pinch = null;
+    dragging = false;
+  }, { passive: true });
 });

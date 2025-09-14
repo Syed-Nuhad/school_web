@@ -13,9 +13,13 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
   <!-- Font Awesome (one copy, latest) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-        integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+
 
   <!-- AOS CSS (Animate On Scroll library) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
@@ -31,23 +35,31 @@
   {% block content %}{% endblock %}
 
   {% include "partials/footer.html" %}
+  <!-- Bootstrap 5 (bundle) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
 
-  <!-- Bootstrap 5 JS (Bundle includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity=""
-        crossorigin="anonymous"></script>
-  <!-- AOS JS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
-  <!-- jsPDF and jsPDF-AutoTable (for PDF export functionality) -->
+  <!-- AOS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js" defer></script>
+
+  <!-- jsPDF: load synchronously (NO defer) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <!-- Custom JS files -->
-  <script src="{% static 'js/common.js' %}"></script>
-  <script src="{% static 'js/fees.js' %}"></script>
-  <script src="{% static 'script.js' %}"></script>
-  <!-- Initialize AOS animations -->
   <script>
-    AOS.init();
+    // Bridge so AutoTable can attach to jsPDF.API
+    if (window.jspdf && window.jspdf.jsPDF) {
+      window.jsPDF = window.jspdf.jsPDF;
+    }
+  </script>
+
+  <!-- AutoTable: must come AFTER jsPDF + bridge (NO defer) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+  <!-- Your scripts (safe to defer) -->
+  <script src="{% static 'js/common.js' %}" defer></script>
+  <script src="{% static 'js/fees.js' %}" defer></script>
+  <script src="{% static 'script.js' %}" defer></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => AOS.init());
   </script>
 </body>
 </html>
