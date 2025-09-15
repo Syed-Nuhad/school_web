@@ -1,0 +1,203 @@
+{# templates/admissions/receipt.html #}
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Payment Receipt — #{{ application.id }}{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-xl-8 col-lg-9">
+        <div class="card border-0 shadow rounded-4">
+          <div class="card-body p-4 p-md-5">
+
+            <!-- Header -->
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <div>
+                <h4 class="mb-1">Payment Receipt</h4>
+                <div class="text-muted small">
+                  Receipt No: <strong>#{{ application.id }}</strong> ·
+                  Date: {{ application.created_at|date:"M d, Y, h:i A" }}
+                </div>
+              </div>
+              {% if institution_logo_url %}
+                <img src="{{ institution_logo_url }}" alt="Logo" style="height:48px;width:auto">
+              {% endif %}
+            </div>
+
+            <!-- Status ribbon -->
+            <div class="mb-3">
+              {% if application.payment_status == "paid" %}
+                <span class="badge rounded-pill text-bg-success px-3 py-2">PAID</span>
+              {% elif application.payment_status == "pending" %}
+                <span class="badge rounded-pill text-bg-warning px-3 py-2">PENDING</span>
+              {% else %}
+                <span class="badge rounded-pill text-bg-secondary px-3 py-2">UNPAID</span>
+              {% endif %}
+            </div>
+
+            <!-- Parties -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Billed To</div>
+                  <div class="fw-semibold">{{ application.full_name }}</div>
+                  <div class="text-muted small">
+                    {{ application.email }}{% if application.phone %} · {{ application.phone }}{% endif %}
+                  </div>
+                  {% if application.address %}
+                    <div class="text-muted small mt-1">{{ application.address }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Institution</div>
+                  <div class="fw-semibold">{{ institution_name|default:"Your Institution" }}</div>
+                  {% if institution_address %}<div class="text-muted small">{{ institution_address }}</div>{% endif %}
+                  {% if institution_phone %}<div class="text-muted small">Phone: {{ institution_phone }}</div>{% endif %}
+                  {% if institution_email %}<div class="text-muted small">Email: {{ institution_email }}</div>{% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Course -->
+            <div class="border rounded p-3 mb-4">
+              <div class="small text-muted">Course</div>
+              <div class="fw-semibold">{{ application.desired_course.title }}</div>
+              <div class="text-muted small">
+                {% if application.desired_course.get_category_display %}
+                  {{ application.desired_course.get_category_display }}
+                {% elif application.desired_course.category %}
+                  {{ application.desired_course.category|title }}
+                {% endif %}
+                {% if application.shift %} · Shift: {{ application.shift }}{% endif %}
+              </div>
+            </div>
+
+            <!-- Line items -->
+            <div class="table-responsive mb-3">
+              <table class="table table-sm table-bordered align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th class="w-50">Description</th>
+                    <th class="text-end" style="width: 180px;">Amount (BDT)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Admission Fee</td>
+                    <td class="text-end">৳ {{ application.fee_admission|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Tuition Fee (1st month)</td>
+                    <td class="text-end">৳ {{ application.fee_tuition|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Exam Fee</td>
+                    <td class="text-end">৳ {{ application.fee_exam|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Bus Service</td>
+                    <td class="text-end">
+                      {% if application.add_bus %}৳ {{ application.fee_bus|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Hostel Seat</td>
+                    <td class="text-end">
+                      {% if application.add_hostel %}৳ {{ application.fee_hostel|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Exact Marksheet</td>
+                    <td class="text-end">
+                      {% if application.add_marksheet %}৳ {{ application.fee_marksheet|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr class="table-active">
+                    <th>Total</th>
+                    <th class="text-end">৳ {{ application.fee_total|floatformat:0|intcomma }}</th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            <!-- Payment meta -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Payment Method</div>
+                  <div class="fw-semibold">
+                    {% if application.payment_method %}
+                      {{ application.get_payment_method_display|default:application.payment_method|title }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Reference</div>
+                  <div class="fw-semibold">
+                    {% if application.payment_reference %}{{ application.payment_reference }}{% else %}—{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            {% if application.message %}
+              <div class="border rounded p-3 mb-4">
+                <div class="small text-muted">Applicant Note</div>
+                <div class="text-muted">{{ application.message|linebreaksbr }}</div>
+              </div>
+            {% endif %}
+
+            <!-- Signatures -->
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-4 text-center">
+                  <div style="height:50px"></div>
+                  <hr class="my-2">
+                  <div class="small text-muted">Authorized Signature</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-4 text-center">
+                  <div style="height:50px"></div>
+                  <hr class="my-2">
+                  <div class="small text-muted">Parent/Guardian Signature</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex flex-wrap gap-3 justify-content-between">
+              <a href="{% url 'admissions:review' application.pk %}" class="btn btn-outline-secondary">
+                Back to Review
+              </a>
+              <a href="#" onclick="window.print();return false;" class="btn btn-success">
+                Print / Save as PDF
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          This is a computer-generated receipt. No signature required if marked <strong>PAID</strong>.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+
+</style>
+{% endblock %}

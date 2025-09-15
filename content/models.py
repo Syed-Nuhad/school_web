@@ -1,3 +1,5 @@
+# content/models.py
+from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -475,8 +477,10 @@ class AcademicCalendarItem(models.Model):
 
 
     # Start Programs & Courses Section
+# ---------- Programs & Courses ----------
 
 def course_image_upload_to(instance, filename):
+    # Safe even on first save (does not depend on instance attrs set later)
     return f"courses/{instance.category}/{filename}"
 
 def course_syllabus_upload_to(instance, filename):
@@ -493,7 +497,7 @@ class Course(models.Model):
     # Core
     title = models.CharField(
         max_length=150,
-        help_text="Visible title of the course/program (e.g., “HSC – Science”)."
+        help_text='Visible title of the course/program (e.g., "HSC – Science").'
     )
     category = models.CharField(
         max_length=20, choices=CATEGORY_CHOICES,
@@ -527,10 +531,23 @@ class Course(models.Model):
         max_length=200, blank=True,
         help_text='Example: "SSC pass (GPA ≥ 3.0)"'
     )
+
+    # Legacy/Display-only monthly price if you still want it in cards
     monthly_fee = models.DecimalField(
         max_digits=10, decimal_places=2, blank=True, null=True,
-        help_text="Monthly fee in BDT. Leave blank if not applicable."
+        help_text="Monthly fee in BDT (for display)."
     )
+
+    # ----- Fees used by Admissions -----
+    # Base (required) — shown in breakdown for all applicants
+    admission_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    first_month_tuition = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    exam_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    # Optional add-ons (applied when user selects)
+    bus_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    hostel_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    marksheet_fee = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
     # Ordering / lifecycle
     order = models.PositiveIntegerField(default=0, help_text="Lower appears first.")
@@ -550,81 +567,63 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
-# End Programs & Courses Section
 
-
-# Admission app
+# ---------- Admissions ----------
 
 def admission_photo_upload_to(instance, filename):
-    return f"admissions/photos/{instance.created_at:%Y/%m}/{filename}"
+    # Use current time (safe before instance exists in DB)
+    dt = timezone.now()
+    return f"admissions/photos/{dt:%Y/%m}/{filename}"
 
 def admission_doc_upload_to(instance, filename):
-    return f"admissions/docs/{instance.created_at:%Y/%m}/{filename}"
+    dt = timezone.now()
+    return f"admissions/docs/{dt:%Y/%m}/{filename}"
 
 class AdmissionApplication(models.Model):
-    SHIFT_CHOICES = [
-        ("day", "Day"),
-        ("morning", "Morning"),
-        ("evening", "Evening"),
-    ]
-    STATUS_CHOICES = [
-        ("new", "New"),
-        ("review", "In review"),
-        ("accepted", "Accepted"),
-        ("rejected", "Rejected"),
-    ]
-
-    # Core
-    full_name = models.CharField(max_length=150)
+    # Applicant details
+    full_name = models.CharField(max_length=200)
     email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=30)
-    date_of_birth = models.DateField(null=True, blank=True)
+    phone = models.CharField(max_length=20)
+    date_of_birth = models.DateField(blank=True, null=True)
     address = models.TextField(blank=True)
+    guardian_name = models.CharField(max_length=200, blank=True)
+    guardian_phone = models.CharField(max_length=20, blank=True)
 
-    guardian_name = models.CharField(max_length=150, blank=True)
-    guardian_phone = models.CharField(max_length=30, blank=True)
-
-    # Course desired
+    # Course choice
     desired_course = models.ForeignKey(
-        "content.Course",
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name="applications",
-        help_text="Course the applicant is applying for."
+        Course, on_delete=models.PROTECT, related_name="applications"
     )
-    shift = models.CharField(max_length=20, choices=SHIFT_CHOICES, blank=True)
+    shift = models.CharField(max_length=20, blank=True)
 
-    # Academics
-    previous_school = models.CharField(max_length=150, blank=True)
-    ssc_gpa = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    # Prior info
+    previous_school = models.CharField(max_length=200, blank=True)
+    ssc_gpa = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
 
-    # Attachments
-    photo = models.ImageField(upload_to=admission_photo_upload_to, null=True, blank=True)
-    transcript = models.FileField(upload_to=admission_doc_upload_to, null=True, blank=True)
-
-    # Extra
+    # Uploads
+    photo = models.ImageField(upload_to=admission_photo_upload_to, blank=True, null=True)
+    transcript = models.FileField(upload_to=admission_doc_upload_to, blank=True, null=True)
     message = models.TextField(blank=True)
 
-    # Admin workflow
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="new")
+    # Chosen add-ons (user inputs)
+    add_bus = models.BooleanField(default=False)
+    add_hostel = models.BooleanField(default=False)
+    add_marksheet = models.BooleanField(default=False)
 
-    # Audit
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True, editable=False,
-        related_name="admissions_created",
-    )
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+    # Snapshot of fees at submission (audit-proof)
+    fee_admission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_tuition = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_exam = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_bus = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_hostel = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_marksheet = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ("-created_at",)
-        verbose_name = "Admission Application"
-        verbose_name_plural = "Admission Applications"
 
     def __str__(self):
-        return f"{self.full_name} ({self.desired_course or '—'})"
+        return f"{self.full_name} — {self.desired_course}"
 
-
-# END
+# END ndkfrgjkhdfigkjghkcgn

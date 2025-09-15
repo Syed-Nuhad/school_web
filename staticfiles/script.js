@@ -1,9 +1,5 @@
   
 
-  //⭐⭐⭐⭐⭐======== Initialize AOS
-  
-  AOS.init();
-
 // ⭐ END Initialize AOS ==============================================================================
 
 
@@ -18,15 +14,6 @@ const navLinks = document.querySelector(".nav-links");
 
 
 
-// ⭐========================= START: Toggle Mobile Menu 
-
-
-mobileMenu.addEventListener("click", () => {
-  navLinks.classList.toggle("active");
-});
-// ⭐ END Toggle Mobile Menu =============================================================================
-
-// ⭐ END Navigation Menu Script =========================================================================
 
 
 
@@ -41,19 +28,6 @@ const dotsContainer = document.querySelector(".dots");
 // ===== END: Select Elements ===============================================================================
 
 let currentIndex = 0;
-
-// ⭐============================= START: Create Dots Dynamically 
-
-slides.forEach((_, index) => {
-  const dot = document.createElement("span");
-  if (index === 0) dot.classList.add("active");
-  dot.addEventListener("click", () => showSlide(index));
-  dotsContainer.appendChild(dot);
-});
-const dots = document.querySelectorAll(".dots span");
-
-// ⭐ END Create Dots Dynamically ======================================================================
-
 
 
 
@@ -73,30 +47,6 @@ function showSlide(index) {
 // ⭐ END Show Specific Slide =============================================================================
 
 
-// ⭐⭐⭐⭐⭐===================== START: Next & Previous Slide Functions 
-
-function nextSlide() {
-  currentIndex = (currentIndex + 1) % slides.length;
-  showSlide(currentIndex);
-}
-
-function prevSlide() {
-  currentIndex = (currentIndex - 1 + slides.length) % slides.length;
-  showSlide(currentIndex);
-}
-// ⭐END  Next & Previous Slide Functions ==============================================================
-
-// ⭐⭐⭐⭐⭐ ====================== START: Event Listeners 
-prevBtn.addEventListener("click", prevSlide);
-
-// ⭐ END: Event Listeners ============================================================================
-
-
-// ⭐⭐⭐⭐⭐======================== START: Auto Slide Every 5 Seconds 
-
-setInterval(nextSlide, 5000);
-
-// ⭐ END  ⭐ Auto Slide Every 5 Seconds =============================================================
 
 
 
@@ -215,61 +165,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-  // ⭐⭐⭐⭐⭐=========Start : Online Admission Form Section. Smooth scroll if nav links jump to this form
-  
-// Use jsPDF from CDN to generate PDF on submit success
-  // const { jsPDF } = window.jspdf;
-
-  // ⭐⭐⭐⭐⭐ Start : Online Admission Form Payment Simulation, Feedback, and PDF Generation
-
-  // Payment confirmation simulation & UI update
-  document.getElementById('confirm-payment-btn').addEventListener('click', () => {
-    const paymentMethod = document.getElementById('payment-method').value;
-    const paymentStatus = document.getElementById('payment-status');
-    const submitBtn = document.getElementById('submit-btn');
-    const printBtn = document.getElementById('print-btn');
-
-    if (!paymentMethod) {
-      paymentStatus.className = 'alert alert-danger py-2';
-      paymentStatus.textContent = 'Please select a payment method before confirming.';
-      submitBtn.disabled = true;
-      printBtn.disabled = true;
-      return;
-    }
-
-    // For demo, randomly decide success or failure
-    const success = Math.random() > 0.3; // 70% chance success
-
-    if(success){
-      paymentStatus.className = 'alert alert-success py-2';
-      paymentStatus.textContent = 'Payment successful, please submit the form.';
-      submitBtn.disabled = false;
-      printBtn.disabled = false;
-    } else {
-      paymentStatus.className = 'alert alert-danger py-2';
-      paymentStatus.textContent = 'Payment not paid, please pay first and submit later.';
-      submitBtn.disabled = true;
-      printBtn.disabled = true;
-    }
-  });
-
-  // Submit form handler (you can add real form submission here)
-  document.querySelector('#admission-form form').addEventListener('submit', e => {
-    e.preventDefault();
-    alert('Form submitted! You will receive a PDF copy via email.');
-  });
-
-  // Print button handler
-  document.getElementById('print-btn').addEventListener('click', () => {
-    window.print();
-  });
-
-
-  // Optionally, add form submit and download PDF logic here
-  // ⭐ End : Online Admission Form Section. Smooth scroll if nav links jump to this form =========================
-
-
-
 
 // ⭐⭐⭐⭐⭐ Start Accademy section :Course filter (pure front-end)
 
@@ -296,135 +191,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // ---- Syllabus data (example, multi-page friendly) ----
 
-const SYLLABUS_DATA = {
-  "HSC – Science": {
-    overview: "This syllabus covers core science subjects with emphasis on lab work, problem solving, and exam preparation.",
-    modules: [
-      ["Physics: Mechanics", "Kinematics, Dynamics, Work-Energy, Power"],
-      ["Physics: Waves & Optics", "Wave motion, Sound, Mirrors, Lenses"],
-      ["Physics: Electricity", "Current, Circuits, EMF, Kirchhoff's laws"],
-      ["Chemistry: Physical", "Mole concept, Thermodynamics, Kinetics"],
-      ["Chemistry: Inorganic", "Periodic table, Bonding, Coordination"],
-      ["Chemistry: Organic", "Hydrocarbons, Functional groups, Reactions"],
-      ["Mathematics: Algebra", "Sets, Functions, Quadratics, Progressions"],
-      ["Mathematics: Calculus", "Limits, Derivatives, Basic Integrals"],
-      ["Biology: Cell Biology", "Cell structure, Transport, Division"],
-      ["Biology: Genetics", "Mendelian genetics, DNA, Gene expression"],
-      // duplicate some rows to force multiple pages
-      ["Lab Work", "Physics/Chemistry/Biology practicals & reports"],
-      ["Project", "Science fair participation & presentation"],
-      ["Revision", "Mock tests, question banks, past papers"],
-      ["Soft Skills", "Time management, presentation, note-taking"],
-      ["ICT Basics", "Spreadsheets, Presentations, Internet safety"],
-      ["Seminars", "Guest lectures from academicians"],
-      ["Career Guidance", "Engineering/Medical admissions roadmap"],
-      ["Ethics", "Academic integrity & lab safety"],
-      ["Field Visit", "Local science museum/industry visit"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  },
-  "HSC – Commerce": {
-    overview: "Focus on Accounting, Business Studies, and Economics with practical projects.",
-    modules: [
-      ["Accounting I", "Journal, Ledger, Trial Balance"],
-      ["Accounting II", "Financial statements, Ratios"],
-      ["Business Studies", "Management, Marketing, HRM"],
-      ["Economics I", "Microeconomics basics"],
-      ["Economics II", "Macroeconomics basics"],
-      ["ICT for Commerce", "Spreadsheets & presentations"],
-      ["Entrepreneurship", "Business plan & pitching"],
-      ["Project", "Case study on a local business"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  },
-  "HSC – Arts": {
-    overview: "Languages, Social Sciences, and Humanities with emphasis on reading & research.",
-    modules: [
-      ["Bangla Literature", "Poetry, drama, prose"],
-      ["English", "Grammar, composition, comprehension"],
-      ["History", "Regional & world history themes"],
-      ["Civics", "Governance, constitution, rights"],
-      ["Geography", "Physical & human geography"],
-      ["Sociology", "Society & culture basics"],
-      ["Research Skills", "Referencing & reports"],
-      ["Debate Club", "Public speaking & debating"],
-      ["Assessment", "Unit tests, midterms, finals"]
-    ]
-  }
-};
-
-// ---- Generate PDF (A4, multi-page) ----
-function generateSyllabusPdf(courseTitle) {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-
-  const course = SYLLABUS_DATA[courseTitle] || {
-    overview: "Detailed syllabus will be provided by the department.",
-    modules: [["Overview", "Content will be announced soon."]]
-  };
-
-  const margin = 15;
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-
-  // Header & footer for every page
-  const drawHeader = () => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("College Syllabus", margin, 14);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(courseTitle, margin, 21);
-  };
-
-  const applyFooters = () => {
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(10);
-      doc.text(`Page ${i} of ${pageCount}`, pageW - margin, pageH - 8, { align: "right" });
-    }
-  };
-
-  // First page body
-  drawHeader();
-  doc.setFontSize(11);
-  doc.text("Overview:", margin, 32);
-  doc.setFont("helvetica", "normal");
-  doc.text(course.overview, margin, 39, { maxWidth: pageW - margin * 2 });
-
-  // Modules table (autoTable handles page breaks)
-  const tableStartY = 52;
-  doc.autoTable({
-    startY: tableStartY,
-    margin: { left: margin, right: margin },
-    headStyles: { fillColor: [13, 110, 253] },  // Bootstrap primary
-    styles: { fontSize: 10, cellPadding: 3 },
-    head: [["Module", "Key Topics"]],
-    body: course.modules,
-    didDrawPage: () => {
-      drawHeader();
-    }
-  });
-
-  applyFooters();
-  const filename = `${courseTitle.replace(/\s+/g, "_")}_Syllabus.pdf`;
-  doc.save(filename);
-}
-
-// ---- Wire the buttons ----
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll('#academics .syllabus-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const card = btn.closest('.card');
-      const title = card.querySelector('.card-title')?.textContent?.trim() || "Syllabus";
-      generateSyllabusPdf(title);
-    });
-  });
-});
-
-
 // ⭐ End Accademy section :Course filter (pure front-end) ========================================================
 
 
@@ -439,68 +205,6 @@ document.getElementById('contact-form').addEventListener('submit', function(e){
 });
 
 // ⭐ End CONTACT SECTION STYLES ====================================================================================
-
-
-//⭐⭐⭐⭐⭐===================== Start: Photo & Video Gallery Script 
-
-  // Fade-in animation on scroll
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const fadeElems = document.querySelectorAll(".fade-in");
-
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("show");
-        }
-      });
-    }, { threshold: 0.2 });
-
-    fadeElems.forEach(el => observer.observe(el));
-  });
-
-  // Lightbox functionality
-
-  document.addEventListener("DOMContentLoaded", () => {
-    const lightbox = document.getElementById('lightbox');
-    const lightboxContent = lightbox.querySelector('.lightbox-content');
-    const closeBtn = lightbox.querySelector('.close');
-
-    // Open lightbox on click
-
-    document.querySelectorAll('.gallery-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if(item.classList.contains('video-item')) {
-          const videoUrl = item.dataset.video;
-          lightboxContent.innerHTML = `<iframe src="${videoUrl}?autoplay=1" frameborder="0" allowfullscreen allow="autoplay"></iframe>`;
-        } else {
-          const imgSrc = item.querySelector('img').src;
-          lightboxContent.innerHTML = `<img src="${imgSrc}" alt="Gallery Image" />`;
-        }
-        lightbox.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-      });
-    });
-
-    // Close lightbox
-
-    closeBtn.addEventListener('click', () => {
-      lightbox.style.display = 'none';
-      lightboxContent.innerHTML = '';
-      document.body.style.overflow = 'auto';
-    });
-
-    // Close on outside click
-
-    lightbox.addEventListener('click', (e) => {
-      if(e.target === lightbox) {
-        closeBtn.click();
-      }
-    });
-  });
-
-  // ⭐ End: Photo & Video Gallery Script ====================================================
-
 
   // ⭐⭐⭐⭐⭐===================== Start About Section Image Fade-in animation and cycling images  
 
@@ -743,150 +447,176 @@ function showMarksheet(student) {
 
   marksheet.style.display = "block";
 }
+// ----- Marksheet search (safe) -----
+(() => {
+  const form = document.getElementById('searchForm');
+  if (!form) return;                 // no form on this page → do nothing
 
-// ---------------------------------------------------------------
-//   Search submit
-//----------------------------------------------------------------
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = form.name.value.trim().toLowerCase();
-  const roll = form.roll.value.trim();
-  const cls = form.class.value;
-  const section = form.section.value;
+  const marksheet       = document.getElementById('marksheet');
+  const msName          = document.getElementById('msName');
+  const msRoll          = document.getElementById('msRoll');
+  const msClass         = document.getElementById('msClass');
+  const msSection       = document.getElementById('msSection');
+  const marksBody       = document.getElementById('marksBody');
+  const totalFullMarksEl= document.getElementById('totalFullMarks');
+  const totalMarksEl    = document.getElementById('totalMarks');
+  const finalGradeEl    = document.getElementById('finalGrade');
+  const finalPositionEl = document.getElementById('finalPosition');
+  const daysPresentEl   = document.getElementById('daysPresent');
+  const daysAbsentEl    = document.getElementById('daysAbsent');
+  const printBtn        = document.getElementById('printBtn');
+  const downloadBtn     = document.getElementById('downloadPdf');
 
-  const found = students.find((student) => {
-    return (
-      (name === "" || student.name.toLowerCase().includes(name)) &&
-      (roll === "" || student.roll === roll) &&
-      (cls === "" || student.class === cls) &&
-      (section === "" || student.section === section)
+  // helper to read form inputs safely (including the field literally named "class")
+  const get = name => form.elements[name]?.value ?? '';
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name    = get('name').trim().toLowerCase();
+    const roll    = get('roll').trim();
+    const cls     = get('class').trim();     // <- read the input named "class"
+    const section = get('section').trim();
+
+    const found = students.find((s) =>
+      (name === '' || s.name.toLowerCase().includes(name)) &&
+      (roll === '' || s.roll === roll) &&
+      (cls  === '' || s.class === cls) &&
+      (section === '' || s.section === section)
     );
-  });
 
-  if (!found) {
-    alert("No student found with the given details.");
-    marksheet.style.display = "none";
-    currentStudent = null;
-    return;
-  }
-
-  currentStudent = found;
-  showMarksheet(found);
-});
-
-// ---------------------------------------------------------------
-//   Print + PDF (Letter size, with background + logo)
-//----------------------------------------------------------------
-printBtn.addEventListener("click", () => window.print());
-
-downloadBtn.addEventListener("click", async () => {
-  if (!currentStudent) return alert("Please search for a student first.");
-
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) {
-    alert("jsPDF not loaded. Please include jsPDF and jspdf-autotable.");
-    return;
-  }
-  const doc = new jsPDF({ orientation: "p", unit: "mm", format: "letter" });
-
-  if (typeof doc.autoTable !== "function") {
-    alert("jsPDF AutoTable plugin not loaded. Please include it after jsPDF.");
-    return;
-  }
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // Prepare assets
-  const collegeName = (document.getElementById("collegeName")?.textContent || "College Name").trim();
-  const examName = (document.getElementById("examName")?.textContent || "Examination").trim();
-  const logoImgEl = marksheet.querySelector("img");
-  const logoDataURL = logoImgEl ? await loadImageAsDataURL(logoImgEl) : null;
-  // Use the same background you use in CSS for consistency
-  const bgDataURL = await loadImageAsDataURL("./img/background/marksheet-bg.png");
-
-  // Page frame + background + header on every page
-  const drawFrameAndHeader = () => {
-    // Background image stretched to page
-    if (bgDataURL) {
-      doc.addImage(bgDataURL, "PNG", 0, 0, pageWidth, pageHeight, "", "FAST");
+    if (!found) {
+      alert('No student found with the given details.');
+      if (marksheet) marksheet.style.display = 'none';
+      return;
     }
-    // Decorative frame
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.6);
-    doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
 
-    // Header
-    if (logoDataURL) doc.addImage(logoDataURL, "PNG", 12, 12, 20, 20);
-    doc.setFont(undefined, "bold"); doc.setFontSize(16);
-    doc.text(collegeName, pageWidth / 2, 18, { align: "center" });
-    doc.setFont(undefined, "normal"); doc.setFontSize(12);
-    doc.text(examName, pageWidth / 2, 24, { align: "center" });
-    // Divider
-    doc.setLineWidth(0.3);
-    doc.line(10, 32, pageWidth - 10, 32);
-  };
-
-  drawFrameAndHeader();
-
-  // Student info
-  doc.setFontSize(11);
-  let y = 38;
-  doc.text(`Name: ${currentStudent.name}`, 12, y);
-  doc.text(`Roll No: ${currentStudent.roll}`, pageWidth / 2, y);
-  y += 6;
-  doc.text(`Class: ${currentStudent.class}`, 12, y);
-  doc.text(`Section: ${currentStudent.section}`, pageWidth / 2, y);
-
-  // Build table rows (repeat position column)
-  const totalFull = currentStudent.marks.reduce((s, m) => s + Number(m.full || 0), 0);
-  const totalObt = currentStudent.marks.reduce((s, m) => s + Number(m.obtained || 0), 0);
-  const position = rankInSection(currentStudent, students);
-  const finalGrade = gradeFromScore(totalObt, totalFull);
-
-  const tableBody = currentStudent.marks.map((m) => [
-    m.subject,
-    String(m.full),
-    String(m.obtained),
-    gradeFromScore(m.obtained, m.full),
-    String(position)
-  ]);
-
-  doc.autoTable({
-    head: [["Subject", "Full Marks", "Marks Obtained", "Grade Obtained", "Position"]],
-    body: tableBody,
-    foot: [["Total", String(totalFull), String(totalObt), String(finalGrade), String(position)]],
-    startY: 50,
-    theme: "grid",
-    headStyles: { fillColor: [13, 110, 253], textColor: 255 },
-    footStyles: { fillColor: [220, 220, 220], textColor: 0, fontStyle: "bold" },
-    styles: { fontSize: 11, cellPadding: 2 },
-    margin: { left: 12, right: 12 },
-    didDrawPage: drawFrameAndHeader
+    // your existing render function can be called here
+    showMarksheet(found);
   });
 
-  // Attendance + signatures
-  let afterTableY = doc.lastAutoTable.finalY + 8;
-  const presentText = currentStudent.attendance?.present ?? (daysPresentEl?.textContent || "");
-  const absentText  = currentStudent.attendance?.absent  ?? (daysAbsentEl?.textContent  || "");
-  if (presentText || absentText) {
+  // bind print / pdf only if the buttons exist
+  printBtn?.addEventListener('click', () => window.print());
+  downloadBtn?.addEventListener('click', async () => {
+    // ... your existing jsPDF code ...
+  });
+})();
+// ---------------------------------------------------------------
+//   Print + PDF (Letter size, with background + logo) — SAFE
+// ---------------------------------------------------------------
+(() => {
+  const marksheet       = document.getElementById('marksheet');
+  const printBtn        = document.getElementById('printBtn');
+  const downloadBtn     = document.getElementById('downloadPdf');
+  if (!marksheet || (!printBtn && !downloadBtn)) return; // this page has no marksheet
+
+  const daysPresentEl   = document.getElementById('daysPresent');
+  const daysAbsentEl    = document.getElementById('daysAbsent');
+
+  // `currentStudent` is set by your search flow; if it isn't, we’ll guard below.
+
+  printBtn?.addEventListener('click', () => window.print());
+
+  downloadBtn?.addEventListener('click', async () => {
+    if (!window.currentStudent) {
+      alert('Please search for a student first.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) return alert('jsPDF not loaded. Please include jsPDF and jspdf-autotable.');
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'letter' });
+
+    if (typeof doc.autoTable !== 'function') {
+      return alert('jsPDF AutoTable plugin not loaded. Please include it after jsPDF.');
+    }
+
+    const pageWidth  = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // Read template-supplied STATIC_URL to locate assets reliably (see #2 below)
+    const STATIC = (window.STATIC_URL || '/static/').replace(/\/?$/, '/');
+
+    const collegeName = (document.getElementById('collegeName')?.textContent || 'College Name').trim();
+    const examName    = (document.getElementById('examName')?.textContent || 'Examination').trim();
+
+    const logoImgEl   = marksheet.querySelector('img');
+    const logoDataURL = logoImgEl ? await loadImageAsDataURL(logoImgEl) : null;
+
+    // ✅ Use STATIC_URL so the path works no matter where this JS file lives
+    const bgDataURL   = await loadImageAsDataURL(`${STATIC}img/background/marksheet-bg.png`);
+
+    const drawFrameAndHeader = () => {
+      if (bgDataURL) doc.addImage(bgDataURL, 'PNG', 0, 0, pageWidth, pageHeight, '', 'FAST');
+      doc.setDrawColor(0,0,0); doc.setLineWidth(0.6);
+      doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
+      if (logoDataURL) doc.addImage(logoDataURL, 'PNG', 12, 12, 20, 20);
+      doc.setFont(undefined, 'bold'); doc.setFontSize(16);
+      doc.text(collegeName, pageWidth/2, 18, { align: 'center' });
+      doc.setFont(undefined, 'normal'); doc.setFontSize(12);
+      doc.text(examName, pageWidth/2, 24, { align: 'center' });
+      doc.setLineWidth(0.3);
+      doc.line(10, 32, pageWidth - 10, 32);
+    };
+
+    drawFrameAndHeader();
+
+    // Student info
+    const s = window.currentStudent;
     doc.setFontSize(11);
-    doc.text(`Days Present: ${presentText || "—"}   |   Days Absent: ${absentText || "—"}`, 12, afterTableY);
-    afterTableY += 10;
-  }
-  const sigY = Math.min(afterTableY + 10, pageHeight - 30);
-  const leftX = 20;
-  const rightX = pageWidth - 20;
-  doc.line(leftX, sigY, leftX + 60, sigY);
-  doc.line(rightX - 60, sigY, rightX, sigY);
-  doc.setFontSize(10);
-  doc.text("Parent's Signature", leftX, sigY + 6);
-  doc.text("Class Teacher's Signature", rightX - 60, sigY + 6);
+    let y = 38;
+    doc.text(`Name: ${s.name}`, 12, y);
+    doc.text(`Roll No: ${s.roll}`, pageWidth / 2, y);
+    y += 6;
+    doc.text(`Class: ${s.class}`, 12, y);
+    doc.text(`Section: ${s.section}`, pageWidth / 2, y);
 
-  doc.save(`Marksheet_${currentStudent.name.replace(/\s+/g, "_")}.pdf`);
-});
+    const totalFull = s.marks.reduce((sum, m) => sum + Number(m.full || 0), 0);
+    const totalObt  = s.marks.reduce((sum, m) => sum + Number(m.obtained || 0), 0);
+    const position  = rankInSection(s, window.students || []);
+    const finalGrade= gradeFromScore(totalObt, totalFull);
 
-// ⭐ End =======================================================================
+    const tableBody = s.marks.map(m => [
+      m.subject,
+      String(m.full),
+      String(m.obtained),
+      gradeFromScore(m.obtained, m.full),
+      String(position)
+    ]);
 
+    doc.autoTable({
+      head: [['Subject','Full Marks','Marks Obtained','Grade Obtained','Position']],
+      body: tableBody,
+      foot: [['Total', String(totalFull), String(totalObt), String(finalGrade), String(position)]],
+      startY: 50,
+      theme: 'grid',
+      headStyles: { fillColor: [13,110,253], textColor: 255 },
+      footStyles: { fillColor: [220,220,220], textColor: 0, fontStyle: 'bold' },
+      styles: { fontSize: 11, cellPadding: 2 },
+      margin: { left: 12, right: 12 },
+      didDrawPage: drawFrameAndHeader
+    });
+
+    // Attendance + signatures
+    let afterTableY = doc.lastAutoTable.finalY + 8;
+    const presentText = s.attendance?.present ?? (daysPresentEl?.textContent || '');
+    const absentText  = s.attendance?.absent  ?? (daysAbsentEl?.textContent  || '');
+    if (presentText || absentText) {
+      doc.setFontSize(11);
+      doc.text(`Days Present: ${presentText || '—'}   |   Days Absent: ${absentText || '—'}`, 12, afterTableY);
+      afterTableY += 10;
+    }
+    const sigY = Math.min(afterTableY + 10, pageHeight - 30);
+    const leftX = 20, rightX = pageWidth - 20;
+    doc.line(leftX, sigY, leftX + 60, sigY);
+    doc.line(rightX - 60, sigY, rightX, sigY);
+    doc.setFontSize(10);
+    doc.text("Parent's Signature", leftX, sigY + 6);
+    doc.text("Class Teacher's Signature", rightX - 60, sigY + 6);
+
+    doc.save(`Marksheet_${s.name.replace(/\s+/g,'_')}.pdf`);
+  });
+})();
 
 // ⭐⭐⭐⭐⭐ Start: Academic Calendar Animations (Fade + Typing Dates)
 
@@ -1028,47 +758,63 @@ document.querySelectorAll('.view-all-btn').forEach(btn => {
     new bootstrap.Modal(document.getElementById('membersModal')).show();
   });
 });
+// ---- Dashboard "members" filters (defensive) ----
+document.addEventListener('DOMContentLoaded', () => {
+  const $ = (id) => document.getElementById(id);
 
-// Filter functionality
-document.getElementById('filterClass').addEventListener('change', applyFilters);
-document.getElementById('filterSection').addEventListener('change', applyFilters);
-document.getElementById('viewAllBtn').addEventListener('click', () => {
-  document.getElementById('filterClass').value = '';
-  document.getElementById('filterSection').value = '';
-  loadMembers(currentCategory, 1);
-});
+  const fc  = $('filterClass');
+  const fs  = $('filterSection');
+  const vab = $('viewAllBtn');
+  const box = $('membersContainer');
 
-function applyFilters() {
-  const classFilter = document.getElementById('filterClass').value;
-  const sectionFilter = document.getElementById('filterSection').value;
-  const membersContainer = document.getElementById('membersContainer');
-  membersContainer.innerHTML = '';
+  // If the members UI isn't on this page, bail early
+  if (!box || !fc || !fs || !vab) return;
 
-  const members = membersData[currentCategory];
-  const filteredMembers = members.filter(member => {
-    let matchClass = classFilter ? member.post === classFilter : true;
-    let matchSection = sectionFilter ? (member.section || '') === sectionFilter : true;
-    return matchClass && matchSection;
+  fc.addEventListener('change', applyFilters);
+  fs.addEventListener('change', applyFilters);
+  vab.addEventListener('click', (e) => {
+    e.preventDefault();
+    fc.value = '';
+    fs.value = '';
+    // Reload current list if helper is present
+    if (typeof loadMembers === 'function') {
+      const cat = window.currentCategory || Object.keys(window.membersData || {teachers:[]})[0] || 'teachers';
+      loadMembers(cat, 1);
+    } else {
+      applyFilters();
+    }
   });
 
-  filteredMembers.forEach(member => {
-    membersContainer.innerHTML += `
+  function applyFilters() {
+    const classFilter   = fc.value;
+    const sectionFilter = fs.value;
+
+    const data = (window.membersData && window.currentCategory)
+      ? (membersData[currentCategory] || [])
+      : [];
+
+    const filtered = data.filter(m => {
+      const okClass   = classFilter   ? m.post === classFilter : true;
+      const okSection = sectionFilter ? (m.section || '') === sectionFilter : true;
+      return okClass && okSection;
+    });
+
+    box.innerHTML = filtered.map(member => `
       <div class="col-md-6 mb-4">
         <div class="member-item ${member.role.toLowerCase()} ${member.role.toLowerCase() === 'student' ? 'student' : ''}">
           <img src="${member.img}" alt="${member.name}">
           <div style="flex:1">
-            <h6 class="fw-bold mb-1">${member.name} <small class="text-muted">(${member.role})</small></h6>
+            <h6 class="fw-bold mb-1">${member.name}
+              <small class="text-muted">(${member.role})</small>
+            </h6>
             <p class="text-muted mb-2">Post: ${member.post}</p>
             <div class="member-bio">${member.bio}</div>
           </div>
         </div>
       </div>
-    `;
-  });
-}
-
-// ⭐End Dashboard Section JS ============================================================
-
+    `).join('');
+  }
+});
 
 
 
@@ -1268,3 +1014,597 @@ window.addEventListener('resize', wireMobileDropdowns);
 // End Mobile menu toggle Section====================================================
 
 // 
+
+    (function () {
+      var open = document.getElementById('openZoom');
+      var modalEl = document.getElementById('zoomModal');
+      if (!modalEl) return;
+      var bsModal;
+
+      function showModal() {
+        bsModal = bsModal || new bootstrap.Modal(modalEl);
+        bsModal.show();
+      }
+      if (open) open.addEventListener('click', function (e) { e.preventDefault(); showModal(); });
+
+      var img = document.getElementById('zoomImg');
+      var scale = 1, min = 0.5, max = 5;
+      var pos = { x: 0, y: 0 }, start = null;
+
+      function apply() {
+        img.style.transform = 'translate(' + pos.x + 'px,' + pos.y + 'px) scale(' + scale + ')';
+      }
+      document.getElementById('zoomIn').onclick = function(){ scale = Math.min(max, scale + 0.25); apply(); };
+      document.getElementById('zoomOut').onclick = function(){ scale = Math.max(min, scale - 0.25); apply(); };
+      document.getElementById('zoomReset').onclick = function(){ scale = 1; pos = {x:0,y:0}; apply(); };
+
+      img.addEventListener('mousedown', function(e){
+        start = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+        img.style.cursor = 'grabbing';
+      });
+      window.addEventListener('mouseup', function(){ start = null; img.style.cursor = 'grab'; });
+      window.addEventListener('mousemove', function(e){
+        if (!start) return;
+        pos.x = e.clientX - start.x; pos.y = e.clientY - start.y; apply();
+      });
+      img.addEventListener('wheel', function(e){
+        e.preventDefault();
+        var delta = e.deltaY < 0 ? 0.1 : -0.1;
+        scale = Math.min(max, Math.max(min, scale + delta)); apply();
+      }, { passive: false });
+    })();
+
+
+
+
+// ==== Gallery (images + YouTube) ===========================================
+document.addEventListener("DOMContentLoaded", function () {
+  const gallery = document.getElementById("glx-gallery");
+  const modalEl = document.getElementById("glxModal");
+  if (!modalEl) return;
+
+  // Bootstrap modal
+  const modal = (window.bootstrap && new bootstrap.Modal(modalEl, { backdrop: true })) || null;
+
+  // UI bits
+  const titleEl  = document.getElementById("glxTitle");
+  const metaEl   = document.getElementById("glxMeta");
+
+  // Image viewport + tools
+  const imgWrap  = document.getElementById("glxImageWrap");
+  const imgEl    = document.getElementById("glxImage");
+  const btnIn    = document.getElementById("glxZoomIn");
+  const btnOut   = document.getElementById("glxZoomOut");
+  const btnReset = document.getElementById("glxReset");
+  const btnDl    = document.getElementById("glxDownload");
+
+  // Video viewport
+  const vidWrap  = document.getElementById("glxVideoWrap");
+  const iframe   = document.getElementById("glxIframe");
+  const btnOpenYT = document.getElementById("glxOpenYT"); // optional external-open link (if you added one)
+
+  // ---------- YouTube helpers ----------
+  function parseYouTubeId(input) {
+    if (!input) return "";
+    if (/^[\w-]{10,}$/.test(input)) return input; // looks like an ID
+    try {
+      const u = new URL(input);
+      if (u.hostname.includes("youtu.be")) return u.pathname.slice(1);
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      const m = u.pathname.match(/\/(shorts|embed)\/([^/?#]+)/);
+      if (m) return m[2];
+    } catch (_) {}
+    return "";
+  }
+  function buildYTEmbed(input) {
+    const id = parseYouTubeId(input);
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1` : "";
+  }
+
+  // ---------- UI helpers ----------
+  function setMeta(title, place, datetime) {
+    if (titleEl) titleEl.textContent = title || "";
+    if (metaEl)  metaEl.textContent  = [place, datetime].filter(Boolean).join(" · ");
+  }
+  function showImgTools(show) {
+    [btnIn, btnOut, btnReset, btnDl].forEach(b => b && b.classList.toggle("d-none", !show));
+  }
+
+  // ---------- Fit / zoom / pan state ----------
+  let mode = "image";     // 'image' | 'video'
+  let base = 1;           // baseline scale to fit
+  let scale = 1;          // current scale
+  let pos = { x: 0, y: 0 };
+  let dragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let pendingFit = false;
+
+  function ensureViewportHeight() {
+    // Safety net if HTML didn't use vh-100
+    if (imgWrap && imgWrap.getBoundingClientRect().height < 40) {
+      imgWrap.style.minHeight = "100vh";
+    }
+    if (vidWrap && vidWrap.getBoundingClientRect().height < 40) {
+      vidWrap.style.minHeight = "100vh";
+    }
+  }
+
+  function applyTransform() {
+    if (imgEl) {
+      imgEl.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+    }
+  }
+
+  function resetTransform() {
+    scale = base;
+    pos = { x: 0, y: 0 };
+    applyTransform();
+  }
+
+  function fitToScreen() {
+    if (!imgWrap || !imgEl) return;
+    ensureViewportHeight();
+    const vw = imgWrap.clientWidth || 1;
+    const vh = imgWrap.clientHeight || 1;
+    const nw = imgEl.naturalWidth  || vw;
+    const nh = imgEl.naturalHeight || vh;
+    base = Math.min(vw / nw, vh / nh);
+    imgEl.style.maxWidth = "none";
+    imgEl.style.maxHeight = "none";
+    resetTransform();
+    pendingFit = false;
+  }
+
+  function zoomAt(fx, fy, factor) {
+    if (mode !== "image" || !imgWrap) return;
+    const before = scale;
+    const next   = Math.min(6, Math.max(base * 0.5, scale * factor));
+    const rect   = imgWrap.getBoundingClientRect();
+    const cx     = fx - rect.left;
+    const cy     = fy - rect.top;
+    // keep focal point under cursor
+    pos.x = cx - ((cx - pos.x) * (next / before));
+    pos.y = cy - ((cy - pos.y) * (next / before));
+    scale = next;
+    applyTransform();
+  }
+
+  // ---------- Openers ----------
+  function openImage(src, title, place, datetime) {
+    mode = "image";
+    if (vidWrap) vidWrap.classList.add("d-none");
+    if (iframe)  iframe.src = "";
+    if (imgWrap) imgWrap.classList.remove("d-none");
+    if (btnOpenYT) btnOpenYT.classList.add("d-none");
+    showImgTools(true);
+
+    if (btnDl) {
+      btnDl.href = src || "#";
+      try { btnDl.download = (src || "").split("/").pop().split("?")[0] || "image"; } catch {}
+    }
+    setMeta(title, place, datetime);
+
+    if (imgEl) {
+      imgEl.onload = () => {
+        if (modalEl.classList.contains("show")) {
+          requestAnimationFrame(fitToScreen);
+        } else {
+          pendingFit = true;
+        }
+      };
+      imgEl.src = src || "";
+      // If cached, onload may not fire
+      if (imgEl.complete) {
+        if (modalEl.classList.contains("show")) {
+          requestAnimationFrame(fitToScreen);
+        } else {
+          pendingFit = true;
+        }
+      }
+    }
+    modal && modal.show();
+  }
+
+  function openVideo(url, title, place, datetime) {
+    mode = "video";
+    if (imgWrap) imgWrap.classList.add("d-none");
+    if (imgEl)   imgEl.src = "";
+    if (vidWrap) vidWrap.classList.remove("d-none");
+    showImgTools(false);
+
+    const embed = buildYTEmbed(url);
+    if (iframe)  iframe.src = embed || "about:blank";
+
+    if (btnOpenYT) {
+      const id = parseYouTubeId(url);
+      btnOpenYT.href = id ? `https://youtu.be/${id}` : (url || "#");
+      btnOpenYT.classList.toggle("d-none", !(id || url));
+    }
+
+    setMeta(title, place, datetime);
+    modal && modal.show();
+  }
+
+  // ---------- Modal lifecycle ----------
+  modalEl.addEventListener("shown.bs.modal", () => {
+    if (mode === "image" && (pendingFit || scale === 1)) {
+      fitToScreen();
+    }
+  });
+
+  modalEl.addEventListener("hidden.bs.modal", () => {
+    if (iframe) iframe.src = "";
+    if (imgEl)  imgEl.src = "";
+    pendingFit = false;
+  });
+
+  // Refit on resize
+  window.addEventListener("resize", () => {
+    if (modalEl.classList.contains("show") && mode === "image") {
+      fitToScreen();
+    }
+  });
+
+  // ---------- Bind cards ----------
+  if (gallery) {
+    gallery.querySelectorAll(".glx-card").forEach(card => {
+      card.addEventListener("click", (e) => {
+        e.preventDefault();
+        const kind  = card.dataset.kind;
+        const title = card.dataset.title || "";
+        const place = card.dataset.place || "";
+        const dt    = card.dataset.datetime || "";
+        if (kind === "video") {
+          const you = card.dataset.video;
+          if (you) openVideo(you, title, place, dt);
+        } else {
+          const src = card.dataset.image || card.querySelector("img")?.src;
+          if (src) openImage(src, title, place, dt);
+        }
+      });
+    });
+  }
+
+  // ---------- Controls / gestures ----------
+  btnIn    && btnIn.addEventListener("click",  () => zoomAt(imgWrap.clientWidth/2, imgWrap.clientHeight/2, 1.2));
+  btnOut   && btnOut.addEventListener("click", () => zoomAt(imgWrap.clientWidth/2, imgWrap.clientHeight/2, 1/1.2));
+  btnReset && btnReset.addEventListener("click", () => { scale = base; pos = {x:0,y:0}; applyTransform(); });
+
+  if (imgEl) {
+    // mouse pan
+    imgEl.addEventListener("mousedown", (e) => {
+      if (mode !== "image") return;
+      dragging = true;
+      dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+      imgEl.style.cursor = "grabbing";
+    });
+    window.addEventListener("mouseup", () => { dragging = false; imgEl.style.cursor = "grab"; });
+    window.addEventListener("mousemove", (e) => {
+      if (!dragging || mode !== "image") return;
+      pos.x = e.clientX - dragStart.x;
+      pos.y = e.clientY - dragStart.y;
+      applyTransform();
+    });
+  }
+
+  // wheel zoom under cursor
+  imgWrap && imgWrap.addEventListener("wheel", (e) => {
+    if (mode !== "image") return;
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1/1.12);
+  }, { passive: false });
+
+  // double-click toggle zoom
+  imgWrap && imgWrap.addEventListener("dblclick", (e) => {
+    if (mode !== "image") return;
+    e.preventDefault();
+    const target = (scale > base * 1.05) ? (base / scale) : (2 / scale);
+    zoomAt(e.clientX, e.clientY, target);
+  });
+
+  // touch: pinch + pan
+  let pinch = null;
+  imgWrap && imgWrap.addEventListener("touchstart", (e) => {
+    if (mode !== "image") return;
+    if (e.touches.length === 2) {
+      const [a,b] = e.touches;
+      pinch = {
+        d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        cx: (a.clientX + b.clientX) / 2,
+        cy: (a.clientY + b.clientY) / 2,
+        scale,
+        pos: { ...pos }
+      };
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0];
+      dragging = true;
+      dragStart = { x: t.clientX - pos.x, y: t.clientY - pos.y };
+    }
+  }, { passive: true });
+
+  imgWrap && imgWrap.addEventListener("touchmove", (e) => {
+    if (mode !== "image") return;
+    if (e.touches.length === 2 && pinch) {
+      e.preventDefault();
+      const [a,b] = e.touches;
+      const d  = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const f  = d / (pinch.d || 1);
+      const ns = Math.min(6, Math.max(base * 0.5, pinch.scale * f));
+
+      const rect = imgWrap.getBoundingClientRect();
+      const cx   = pinch.cx - rect.left;
+      const cy   = pinch.cy - rect.top;
+
+      pos.x = cx - ((cx - pinch.pos.x) * (ns / pinch.scale));
+      pos.y = cy - ((cy - pinch.pos.y) * (ns / pinch.scale));
+      scale = ns;
+      applyTransform();
+    } else if (e.touches.length === 1 && dragging) {
+      const t = e.touches[0];
+      pos.x = t.clientX - dragStart.x;
+      pos.y = t.clientY - dragStart.y;
+      applyTransform();
+    }
+  }, { passive: false });
+
+  imgWrap && imgWrap.addEventListener("touchend", () => {
+    pinch = null;
+    dragging = false;
+  }, { passive: true });
+});
+
+
+
+(() => {
+  const els = document.querySelectorAll('#academic-calendar .typing-date');
+
+  function type(el, text) {
+    el.textContent = '';
+    let i = 0;
+    const tick = () => {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i++);
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+  }
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        type(entry.target, entry.target.getAttribute('data-text') || '');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.4 });
+
+  els.forEach(el => io.observe(el));
+})();
+
+///////////////////////////////////
+//Courses sylabus modal
+///////////////////////////////////
+// Open syllabus image in LightGallery (zoom + download)
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.js-open-syllabus');
+  if (!btn) return;
+
+  e.preventDefault();
+
+  const src = btn.dataset.img;
+  const title = btn.dataset.title || 'Syllabus';
+  if (!src) {
+    console.warn('No data-img on syllabus button.');
+    return;
+  }
+
+  // Make sure LG is available
+  if (typeof window.lightGallery !== 'function') {
+    console.error('lightGallery not loaded.');
+    return;
+  }
+
+  // Use plugins if present
+  const plugins = [];
+  if (window.lgZoom) plugins.push(window.lgZoom);
+  if (window.lgDownload) plugins.push(window.lgDownload);
+
+  // Temporary holder for this one-shot gallery
+  const holder = document.createElement('div');
+  document.body.appendChild(holder);
+
+  const lg = window.lightGallery(holder, {
+    dynamic: true,
+    licenseKey: '0000-0000-000-0000', // required param
+    plugins,
+    closable: true,
+    download: true,
+    speed: 300,
+    backdropDuration: 200,
+    dynamicEl: [
+      {
+        src,
+        thumb: src,
+        subHtml: `<h4 class="mb-0">${title}</h4>`,
+        downloadUrl: src
+      }
+    ]
+  });
+
+  lg.openGallery(0);
+
+  // Clean up when closed
+  holder.addEventListener('lgAfterClose', () => {
+    lg.destroy(true);
+    holder.remove();
+  }, { once: true });
+});
+
+
+// --- tiny helpers ---
+const $ = (id) => document.getElementById(id);
+const setStatus = (type, msg) => {
+  const el = $('payment-status'); if (!el) return;
+  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
+  el.textContent = msg;
+};
+// ✅ single backslash in the regex literal
+const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+
+// --- bKash click ---
+$('bkash-btn')?.addEventListener('click', async () => {
+  try {
+    setStatus('secondary','Starting bKash…');
+    const r = await fetch('/pay/bkash/init/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+      body: JSON.stringify({ amount: 1500 })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Init failed');
+    location.href = j.bkash_url; // go to hosted checkout
+  } catch (e) {
+    setStatus('danger', e.message || 'Could not start bKash.');
+  }
+});
+
+  // --- helpers ---
+  const $ = (id) => document.getElementById(id);
+  const setStatus = (type, msg) => {
+    const el = $('payment-status'); if (!el) return;
+    el.className = `alert alert-${type} py-2 mt-3 mb-0`; el.textContent = msg;
+  };
+  const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+  const unlock = () => {
+    $('submit-btn')?.removeAttribute('disabled');
+    $('print-btn')?.removeAttribute('disabled');
+    setStatus('success','Payment confirmed ✅');
+  };
+
+  // --- bKash click (points at your backend) ---
+  $('bkash-btn')?.addEventListener('click', async () => {
+    try{
+      setStatus('secondary','Starting bKash…');
+      const r = await fetch('/pay/bkash/init/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ amount: 1500 })
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'Init failed');
+      location.href = j.bkash_url; // redirect to hosted checkout
+    }catch(e){ setStatus('danger', e.message || 'Could not start bKash.'); }
+  });
+
+  // --- PayPal WORKING DEMO (exact style you provided) ---
+  // Renders immediately with client-id=test. Uses demo endpoints below.
+  paypal.Buttons({
+    // Call your server to set up the transaction (DEMO endpoints)
+    createOrder: function(data, actions) {
+      return fetch('/demo/checkout/api/paypal/order/create/', {
+        method: 'post'
+      }).then(function(res) {
+        return res.json();
+      }).then(function(orderData) {
+        return orderData.id;
+      });
+    },
+
+    // Call your server to finalize the transaction (DEMO endpoints)
+    onApprove: function(data, actions) {
+      return fetch('/demo/checkout/api/paypal/order/' + data.orderID + '/capture/', {
+        method: 'post'
+      }).then(function(res) {
+        return res.json();
+      }).then(function(orderData) {
+        // If there’s a recoverable decline
+        var errorDetail = Array.isArray(orderData.details) && orderData.details[0];
+        if (errorDetail && errorDetail.issue === 'INSTRUMENT_DECLINED') {
+          return actions.restart();
+        }
+        if (errorDetail) {
+          var msg = 'Sorry, your transaction could not be processed.';
+          if (errorDetail.description) msg += '\n\n' + errorDetail.description;
+          if (orderData.debug_id) msg += ' (' + orderData.debug_id + ')';
+          return alert(msg);
+        }
+
+        // Successful capture!
+        console.log('Capture result', orderData);
+        unlock();
+      });
+    }
+  }).render('#paypal-button-container');
+
+  // If returning from a provider with ?paid=1
+  (function(){
+    const q = new URLSearchParams(location.search);
+    if (q.get('paid') === '1') unlock();
+  })();
+
+
+
+
+  (function () {
+    // Add bootstrap classes to inputs/selects/textareas that lack them
+    const addIfMissing = (el, cls) => { if (el && !el.classList.contains(cls)) el.classList.add(cls); };
+    document.addEventListener('DOMContentLoaded', function () {
+      // inputs (text/email/tel/number/date)
+      document.querySelectorAll('input').forEach(i => {
+        const t = i.type;
+        if (['text','email','tel','number','date','password','search'].includes(t)) addIfMissing(i,'form-control');
+        if (t === 'file') addIfMissing(i,'form-control'); // file inputs styled by browser
+        if (t === 'checkbox' || t === 'radio') {
+          // keep bootstrap form-check-input
+          addIfMissing(i,'form-check-input');
+          // and ensure parent has form-check class (if not, wrap could be adjusted in template)
+        }
+      });
+      document.querySelectorAll('textarea').forEach(t => addIfMissing(t,'form-control'));
+      document.querySelectorAll('select').forEach(s => addIfMissing(s,'form-select'));
+
+      // Simple demo: enable submit when any payment option clicked (replace with real payment callback)
+      const bkashBtn = document.getElementById('bkash-btn');
+      const submitBtn = document.getElementById('submit-btn');
+      const printBtn = document.getElementById('print-btn');
+      if (bkashBtn) bkashBtn.addEventListener('click', () => {
+        document.getElementById('payment-status').className = 'alert alert-success py-2 mt-3 mb-0';
+        document.getElementById('payment-status').textContent = 'bKash selected (demo). Click submit to finish.';
+        submitBtn.disabled = false;
+        printBtn.disabled = false;
+      });
+
+      // checkboxes: visually toggle fee rows (demo behavior, implement real calc)
+      document.getElementById('optBus')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-bus]').textContent = e.target.checked ? '৳ 500' : '৳ 0';
+        // update total (simple parse)
+        updateTotal();
+      });
+      document.getElementById('optHostel')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-hostel]').textContent = e.target.checked ? '৳ 1500' : '৳ 0';
+        updateTotal();
+      });
+      document.getElementById('optMarksheet')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-marksheet]').textContent = e.target.checked ? '৳ 200' : '৳ 0';
+        updateTotal();
+      });
+
+      function parseAmount(text) {
+        return Number(String(text).replace(/[^\d.-]/g,'') || 0);
+      }
+      function updateTotal() {
+        const admission = parseAmount(document.querySelector('[data-fee-admission]').textContent);
+        const tuition = parseAmount(document.querySelector('[data-fee-tuition]').textContent);
+        const exam = parseAmount(document.querySelector('[data-fee-exam]').textContent);
+        const bus = parseAmount(document.querySelector('[data-fee-bus]').textContent);
+        const hostel = parseAmount(document.querySelector('[data-fee-hostel]').textContent);
+        const marksheet = parseAmount(document.querySelector('[data-fee-marksheet]').textContent);
+        const total = admission + tuition + exam + bus + hostel + marksheet;
+        document.querySelector('[data-fee-total]').textContent = '৳ ' + total;
+      }
+      // initial total calc
+      updateTotal();
+    });
+  })();

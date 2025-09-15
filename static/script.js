@@ -1444,7 +1444,6 @@ document.addEventListener('click', function (e) {
 
 
 // --- tiny helpers ---
-const $ = (id) => document.getElementById(id);
 const setStatus = (type, msg) => {
   const el = $('payment-status'); if (!el) return;
   el.className = `alert alert-${type} py-2 mt-3 mb-0`;
@@ -1453,25 +1452,9 @@ const setStatus = (type, msg) => {
 // ✅ single backslash in the regex literal
 const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
 
-// --- bKash click ---
-$('bkash-btn')?.addEventListener('click', async () => {
-  try {
-    setStatus('secondary','Starting bKash…');
-    const r = await fetch('/pay/bkash/init/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
-      body: JSON.stringify({ amount: 1500 })
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Init failed');
-    location.href = j.bkash_url; // go to hosted checkout
-  } catch (e) {
-    setStatus('danger', e.message || 'Could not start bKash.');
-  }
-});
+
 
   // --- helpers ---
-  const $ = (id) => document.getElementById(id);
   const setStatus = (type, msg) => {
     const el = $('payment-status'); if (!el) return;
     el.className = `alert alert-${type} py-2 mt-3 mb-0`; el.textContent = msg;
@@ -1483,20 +1466,7 @@ $('bkash-btn')?.addEventListener('click', async () => {
     setStatus('success','Payment confirmed ✅');
   };
 
-  // --- bKash click (points at your backend) ---
-  $('bkash-btn')?.addEventListener('click', async () => {
-    try{
-      setStatus('secondary','Starting bKash…');
-      const r = await fetch('/pay/bkash/init/', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
-        body: JSON.stringify({ amount: 1500 })
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'Init failed');
-      location.href = j.bkash_url; // redirect to hosted checkout
-    }catch(e){ setStatus('danger', e.message || 'Could not start bKash.'); }
-  });
+
 
   // --- PayPal WORKING DEMO (exact style you provided) ---
   // Renders immediately with client-id=test. Uses demo endpoints below.
@@ -1543,3 +1513,60 @@ $('bkash-btn')?.addEventListener('click', async () => {
     const q = new URLSearchParams(location.search);
     if (q.get('paid') === '1') unlock();
   })();
+
+
+
+
+  (function () {
+    // Add bootstrap classes to inputs/selects/textareas that lack them
+
+
+
+
+
+      // checkboxes: visually toggle fee rows (demo behavior, implement real calc)
+      document.getElementById('optBus')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-bus]').textContent = e.target.checked ? '৳ 500' : '৳ 0';
+        // update total (simple parse)
+        updateTotal();
+      });
+      document.getElementById('optHostel')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-hostel]').textContent = e.target.checked ? '৳ 1500' : '৳ 0';
+        updateTotal();
+      });
+      document.getElementById('optMarksheet')?.addEventListener('change', (e) => {
+        document.querySelector('[data-fee-marksheet]').textContent = e.target.checked ? '৳ 200' : '৳ 0';
+        updateTotal();
+      });
+
+      function parseAmount(text) {
+        return Number(String(text).replace(/[^\d.-]/g,'') || 0);
+      }
+      function updateTotal() {
+        const admission = parseAmount(document.querySelector('[data-fee-admission]').textContent);
+        const tuition = parseAmount(document.querySelector('[data-fee-tuition]').textContent);
+        const exam = parseAmount(document.querySelector('[data-fee-exam]').textContent);
+        const bus = parseAmount(document.querySelector('[data-fee-bus]').textContent);
+        const hostel = parseAmount(document.querySelector('[data-fee-hostel]').textContent);
+        const marksheet = parseAmount(document.querySelector('[data-fee-marksheet]').textContent);
+        const total = admission + tuition + exam + bus + hostel + marksheet;
+        document.querySelector('[data-fee-total]').textContent = '৳ ' + total;
+      }
+      // initial total calc
+      updateTotal();
+    });
+  })();
+
+
+
+// ---- helpers (define ONCE) ----
+const getCSRF = () =>
+  (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || "";
+
+function setStatus(type, msg) {
+  const el = document.getElementById('payment-status');
+  if (!el) return;
+  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
+  el.textContent = msg;
+}
+

@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.urls import path
 from . import views
-from . import views
 from .view_addmissions import AdmissionApplyView, AdmissionSuccessView
 
 app_name = "content"
@@ -21,10 +20,12 @@ urlpatterns = [
     path(f"{P}/manage/notices/create/", views.manage_notice_create, name="manage_notice_create"),
     path(f"{P}/manage/timeline/create/", views.manage_timeline_create, name="manage_timeline_create"),
 
-    path("pay/bkash/init/", views.bkash_init, name="bkash_init"),
-    path("pay/bkash/return/", views.bkash_return, name="bkash_return"),
-
     # PayPal
     path("pay/paypal/create/", views.paypal_create, name="paypal_create"),
     path("pay/paypal/capture/", views.paypal_capture, name="paypal_capture"),
+
+    path("apply/", AdmissionApplyView.as_view(), name="apply"),
+    path("review/<int:pk>/", AdmissionReviewView.as_view(), name="review"),
+    path("confirm/<int:pk>/", AdmissionConfirmView.as_view(), name="confirm"),
+    path("receipt/<int:pk>/", AdmissionReceiptView.as_view(), name="receipt"),
 ]

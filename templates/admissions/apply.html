@@ -1,5 +1,6 @@
+{# templates/admissions/apply.html #}
 {% extends "base.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Apply for Admission{% endblock %}
 
@@ -7,15 +8,16 @@
 <section class="py-5 bg-light" id="admission-form">
   <div class="container">
     <div class="row g-4">
-      <!-- Tips -->
+
+      <!-- Tips (sticky on large screens) -->
       <aside class="col-lg-4 order-lg-2">
-        <div class="card border-0 shadow-sm">
+        <div class="card border-0 shadow-sm" style="position:sticky; top:1rem">
           <div class="card-body">
             <h5 class="fw-semibold mb-3">Tips</h5>
-            <ul class="small text-muted mb-0 ps-3">
-              <li>Use a valid email and phone number.</li>
-              <li>If you came from a course card, it’s pre-selected below.</li>
-              <li>Upload only PDF / JPG / PNG files.</li>
+            <ul class="list-group list-group-flush small">
+              <li class="list-group-item px-0">Use a valid email and phone number.</li>
+              <li class="list-group-item px-0">If you came from a course card, it’s pre-selected below.</li>
+              <li class="list-group-item px-0">Upload only PDF / JPG / PNG files.</li>
             </ul>
           </div>
         </div>
@@ -23,15 +25,13 @@
 
       <!-- Form -->
       <div class="col-lg-8 order-lg-1">
-        <div class="card shadow-lg border-0 rounded-4">
+        <div class="card shadow border-0 rounded-4">
           <div class="card-body p-4 p-md-5">
 
-            <!-- Selected course banner (compact & well-sized) -->
             {% if selected_course %}
               <div class="alert alert-light border d-flex align-items-center gap-3 mb-4">
                 {% if selected_course.image %}
-                  <img src="{{ selected_course.image.url }}" alt=""
-                       class="selected-course-thumb rounded">
+                  <img src="{{ selected_course.image.url }}" alt="" class="rounded border" style="width:48px;height:48px;object-fit:cover">
                 {% endif %}
                 <div class="flex-grow-1">
                   <div class="fw-semibold">{{ selected_course.title }}</div>
@@ -39,20 +39,26 @@
                 </div>
                 <a href="{% url 'home' %}#academics" class="btn btn-sm btn-outline-secondary">Change</a>
               </div>
+            {% endif %}
 
-              {# Keep the selected course locked via hidden field #}
-              {% if form.desired_course %}{{ form.desired_course.as_hidden }}{% endif %}
-              {% if form.course %}{{ form.course.as_hidden }}{% endif %}
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger mb-4">
+                {{ form.non_field_errors }}
+              </div>
             {% endif %}
 
             <form method="post" enctype="multipart/form-data" novalidate>
               {% csrf_token %}
 
+              {# Keep the course fixed if preselected #}
+              {% if selected_course and form.desired_course %}
+                {{ form.desired_course.as_hidden }}
+              {% endif %}
+
               <!-- SECTION: Student info -->
-              <h5 class="section-title mb-3">Student Information</h5>
+              <h5 class="mb-3">Student Information</h5>
 
               <div class="row g-3">
-                <!-- left column -->
                 <div class="col-md-6">
                   <label class="form-label fw-semibold" for="{{ form.full_name.id_for_label }}">
                     {{ form.full_name.label }}{% if form.full_name.field.required %} <span class="text-danger">*</span>{% endif %}
@@ -72,6 +78,7 @@
                     {{ form.phone.label }}{% if form.phone.field.required %} <span class="text-danger">*</span>{% endif %}
                   </label>
                   {{ form.phone }}
+                  <div class="form-text">Format: 01XXXXXXXXX</div>
                   {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.phone.errors|striptags }}</div>{% endif %}
                 </div>
 
@@ -99,12 +106,9 @@
                   {% if form.guardian_phone.errors %}<div class="invalid-feedback d-block">{{ form.guardian_phone.errors|striptags }}</div>{% endif %}
                 </div>
 
-                {# Only show the course selector if not preselected #}
                 {% if not selected_course %}
                   <div class="col-md-6">
-                    <label class="form-label fw-semibold" for="{{ form.desired_course.id_for_label }}">
-                      {{ form.desired_course.label }}
-                    </label>
+                    <label class="form-label fw-semibold" for="{{ form.desired_course.id_for_label }}">{{ form.desired_course.label }}</label>
                     {{ form.desired_course }}
                     {% if form.desired_course.help_text %}<div class="form-text">{{ form.desired_course.help_text|safe }}</div>{% endif %}
                     {% if form.desired_course.errors %}<div class="invalid-feedback d-block">{{ form.desired_course.errors|striptags }}</div>{% endif %}
@@ -126,18 +130,21 @@
                 <div class="col-md-6">
                   <label class="form-label fw-semibold" for="{{ form.ssc_gpa.id_for_label }}">{{ form.ssc_gpa.label }}</label>
                   {{ form.ssc_gpa }}
+                  <div class="form-text">Max 5.00</div>
                   {% if form.ssc_gpa.errors %}<div class="invalid-feedback d-block">{{ form.ssc_gpa.errors|striptags }}</div>{% endif %}
                 </div>
 
                 <div class="col-md-6">
                   <label class="form-label fw-semibold" for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
                   {{ form.photo }}
+                  <div class="form-text">JPG/PNG up to 5&nbsp;MB.</div>
                   {% if form.photo.errors %}<div class="invalid-feedback d-block">{{ form.photo.errors|striptags }}</div>{% endif %}
                 </div>
 
                 <div class="col-md-6">
                   <label class="form-label fw-semibold" for="{{ form.transcript.id_for_label }}">{{ form.transcript.label }}</label>
                   {{ form.transcript }}
+                  <div class="form-text">PDF/JPG/PNG up to 10&nbsp;MB.</div>
                   {% if form.transcript.help_text %}<div class="form-text">{{ form.transcript.help_text|safe }}</div>{% endif %}
                   {% if form.transcript.errors %}<div class="invalid-feedback d-block">{{ form.transcript.errors|striptags }}</div>{% endif %}
                 </div>
@@ -145,89 +152,90 @@
                 <div class="col-12">
                   <label class="form-label fw-semibold" for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
                   {{ form.message }}
+                  <div class="form-text">Optional</div>
                   {% if form.message.errors %}<div class="invalid-feedback d-block">{{ form.message.errors|striptags }}</div>{% endif %}
                 </div>
               </div>
 
+              <!-- Fees (server-calculated preview) -->
               <hr class="my-4">
+              <h5 class="mb-3">Fee Breakdown</h5>
 
-              <!-- SECTION: Fees -->
-              <h5 class="section-title mb-3">Fee Breakdown</h5>
+              {% with fb=fee_breakdown %}
               <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-3">
+                <table class="table table-sm table-bordered align-middle mb-3">
+                  <caption class="text-muted small">Amounts shown in BDT</caption>
                   <tbody>
-                    <tr><th style="width:40%">Admission Fee</th><td data-fee-admission>৳ 0</td></tr>
-                    <tr><th>Tuition Fee (1st month)</th><td data-fee-tuition>৳ 0</td></tr>
-                    <tr><th>Exam Fee</th><td data-fee-exam>৳ 0</td></tr>
-                    <tr><th>Bus Service</th><td data-fee-bus>৳ 0</td></tr>
-                    <tr><th>Hostel Seat</th><td data-fee-hostel>৳ 0</td></tr>
-                    <tr><th>Exact Marksheet</th><td data-fee-marksheet>৳ 0</td></tr>
-                    <tr class="table-primary"><th>Total</th><td data-fee-total class="fw-bold">৳ 0</td></tr>
+                    <tr>
+                      <th class="w-50">Admission Fee</th>
+                      <td class="text-end">৳ {{ fb.admission|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                      <th>Tuition Fee (1st month)</th>
+                      <td class="text-end">৳ {{ fb.tuition|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                      <th>Exam Fee</th>
+                      <td class="text-end">৳ {{ fb.exam|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                      <th>Bus Service</th>
+                      <td class="text-end">৳ {{ fb.bus|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                      <th>Hostel Seat</th>
+                      <td class="text-end">৳ {{ fb.hostel|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr>
+                      <th>Exact Marksheet</th>
+                      <td class="text-end">৳ {{ fb.marksheet|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
+                    <tr class="table-active">
+                      <th>Total</th>
+                      <td class="fw-bold text-end">৳ {{ fb.total|default:0|floatformat:0|intcomma }}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
+              {% endwith %}
 
+              <!-- Add-ons (real form fields; server will snapshot on POST) -->
               <div class="row g-2 mb-3">
                 <div class="col-12 col-sm-4">
                   <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="optBus">
-                    <label class="form-check-label" for="optBus">Add School Bus</label>
+                    {{ form.add_bus }} <label class="form-check-label" for="{{ form.add_bus.id_for_label }}">Add School Bus</label>
                   </div>
                 </div>
                 <div class="col-12 col-sm-4">
                   <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="optHostel">
-                    <label class="form-check-label" for="optHostel">Add Hostel Seat</label>
+                    {{ form.add_hostel }} <label class="form-check-label" for="{{ form.add_hostel.id_for_label }}">Add Hostel Seat</label>
                   </div>
                 </div>
                 <div class="col-12 col-sm-4">
                   <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="optMarksheet">
-                    <label class="form-check-label" for="optMarksheet">Add Exact Marksheet</label>
+                    {{ form.add_marksheet }} <label class="form-check-label" for="{{ form.add_marksheet.id_for_label }}">Add Exact Marksheet</label>
                   </div>
                 </div>
               </div>
 
-              <hr class="my-4">
-
-              <!-- SECTION: Payment -->
-              <h5 class="section-title mb-3">Online Payment</h5>
-              <div class="row g-3">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-3">
-                  <!-- existing -->
-                  <button id="bkash-btn" class="btn btn-bkash d-inline-flex align-items-center px-4 py-2" type="button">
-                    <img class="logo" src="{% static 'img/payments/bkash.svg' %}" alt="" onerror="this.remove()">
-                    <span>Pay with bKash</span>
-                  </button>
-
-                  <!-- PayPal wallet button -->
-                  <div id="paypal-button-container" class="flex-grow-1" style="min-width:250px;"></div>
-
-                  <!-- NEW: Card-only button -->
-                  <div id="paypal-card-button" style="min-width:250px;"></div>
-                </div>
-
-                <div id="payment-status" class="alert alert-info py-2 mt-3 mb-0">
-                  Choose a method and complete payment.
-                </div>
+              <!-- Note: Payment happens on the Review page after submit -->
+              <div class="alert alert-info small mb-0">
+                After you submit, you’ll see a final review with the exact total and payment options.
               </div>
 
+              <!-- Actions -->
               <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
-                <button type="submit" id="submit-btn" class="btn btn-primary px-4 py-2" disabled>Submit Form</button>
-                <button type="button" id="print-btn" class="btn btn-success px-4 py-2" disabled>Print Form</button>
+                <button type="submit" class="btn btn-primary px-4 py-2">Submit &amp; Review</button>
                 <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4 py-2">Cancel</a>
               </div>
-
-
-
 
             </form>
 
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </section>
-
 {% endblock %}

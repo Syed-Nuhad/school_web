@@ -1863,3 +1863,51 @@ header {
   width: 22px; height: 22px; object-fit: contain;
   margin-right: .5rem;
 }
+
+
+/* minimal local styles */
+.selected-course-thumb { width:64px; height:64px; object-fit:cover; border-radius:6px; }
+.section-title { font-size:1.05rem; letter-spacing:0.25px; }
+.table thead th, .table td, .table th { vertical-align: middle; }
+/* emphasise total row */
+.fee-total { background:#f1f7ff; font-weight:600; }
+/* nice file input layout */
+input[type="file"]::file-selector-button { cursor:pointer; padding:.3rem .6rem; }
+/* small helpers */
+.btn-bkash { background: linear-gradient(90deg,#f7b33b,#f29b00); border:0; color:#111; }
+.logo { height:20px; margin-right:8px; }
+/* responsive tweak for payment area */
+@media (max-width:767.98px){ #paypal-button-container, #paypal-card-button { width:100% !important; } }
+
+
+
+.form-control {
+  display: block !important;
+  width: 100% !important;
+  padding: .375rem .75rem !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  color: #212529 !important;
+  background-color: #fff !important;
+  background-clip: padding-box !important;
+  border: 1px solid #ced4da !important;
+  border-radius: .375rem !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+}
+.form-select {
+  display:block !important;
+  width:100% !important;
+  padding:.375rem 1.75rem .375rem .75rem !important;
+  border:1px solid #ced4da !important;
+  border-radius:.375rem !important;
+}
+
+
+@media print {
+header, nav, footer, .btn, .bg-light { display: none !important; }
+body { background: #fff !important; }
+.card { border: none !important; box-shadow: none !important; }
+.rounded-4 { border-radius: 0 !important; }
+.table { font-size: 12px; }
+}

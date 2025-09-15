@@ -1,16 +1,169 @@
+{# templates/admissions/success.html #}
 {% extends "base.html" %}
+{% load humanize %}
 
-{% block title %}Application Submitted{% endblock %}
+{% block title %}Application Submitted — Thank You{% endblock %}
 
 {% block content %}
-<section class="container py-5 text-center" data-aos="fade-up">
-  <div class="mb-3">
-    <svg width="64" height="64" viewBox="0 0 24 24" class="text-success">
-      <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-    </svg>
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-xl-8 col-lg-9">
+        <div class="card border-0 shadow rounded-4">
+          <div class="card-body p-4 p-md-5">
+
+            <!-- Success header -->
+            <div class="d-flex align-items-start gap-3 mb-4">
+              <div class="flex-shrink-0">
+                <span class="badge rounded-pill text-bg-success px-3 py-2">Success</span>
+              </div>
+              <div class="flex-grow-1">
+                <h4 class="mb-1">Your application has been submitted</h4>
+                <p class="text-muted mb-0">
+                  Thank you, <strong>{{ application.full_name }}</strong>. We’ve received your application
+                  for <strong>{{ application.desired_course.title }}</strong>.
+                </p>
+              </div>
+            </div>
+
+            <!-- Reference + status -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Reference</div>
+                  <div class="fw-semibold">Application ID: #{{ application.id }}</div>
+                  <div class="text-muted small">Submitted on {{ application.created_at|date:"M d, Y, h:i A" }}</div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Payment Status</div>
+                  {% if application.payment_status == "paid" %}
+                    <div class="fw-semibold text-success">Paid</div>
+                    {% if application.payment_reference %}
+                      <div class="text-muted small">Ref: {{ application.payment_reference }}</div>
+                    {% endif %}
+                  {% elif application.payment_status == "pending" %}
+                    <div class="fw-semibold text-warning">Pending</div>
+                    <div class="text-muted small">We’ll email you once it’s confirmed.</div>
+                  {% else %}
+                    <div class="fw-semibold text-secondary">Unpaid</div>
+                    <div class="text-muted small">Please complete payment to finalize admission.</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Applicant + course -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Applicant</div>
+                  <div class="fw-semibold">{{ application.full_name }}</div>
+                  <div class="text-muted small">
+                    {{ application.email }}{% if application.phone %} · {{ application.phone }}{% endif %}
+                  </div>
+                  {% if application.address %}
+                    <div class="text-muted small mt-1">{{ application.address }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="small text-muted">Course</div>
+                  <div class="fw-semibold">{{ application.desired_course.title }}</div>
+                  {% if application.desired_course.get_category_display %}
+                    <div class="small text-muted text-uppercase">
+                      {{ application.desired_course.get_category_display }}
+                    </div>
+                  {% elif application.desired_course.category %}
+                    <div class="small text-muted text-uppercase">
+                      {{ application.desired_course.category }}
+                    </div>
+                  {% endif %}
+                  {% if application.shift %}
+                    <div class="small text-muted mt-1">Shift: {{ application.shift }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Fees snapshot -->
+            <h6 class="mb-2">Fee Snapshot (BDT)</h6>
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered align-middle mb-3">
+                <thead class="table-light">
+                  <tr>
+                    <th class="w-50">Item</th>
+                    <th class="text-end">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Admission Fee</td>
+                    <td class="text-end">৳ {{ application.fee_admission|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Tuition Fee (1st month)</td>
+                    <td class="text-end">৳ {{ application.fee_tuition|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Exam Fee</td>
+                    <td class="text-end">৳ {{ application.fee_exam|floatformat:0|intcomma }}</td>
+                  </tr>
+                  <tr>
+                    <td>Bus Service</td>
+                    <td class="text-end">
+                      {% if application.add_bus %}৳ {{ application.fee_bus|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Hostel Seat</td>
+                    <td class="text-end">
+                      {% if application.add_hostel %}৳ {{ application.fee_hostel|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Exact Marksheet</td>
+                    <td class="text-end">
+                      {% if application.add_marksheet %}৳ {{ application.fee_marksheet|floatformat:0|intcomma }}{% else %}—{% endif %}
+                    </td>
+                  </tr>
+                  <tr class="table-active">
+                    <th>Total</th>
+                    <th class="text-end">৳ {{ application.fee_total|floatformat:0|intcomma }}</th>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- What happens next -->
+            <div class="alert alert-light border d-flex align-items-start gap-3 mb-4">
+              <div class="pt-1">📩</div>
+              <div class="small">
+                A confirmation email has been sent to <strong>{{ application.email }}</strong>.
+                Please keep your Application ID handy for future reference.
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex flex-wrap gap-3 justify-content-between">
+              <a href="{% url 'admissions:receipt' application.pk %}" class="btn btn-outline-secondary">
+                View Receipt
+              </a>
+              <a href="#" onclick="window.print();return false;" class="btn btn-success">
+                Print / Save as PDF
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Need help? Contact our office at {{ institution_phone|default:"01XXXXXXXXX" }}.
+        </p>
+      </div>
+    </div>
   </div>
-  <h1 class="fw-bold mb-2">Application Submitted</h1>
-  <p class="text-muted mb-4">Thank you! We’ve received your application. You’ll get an email/SMS once it’s reviewed.</p>
-  <a href="{% url 'home' %}" class="btn btn-primary">Back to Home</a>
 </section>
 {% endblock %}
