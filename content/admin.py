@@ -333,10 +333,10 @@ class CourseAdmin(OwnableAdminMixin):
 
 
 @admin.register(AdmissionApplication)
-class AdmissionApplicationAdmin(admin.ModelAdmin):
-    list_display = ("full_name", "desired_course", "shift", "status", "created_at")
-    list_filter  = ("status", "shift", "desired_course")
-    search_fields = ("full_name", "email", "phone", "guardian_name", "previous_school")
+class AdmissionApplicationAdmin(OwnableAdminMixin):  # was admin.ModelAdmin
+    list_display    = ("full_name", "desired_course", "shift", "status", "created_at")
+    list_filter     = ("status", "shift", "desired_course")
+    search_fields   = ("full_name", "email", "phone", "guardian_name", "previous_school")
     readonly_fields = ("created_at", "updated_at", "created_by")
-    ordering = ("-created_at",)
+    ordering        = ("-created_at",)
 

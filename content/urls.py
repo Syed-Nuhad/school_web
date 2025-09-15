@@ -20,4 +20,11 @@ urlpatterns = [
     path(f"{P}/manage/slides/create/", views.manage_slide_create, name="manage_slide_create"),
     path(f"{P}/manage/notices/create/", views.manage_notice_create, name="manage_notice_create"),
     path(f"{P}/manage/timeline/create/", views.manage_timeline_create, name="manage_timeline_create"),
+
+    path("pay/bkash/init/", views.bkash_init, name="bkash_init"),
+    path("pay/bkash/return/", views.bkash_return, name="bkash_return"),
+
+    # PayPal
+    path("pay/paypal/create/", views.paypal_create, name="paypal_create"),
+    path("pay/paypal/capture/", views.paypal_capture, name="paypal_capture"),
 ]

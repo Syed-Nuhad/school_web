@@ -21,17 +21,22 @@ class AdmissionApplicationForm(forms.ModelForm):
             "photo", "transcript",
             "message",
         ]
-        widgets = {
-            "date_of_birth": forms.DateInput(attrs={"type": "date"}),
-            "message": forms.Textarea(attrs={"rows": 4}),
-            "address": forms.Textarea(attrs={"rows": 3}),
-        }
+
         help_texts = {
             "desired_course": "Choose the course you want to apply for.",
             "transcript": "PDF/JPG/PNG up to 10 MB.",
             "photo": "JPG/PNG up to 5 MB.",
         }
-
+        widgets = {
+            "full_name": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+            "course": forms.Select(attrs={"class": "form-select"}),
+            "dob": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "date_of_birth": forms.DateInput(attrs={"type": "date"}),
+            "message": forms.Textarea(attrs={"rows": 4}),
+        }
     phone = forms.CharField(validators=[PHONE_RE])
     guardian_phone = forms.CharField(validators=[PHONE_RE], required=False)
 

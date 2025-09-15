@@ -1848,3 +1848,18 @@ header {
 .icon-orange { color: #fd7e14; }
 
 
+  /* minimal, purely for polish; everything else is Bootstrap */
+  .selected-course-thumb{width:72px;height:48px;object-fit:cover}
+  .section-title{border-left:4px solid #198754;padding-left:.75rem}
+
+
+.btn-bkash {
+  background: #E2136E; /* bKash brand pink */
+  color: #fff;
+  border-color: #E2136E;
+}
+
+.btn-bkash .logo {
+  width: 22px; height: 22px; object-fit: contain;
+  margin-right: .5rem;
+}

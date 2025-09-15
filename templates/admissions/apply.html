@@ -1,121 +1,233 @@
 {% extends "base.html" %}
 {% load static %}
-{% load widget_tweaks %}
 
 {% block title %}Apply for Admission{% endblock %}
 
 {% block content %}
-<section class="container py-5">
-  <!-- Header -->
-  <div class="text-center mb-4" data-aos="fade-up">
-    <h1 class="fw-bold mb-1">Admission Application</h1>
-    <p class="text-muted mb-0">
-      Fill out the form below to apply. Fields marked with
-      <span class="text-danger">*</span> are required.
-    </p>
-  </div>
-
-  <!-- Stepper -->
-  <div class="d-flex justify-content-center gap-4 mb-4 small text-uppercase fw-semibold" data-aos="fade-up">
-    <div class="text-primary">1. Details</div>
-    <div class="text-muted">2. Review</div>
-    <div class="text-muted">3. Done</div>
-  </div>
-
-  <!-- Preselected Course Banner -->
-  {% if selected_course %}
-    <div class="alert alert-light border d-flex align-items-center mb-4" role="alert">
-      {% if selected_course.image %}
-        <img src="{{ selected_course.image.url }}"
-             alt="Course image"
-             class="me-3 rounded"
-             style="max-height:60px; width:auto; object-fit:cover;"
-             onerror="this.style.display='none'">
-      {% endif %}
-      <div>
-        <div class="fw-semibold">{{ selected_course.title }}</div>
-        <div class="small text-muted text-uppercase">{{ selected_course.get_category_display }}</div>
-      </div>
-      <a href="{% url 'home' %}#academics" class="btn btn-sm btn-outline-secondary ms-auto">Change</a>
-    </div>
-
-    {# keep the course fixed as hidden #}
-    {% if form.desired_course %}
-      {{ form.desired_course.as_hidden }}
-    {% elif form.course %}
-      {{ form.course.as_hidden }}
-    {% endif %}
-  {% endif %}
-
-  <!-- Non-field Errors -->
-  {% if form.non_field_errors %}
-    <div class="alert alert-danger" role="alert">
-      {{ form.non_field_errors }}
-    </div>
-  {% endif %}
-
-  <div class="row g-4">
-    <!-- Tips Sidebar -->
-    <div class="col-lg-4 order-lg-2">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title fw-semibold mb-3">Tips</h5>
-          <ul class="small text-muted mb-0 ps-3">
-            <li>Use a valid email and phone number.</li>
-            <li>If you selected a course earlier, it’s already set.</li>
-            <li>Supported uploads: PDF / JPG / PNG.</li>
-          </ul>
+<section class="py-5 bg-light" id="admission-form">
+  <div class="container">
+    <div class="row g-4">
+      <!-- Tips -->
+      <aside class="col-lg-4 order-lg-2">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h5 class="fw-semibold mb-3">Tips</h5>
+            <ul class="small text-muted mb-0 ps-3">
+              <li>Use a valid email and phone number.</li>
+              <li>If you came from a course card, it’s pre-selected below.</li>
+              <li>Upload only PDF / JPG / PNG files.</li>
+            </ul>
+          </div>
         </div>
-      </div>
-    </div>
+      </aside>
 
-    <!-- Main Form -->
-    <div class="col-lg-8 order-lg-1">
-      <form method="post" enctype="multipart/form-data" class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-          {% csrf_token %}
+      <!-- Form -->
+      <div class="col-lg-8 order-lg-1">
+        <div class="card shadow-lg border-0 rounded-4">
+          <div class="card-body p-4 p-md-5">
 
-          <div class="row g-3">
-            {% for field in form.visible_fields %}
-              {% if selected_course and field.name in 'desired_course course' %}
-                {# skip visible course field when preselected #}
-              {% else %}
-                <div class="col-12 col-md-6">
-                  {% if field.label %}
-                    <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                      {{ field.label }}{% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                    </label>
-                  {% endif %}
-                  {% if field.errors %}
-                    {% render_field field class+="form-control is-invalid" %}
-                  {% else %}
-                    {% if field.field.widget.input_type == "file" %}
-                      {% render_field field class+="form-control" %}
-                    {% elif field.field.widget.__class__.__name__ in ("Select","SelectMultiple") %}
-                      {% render_field field class+="form-select" %}
-                    {% elif field.field.widget.__class__.__name__ in ("CheckboxInput","CheckboxSelectMultiple") %}
-                      <div class="form-check">
-                        {% render_field field class+="form-check-input" %}
-                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                      </div>
-                    {% else %}
-                      {% render_field field class+="form-control" %}
-                    {% endif %}
-                  {% endif %}
-                  {% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}
-                  {% if field.errors %}<div class="invalid-feedback d-block">{{ field.errors|striptags }}</div>{% endif %}
+            <!-- Selected course banner (compact & well-sized) -->
+            {% if selected_course %}
+              <div class="alert alert-light border d-flex align-items-center gap-3 mb-4">
+                {% if selected_course.image %}
+                  <img src="{{ selected_course.image.url }}" alt=""
+                       class="selected-course-thumb rounded">
+                {% endif %}
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">{{ selected_course.title }}</div>
+                  <div class="small text-muted text-uppercase">{{ selected_course.get_category_display }}</div>
                 </div>
-              {% endif %}
-            {% endfor %}
-          </div>
+                <a href="{% url 'home' %}#academics" class="btn btn-sm btn-outline-secondary">Change</a>
+              </div>
 
-          <div class="d-flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary">Submit Application</button>
-            <a href="{% url 'home' %}" class="btn btn-outline-secondary">Cancel</a>
+              {# Keep the selected course locked via hidden field #}
+              {% if form.desired_course %}{{ form.desired_course.as_hidden }}{% endif %}
+              {% if form.course %}{{ form.course.as_hidden }}{% endif %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+
+              <!-- SECTION: Student info -->
+              <h5 class="section-title mb-3">Student Information</h5>
+
+              <div class="row g-3">
+                <!-- left column -->
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.full_name.id_for_label }}">
+                    {{ form.full_name.label }}{% if form.full_name.field.required %} <span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ form.full_name }}
+                  {% if form.full_name.errors %}<div class="invalid-feedback d-block">{{ form.full_name.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                  {{ form.email }}
+                  {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.phone.id_for_label }}">
+                    {{ form.phone.label }}{% if form.phone.field.required %} <span class="text-danger">*</span>{% endif %}
+                  </label>
+                  {{ form.phone }}
+                  {% if form.phone.errors %}<div class="invalid-feedback d-block">{{ form.phone.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.date_of_birth.id_for_label }}">{{ form.date_of_birth.label }}</label>
+                  {{ form.date_of_birth }}
+                  {% if form.date_of_birth.errors %}<div class="invalid-feedback d-block">{{ form.date_of_birth.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label fw-semibold" for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+                  {{ form.address }}
+                  {% if form.address.errors %}<div class="invalid-feedback d-block">{{ form.address.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.guardian_name.id_for_label }}">{{ form.guardian_name.label }}</label>
+                  {{ form.guardian_name }}
+                  {% if form.guardian_name.errors %}<div class="invalid-feedback d-block">{{ form.guardian_name.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.guardian_phone.id_for_label }}">{{ form.guardian_phone.label }}</label>
+                  {{ form.guardian_phone }}
+                  {% if form.guardian_phone.errors %}<div class="invalid-feedback d-block">{{ form.guardian_phone.errors|striptags }}</div>{% endif %}
+                </div>
+
+                {# Only show the course selector if not preselected #}
+                {% if not selected_course %}
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="{{ form.desired_course.id_for_label }}">
+                      {{ form.desired_course.label }}
+                    </label>
+                    {{ form.desired_course }}
+                    {% if form.desired_course.help_text %}<div class="form-text">{{ form.desired_course.help_text|safe }}</div>{% endif %}
+                    {% if form.desired_course.errors %}<div class="invalid-feedback d-block">{{ form.desired_course.errors|striptags }}</div>{% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.shift.id_for_label }}">{{ form.shift.label }}</label>
+                  {{ form.shift }}
+                  {% if form.shift.errors %}<div class="invalid-feedback d-block">{{ form.shift.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.previous_school.id_for_label }}">{{ form.previous_school.label }}</label>
+                  {{ form.previous_school }}
+                  {% if form.previous_school.errors %}<div class="invalid-feedback d-block">{{ form.previous_school.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.ssc_gpa.id_for_label }}">{{ form.ssc_gpa.label }}</label>
+                  {{ form.ssc_gpa }}
+                  {% if form.ssc_gpa.errors %}<div class="invalid-feedback d-block">{{ form.ssc_gpa.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.photo.id_for_label }}">{{ form.photo.label }}</label>
+                  {{ form.photo }}
+                  {% if form.photo.errors %}<div class="invalid-feedback d-block">{{ form.photo.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ form.transcript.id_for_label }}">{{ form.transcript.label }}</label>
+                  {{ form.transcript }}
+                  {% if form.transcript.help_text %}<div class="form-text">{{ form.transcript.help_text|safe }}</div>{% endif %}
+                  {% if form.transcript.errors %}<div class="invalid-feedback d-block">{{ form.transcript.errors|striptags }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label fw-semibold" for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
+                  {{ form.message }}
+                  {% if form.message.errors %}<div class="invalid-feedback d-block">{{ form.message.errors|striptags }}</div>{% endif %}
+                </div>
+              </div>
+
+              <hr class="my-4">
+
+              <!-- SECTION: Fees -->
+              <h5 class="section-title mb-3">Fee Breakdown</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-3">
+                  <tbody>
+                    <tr><th style="width:40%">Admission Fee</th><td data-fee-admission>৳ 0</td></tr>
+                    <tr><th>Tuition Fee (1st month)</th><td data-fee-tuition>৳ 0</td></tr>
+                    <tr><th>Exam Fee</th><td data-fee-exam>৳ 0</td></tr>
+                    <tr><th>Bus Service</th><td data-fee-bus>৳ 0</td></tr>
+                    <tr><th>Hostel Seat</th><td data-fee-hostel>৳ 0</td></tr>
+                    <tr><th>Exact Marksheet</th><td data-fee-marksheet>৳ 0</td></tr>
+                    <tr class="table-primary"><th>Total</th><td data-fee-total class="fw-bold">৳ 0</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="row g-2 mb-3">
+                <div class="col-12 col-sm-4">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optBus">
+                    <label class="form-check-label" for="optBus">Add School Bus</label>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optHostel">
+                    <label class="form-check-label" for="optHostel">Add Hostel Seat</label>
+                  </div>
+                </div>
+                <div class="col-12 col-sm-4">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="optMarksheet">
+                    <label class="form-check-label" for="optMarksheet">Add Exact Marksheet</label>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="my-4">
+
+              <!-- SECTION: Payment -->
+              <h5 class="section-title mb-3">Online Payment</h5>
+              <div class="row g-3">
+                <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-3">
+                  <!-- existing -->
+                  <button id="bkash-btn" class="btn btn-bkash d-inline-flex align-items-center px-4 py-2" type="button">
+                    <img class="logo" src="{% static 'img/payments/bkash.svg' %}" alt="" onerror="this.remove()">
+                    <span>Pay with bKash</span>
+                  </button>
+
+                  <!-- PayPal wallet button -->
+                  <div id="paypal-button-container" class="flex-grow-1" style="min-width:250px;"></div>
+
+                  <!-- NEW: Card-only button -->
+                  <div id="paypal-card-button" style="min-width:250px;"></div>
+                </div>
+
+                <div id="payment-status" class="alert alert-info py-2 mt-3 mb-0">
+                  Choose a method and complete payment.
+                </div>
+              </div>
+
+              <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
+                <button type="submit" id="submit-btn" class="btn btn-primary px-4 py-2" disabled>Submit Form</button>
+                <button type="button" id="print-btn" class="btn btn-success px-4 py-2" disabled>Print Form</button>
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4 py-2">Cancel</a>
+              </div>
+
+
+
+
+            </form>
+
           </div>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 </section>
+
 {% endblock %}

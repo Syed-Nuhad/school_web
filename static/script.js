@@ -1443,85 +1443,103 @@ document.addEventListener('click', function (e) {
 });
 
 
+// --- tiny helpers ---
+const $ = (id) => document.getElementById(id);
+const setStatus = (type, msg) => {
+  const el = $('payment-status'); if (!el) return;
+  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
+  el.textContent = msg;
+};
+// ✅ single backslash in the regex literal
+const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
 
-
-
-
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('admission-form');
-  if (!form) return;
-
-  // inputs & textareas → form-control (except checkbox/radio)
-  form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')
-      .forEach(el => el.classList.add('form-control'));
-
-  // file inputs → form-control
-  form.querySelectorAll('input[type=file]').forEach(el => el.classList.add('form-control'));
-
-  // selects → form-select
-  form.querySelectorAll('select').forEach(el => el.classList.add('form-select'));
-
-  // checkboxes / radios → form-check-input (label already rendered)
-  form.querySelectorAll('input[type=checkbox], input[type=radio]')
-      .forEach(el => el.classList.add('form-check-input'));
-
-  // If server provided errors, add is-invalid to any field with aria-invalid="true"
-  form.querySelectorAll('[aria-invalid="true"]').forEach(el => {
-    if (el.matches('select')) el.classList.add('is-invalid');
-    else if (el.matches('input[type=checkbox],input[type=radio]')) el.classList.add('is-invalid');
-    else el.classList.add('is-invalid');
-  });
+// --- bKash click ---
+$('bkash-btn')?.addEventListener('click', async () => {
+  try {
+    setStatus('secondary','Starting bKash…');
+    const r = await fetch('/pay/bkash/init/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
+      body: JSON.stringify({ amount: 1500 })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'Init failed');
+    location.href = j.bkash_url; // go to hosted checkout
+  } catch (e) {
+    setStatus('danger', e.message || 'Could not start bKash.');
+  }
 });
 
+  // --- helpers ---
+  const $ = (id) => document.getElementById(id);
+  const setStatus = (type, msg) => {
+    const el = $('payment-status'); if (!el) return;
+    el.className = `alert alert-${type} py-2 mt-3 mb-0`; el.textContent = msg;
+  };
+  const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+  const unlock = () => {
+    $('submit-btn')?.removeAttribute('disabled');
+    $('print-btn')?.removeAttribute('disabled');
+    setStatus('success','Payment confirmed ✅');
+  };
 
-
-
-
-/* Pure Bootstrap upgrade for raw Django widgets (no custom CSS) */
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('admissionForm');
-  if (!form) return;
-
-  // Text-like controls
-  form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')
-      .forEach(el => el.classList.add('form-control','w-100'));
-
-  // File inputs
-  form.querySelectorAll('input[type=file]').forEach(el => el.classList.add('form-control','w-100'));
-
-  // Selects
-  form.querySelectorAll('select').forEach(el => el.classList.add('form-select','w-100'));
-
-  // Checkboxes & radios
-  form.querySelectorAll('input[type=checkbox], input[type=radio]').forEach(el => {
-    el.classList.add('form-check-input');
-    const label = form.querySelector('label[for="'+ (el.id || '') +'"]');
-    if (label && !label.classList.contains('form-check-label')) label.classList.add('form-check-label');
-    if (el.type === 'radio' && !el.closest('.form-check')) {
-      const wrap = document.createElement('div'); wrap.className = 'form-check';
-      el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
-      if (label) wrap.appendChild(label);
-    }
+  // --- bKash click (points at your backend) ---
+  $('bkash-btn')?.addEventListener('click', async () => {
+    try{
+      setStatus('secondary','Starting bKash…');
+      const r = await fetch('/pay/bkash/init/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ amount: 1500 })
+      });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || 'Init failed');
+      location.href = j.bkash_url; // redirect to hosted checkout
+    }catch(e){ setStatus('danger', e.message || 'Could not start bKash.'); }
   });
 
-  // Payment gating demo
-  const method = document.getElementById('payment-method');
-  const status = document.getElementById('payment-status');
-  const confirmBtn = document.getElementById('confirm-payment-btn');
-  const submitBtn = document.getElementById('submit-btn');
-  const printBtn = document.getElementById('print-btn');
+  // --- PayPal WORKING DEMO (exact style you provided) ---
+  // Renders immediately with client-id=test. Uses demo endpoints below.
+  paypal.Buttons({
+    // Call your server to set up the transaction (DEMO endpoints)
+    createOrder: function(data, actions) {
+      return fetch('/demo/checkout/api/paypal/order/create/', {
+        method: 'post'
+      }).then(function(res) {
+        return res.json();
+      }).then(function(orderData) {
+        return orderData.id;
+      });
+    },
 
-  confirmBtn?.addEventListener('click', () => {
-    if (!method?.value) {
-      status.className = 'alert alert-warning py-2';
-      status.textContent = 'Pick a payment method first.';
-      return;
+    // Call your server to finalize the transaction (DEMO endpoints)
+    onApprove: function(data, actions) {
+      return fetch('/demo/checkout/api/paypal/order/' + data.orderID + '/capture/', {
+        method: 'post'
+      }).then(function(res) {
+        return res.json();
+      }).then(function(orderData) {
+        // If there’s a recoverable decline
+        var errorDetail = Array.isArray(orderData.details) && orderData.details[0];
+        if (errorDetail && errorDetail.issue === 'INSTRUMENT_DECLINED') {
+          return actions.restart();
+        }
+        if (errorDetail) {
+          var msg = 'Sorry, your transaction could not be processed.';
+          if (errorDetail.description) msg += '\n\n' + errorDetail.description;
+          if (orderData.debug_id) msg += ' (' + orderData.debug_id + ')';
+          return alert(msg);
+        }
+
+        // Successful capture!
+        console.log('Capture result', orderData);
+        unlock();
+      });
     }
-    status.className = 'alert alert-success py-2';
-    status.textContent = 'Payment confirmed. You can submit now.';
-    submitBtn.disabled = false;
-    printBtn.disabled = false;
-  });
+  }).render('#paypal-button-container');
 
-  printBtn?.addEventListener('click', () => window.print());
-});
+  // If returning from a provider with ?paid=1
+  (function(){
+    const q = new URLSearchParams(location.search);
+    if (q.get('paid') === '1') unlock();
+  })();
