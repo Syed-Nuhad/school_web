@@ -1,4 +1,4 @@
-  
+const $ = (id) => document.getElementById(id);
 
 // ⭐ END Initialize AOS ==============================================================================
 
@@ -1570,3 +1570,6 @@ function setStatus(type, msg) {
   el.textContent = msg;
 }
 
+
+
+document.getElementById('btnPrint')?.addEventListener('click', () => window.print());

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.urls import path
 from . import views
 from .view_addmissions import AdmissionApplyView, AdmissionSuccessView
+from .views import AdmissionReceiptView, AdmissionReviewView, AdmissionConfirmView
 
 app_name = "content"
 

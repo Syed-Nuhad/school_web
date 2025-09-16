@@ -285,23 +285,60 @@ class AcademicCalendarItemAdmin(OwnableAdminMixin):
 
 @admin.register(Course)
 class CourseAdmin(OwnableAdminMixin):
-    list_display  = ("title", "category", "monthly_fee_display", "order", "is_active", "updated_at", "thumb")
-    list_filter   = ("is_active", "category")
+    list_display = (
+        "title", "category",
+        "admission_fee_bdt", "first_month_tuition_bdt", "exam_fee_bdt",
+        "bus_fee_bdt", "hostel_fee_bdt", "marksheet_fee_bdt",
+        "order", "is_active", "updated_at", "thumb",   # <- uses method below
+    )
+    list_filter = ("is_active", "category")
     search_fields = ("title", "eligibility", "duration", "shift", "description")
-    ordering      = ("order", "-updated_at")
-    readonly_fields = ("created_by", "created_at", "updated_at", "preview")
+    ordering = ("order", "-updated_at")
+    readonly_fields = ("created_by", "created_at", "updated_at", "preview")  # <- uses method below
 
     fieldsets = (
         ("Visibility & Order", {"fields": ("is_active", "order")}),
         ("Basic Info", {"fields": ("title", "category", "duration", "shift", "eligibility")}),
-        ("Media", {"fields": ("image", "syllabus_file", "preview")}),
+        ("Media", {"fields": ("image", "syllabus_file", "preview")}),  # preview is read-only renderer
         ("Details", {"fields": ("description",)}),
-        ("Fees", {"fields": ("monthly_fee",)}),
+        ("Fees (BDT)", {
+            "fields": (
+                "admission_fee",
+                "first_month_tuition",
+                "exam_fee",
+                "bus_fee",
+                "hostel_fee",
+                "marksheet_fee",
+                "monthly_fee",
+            )
+        }),
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
-    # thumbnails / preview
+    # --- helpers for BDT formatting in list_display ---
+    def _bdt(self, v):
+        try:
+            return f"৳ {float(v):,.2f}"
+        except Exception:
+            return "—"
+
+    def admission_fee_bdt(self, obj):       return self._bdt(obj.admission_fee)
+    def first_month_tuition_bdt(self, obj): return self._bdt(obj.first_month_tuition)
+    def exam_fee_bdt(self, obj):            return self._bdt(obj.exam_fee)
+    def bus_fee_bdt(self, obj):             return self._bdt(obj.bus_fee)
+    def hostel_fee_bdt(self, obj):          return self._bdt(obj.hostel_fee)
+    def marksheet_fee_bdt(self, obj):       return self._bdt(obj.marksheet_fee)
+
+    admission_fee_bdt.short_description       = "Admission"
+    first_month_tuition_bdt.short_description = "Tuition (1st)"
+    exam_fee_bdt.short_description            = "Exam"
+    bus_fee_bdt.short_description             = "Bus"
+    hostel_fee_bdt.short_description          = "Hostel"
+    marksheet_fee_bdt.short_description       = "Marksheet"
+
+    # --- the two missing methods: thumb + preview ---
     def thumb(self, obj):
+        """Small image for list view."""
         try:
             if obj.image and obj.image.url:
                 return format_html('<img src="{}" style="height:38px;border-radius:6px;">', obj.image.url)
@@ -311,6 +348,7 @@ class CourseAdmin(OwnableAdminMixin):
     thumb.short_description = "Image"
 
     def preview(self, obj):
+        """Read-only larger preview in the form."""
         try:
             if obj.image and obj.image.url:
                 return format_html('<img src="{}" style="max-height:160px;max-width:100%;border-radius:8px;">', obj.image.url)
@@ -319,24 +357,17 @@ class CourseAdmin(OwnableAdminMixin):
         return "—"
     preview.short_description = "Preview"
 
-    def monthly_fee_display(self, obj):
-        return f"৳ {float(obj.monthly_fee):,.0f}" if obj.monthly_fee is not None else "—"
-    monthly_fee_display.short_description = "Monthly Fee"
-
-    def save_model(self, request, obj, form, change):
-        if not getattr(obj, "created_by_id", None):
-            obj.created_by = request.user
-        return super().save_model(request, obj, form, change)
-
 
 
 
 
 @admin.register(AdmissionApplication)
-class AdmissionApplicationAdmin(OwnableAdminMixin):  # was admin.ModelAdmin
-    list_display    = ("full_name", "desired_course", "shift", "status", "created_at")
-    list_filter     = ("status", "shift", "desired_course")
-    search_fields   = ("full_name", "email", "phone", "guardian_name", "previous_school")
-    readonly_fields = ("created_at", "updated_at", "created_by")
-    ordering        = ("-created_at",)
-
+class AdmissionApplicationAdmin(OwnableAdminMixin):  # <-- use the mixin
+    list_display = ("full_name","desired_course","fee_total","payment_status","created_at")
+    list_filter  = ("payment_status","desired_course")
+    search_fields= ("full_name","email","phone")
+    readonly_fields = (
+        "fee_admission","fee_tuition","fee_exam",
+        "fee_bus","fee_hostel","fee_marksheet","fee_total",
+        "created_at",
+    )

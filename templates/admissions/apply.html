@@ -1,6 +1,5 @@
-{# templates/admissions/apply.html #}
 {% extends "base.html" %}
-{% load static humanize %}
+{% load static %}
 
 {% block title %}Apply for Admission{% endblock %}
 
@@ -8,7 +7,6 @@
 <section class="py-5 bg-light" id="admission-form">
   <div class="container">
     <div class="row g-4">
-
       <!-- Tips (sticky on large screens) -->
       <aside class="col-lg-4 order-lg-2">
         <div class="card border-0 shadow-sm" style="position:sticky; top:1rem">
@@ -31,7 +29,9 @@
             {% if selected_course %}
               <div class="alert alert-light border d-flex align-items-center gap-3 mb-4">
                 {% if selected_course.image %}
-                  <img src="{{ selected_course.image.url }}" alt="" class="rounded border" style="width:48px;height:48px;object-fit:cover">
+                  <img src="{{ selected_course.image.url }}" alt=""
+                       class="rounded border"
+                       style="width:48px;height:48px;object-fit:cover">
                 {% endif %}
                 <div class="flex-grow-1">
                   <div class="fw-semibold">{{ selected_course.title }}</div>
@@ -39,21 +39,12 @@
                 </div>
                 <a href="{% url 'home' %}#academics" class="btn btn-sm btn-outline-secondary">Change</a>
               </div>
-            {% endif %}
-
-            {% if form.non_field_errors %}
-              <div class="alert alert-danger mb-4">
-                {{ form.non_field_errors }}
-              </div>
+              {% if form.desired_course %}{{ form.desired_course.as_hidden }}{% endif %}
+              {% if form.course %}{{ form.course.as_hidden }}{% endif %}
             {% endif %}
 
             <form method="post" enctype="multipart/form-data" novalidate>
               {% csrf_token %}
-
-              {# Keep the course fixed if preselected #}
-              {% if selected_course and form.desired_course %}
-                {{ form.desired_course.as_hidden }}
-              {% endif %}
 
               <!-- SECTION: Student info -->
               <h5 class="mb-3">Student Information</h5>
@@ -157,84 +148,141 @@
                 </div>
               </div>
 
-              <!-- Fees (server-calculated preview) -->
+              <!-- Fees -->
               <hr class="my-4">
               <h5 class="mb-3">Fee Breakdown</h5>
 
-              {% with fb=fee_breakdown %}
               <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle mb-3">
-                  <caption class="text-muted small">Amounts shown in BDT</caption>
+                <table class="table table-sm table-bordered align-middle mb-2">
+                  <caption class="text-muted small">Tick the items you will pay now (Amounts in BDT)</caption>
                   <tbody>
+                    <!-- Admission -->
                     <tr>
-                      <th class="w-50">Admission Fee</th>
-                      <td class="text-end">৳ {{ fb.admission|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="add_admission">
+                          <input type="checkbox" name="add_admission" id="add_admission">
+                          <span>Admission Fee</span>
+                        </label>
+                      </th>
+                      <td class="text-end">৳ {{ fee_admission|default:0|floatformat:2 }}</td>
                     </tr>
+
+                    <!-- Tuition (1st month) -->
                     <tr>
-                      <th>Tuition Fee (1st month)</th>
-                      <td class="text-end">৳ {{ fb.tuition|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="add_tuition">
+                          <input type="checkbox" name="add_tuition" id="add_tuition">
+                          <span>Tuition Fee (1st month)</span>
+                        </label>
+                      </th>
+                      <td class="text-end">৳ {{ fee_tuition|default:0|floatformat:2 }}</td>
                     </tr>
+
+                    <!-- Exam -->
                     <tr>
-                      <th>Exam Fee</th>
-                      <td class="text-end">৳ {{ fb.exam|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="add_exam">
+                          <input type="checkbox" name="add_exam" id="add_exam">
+                          <span>Exam Fee</span>
+                        </label>
+                      </th>
+                      <td class="text-end">৳ {{ fee_exam|default:0|floatformat:2 }}</td>
                     </tr>
+
+                    <!-- Bus -->
                     <tr>
-                      <th>Bus Service</th>
-                      <td class="text-end">৳ {{ fb.bus|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="{{ form.add_bus.id_for_label }}">
+                          {{ form.add_bus }} <span>Bus Service</span>
+                        </label>
+                        {% if form.add_bus.errors %}
+                          <div class="invalid-feedback d-block">{{ form.add_bus.errors|striptags }}</div>
+                        {% endif %}
+                      </th>
+                      <td class="text-end">
+                        ৳ {% if selected_course and selected_course.bus_fee is not None %}
+                             {{ selected_course.bus_fee|floatformat:2 }}
+                           {% else %}0.00{% endif %}
+                      </td>
                     </tr>
+
+                    <!-- Hostel -->
                     <tr>
-                      <th>Hostel Seat</th>
-                      <td class="text-end">৳ {{ fb.hostel|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="{{ form.add_hostel.id_for_label }}">
+                          {{ form.add_hostel }} <span>Hostel Seat</span>
+                        </label>
+                        {% if form.add_hostel.errors %}
+                          <div class="invalid-feedback d-block">{{ form.add_hostel.errors|striptags }}</div>
+                        {% endif %}
+                      </th>
+                      <td class="text-end">
+                        ৳ {% if selected_course and selected_course.hostel_fee is not None %}
+                             {{ selected_course.hostel_fee|floatformat:2 }}
+                           {% else %}0.00{% endif %}
+                      </td>
                     </tr>
+
+                    <!-- Exact Marksheet -->
                     <tr>
-                      <th>Exact Marksheet</th>
-                      <td class="text-end">৳ {{ fb.marksheet|default:0|floatformat:0|intcomma }}</td>
+                      <th>
+                        <label class="d-flex align-items-center gap-2 mb-0" for="{{ form.add_marksheet.id_for_label }}">
+                          {{ form.add_marksheet }} <span>Exact Marksheet</span>
+                        </label>
+                        {% if form.add_marksheet.errors %}
+                          <div class="invalid-feedback d-block">{{ form.add_marksheet.errors|striptags }}</div>
+                        {% endif %}
+                      </th>
+                      <td class="text-end">
+                        ৳ {% if selected_course and selected_course.marksheet_fee is not None %}
+                             {{ selected_course.marksheet_fee|floatformat:2 }}
+                           {% else %}0.00{% endif %}
+                      </td>
                     </tr>
+
+                    <!-- Hint row -->
                     <tr class="table-active">
-                      <th>Total</th>
-                      <td class="fw-bold text-end">৳ {{ fb.total|default:0|floatformat:0|intcomma }}</td>
+                      <th>Selected Total</th>
+                      <td class="fw-bold text-end">Calculated securely at checkout</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              {% endwith %}
 
-              <!-- Add-ons (real form fields; server will snapshot on POST) -->
-              <div class="row g-2 mb-3">
-                <div class="col-12 col-sm-4">
-                  <div class="form-check">
-                    {{ form.add_bus }} <label class="form-check-label" for="{{ form.add_bus.id_for_label }}">Add School Bus</label>
-                  </div>
-                </div>
-                <div class="col-12 col-sm-4">
-                  <div class="form-check">
-                    {{ form.add_hostel }} <label class="form-check-label" for="{{ form.add_hostel.id_for_label }}">Add Hostel Seat</label>
-                  </div>
-                </div>
-                <div class="col-12 col-sm-4">
-                  <div class="form-check">
-                    {{ form.add_marksheet }} <label class="form-check-label" for="{{ form.add_marksheet.id_for_label }}">Add Exact Marksheet</label>
-                  </div>
-                </div>
-              </div>
+              <p class="text-muted small mb-0">
+                We’ll calculate your total from the boxes you tick and send that exact amount to the payment provider.
+              </p>
 
-              <!-- Note: Payment happens on the Review page after submit -->
-              <div class="alert alert-info small mb-0">
-                After you submit, you’ll see a final review with the exact total and payment options.
+
+
+
+              <!-- Payment -->
+              <hr class="my-4">
+              <h5 class="mb-3">Online Payment</h5>
+
+              <div class="row g-3">
+                <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-2">
+
+
+                  <div id="paypal-button-container" class="flex-grow-1" style="min-width:250px;"></div>
+                  <div id="paypal-card-button" style="min-width:250px;"></div>
+                </div>
+
+                <div id="payment-status" class="alert alert-info py-2 mb-0">
+                  Choose a method and complete payment.
+                </div>
               </div>
 
               <!-- Actions -->
               <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
-                <button type="submit" class="btn btn-primary px-4 py-2">Submit &amp; Review</button>
+                <button type="submit" id="submit-btn" class="btn btn-primary px-4 py-2" disabled>Submit Form</button>
                 <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4 py-2">Cancel</a>
               </div>
-
             </form>
 
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </section>
