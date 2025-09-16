@@ -362,12 +362,18 @@ class CourseAdmin(OwnableAdminMixin):
 
 
 @admin.register(AdmissionApplication)
-class AdmissionApplicationAdmin(OwnableAdminMixin):  # <-- use the mixin
-    list_display = ("full_name","desired_course","fee_total","payment_status","created_at")
-    list_filter  = ("payment_status","desired_course")
+class AdmissionApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "full_name","desired_course",
+        "add_admission","add_tuition","add_exam",
+        "add_bus","add_hostel","add_marksheet",
+        "fee_selected_total","payment_status","created_at",
+    )
+    list_filter  = ("payment_status","desired_course","add_bus","add_hostel","add_marksheet")
     search_fields= ("full_name","email","phone")
     readonly_fields = (
         "fee_admission","fee_tuition","fee_exam",
-        "fee_bus","fee_hostel","fee_marksheet","fee_total",
+        "fee_bus","fee_hostel","fee_marksheet",
+        "fee_base_subtotal","fee_selected_total","fee_total",
         "created_at",
     )
