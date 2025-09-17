@@ -1,11 +1,11 @@
 from decimal import Decimal
-from time import timezone
 
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.http import JsonResponse, HttpResponseBadRequest, Http404
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView, CreateView, DetailView
@@ -24,88 +24,40 @@ class AdmissionApplyView(CreateView):
         initial = super().get_initial()
         cid = self.request.GET.get("course")
         if cid:
-            try:
-                initial["desired_course"] = Course.objects.get(pk=cid)
-            except Course.DoesNotExist:
-                pass
+            c = Course.objects.filter(pk=cid).first()
+            if c:
+                initial["desired_course"] = c
         return initial
-
-    def _resolve_course_from_form(self, form):
-        """
-        Try to resolve the selected course from:
-        1) URL param ?course=
-        2) Bound form data (form.data), using the field’s prefixed name
-        3) form.initial
-        4) form.instance.desired_course
-        """
-        # 1) URL preselect
-        cid = self.request.GET.get("course")
-        if cid:
-            obj = Course.objects.filter(pk=cid).first()
-            if obj:
-                return obj
-
-        # 2) Bound form data (works when user changed the select)
-        if hasattr(form, "data") and form.data:
-            key = form.add_prefix("desired_course")
-            cid = form.data.get(key) or form.data.get("desired_course")
-            if cid:
-                obj = Course.objects.filter(pk=cid).first()
-                if obj:
-                    return obj
-
-        # 3) form.initial
-        dc = form.initial.get("desired_course")
-        if isinstance(dc, Course):
-            return dc
-        if dc:
-            obj = Course.objects.filter(pk=dc).first()
-            if obj:
-                return obj
-
-        # 4) instance
-        return getattr(form.instance, "desired_course", None)
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        form = ctx.get("form")
-        course = self._resolve_course_from_form(form) if form else None
-
-        ctx["selected_course"] = course
-
-        # Always set fee variables so the template has values.
-        fa = ft = fe = Decimal("0.00")
-        if course:
-            fa = course.admission_fee or Decimal("0.00")
-            ft = course.first_month_tuition or Decimal("0.00")
-            fe = course.exam_fee or Decimal("0.00")
-
-        ctx["fee_admission"] = fa
-        ctx["fee_tuition"]   = ft
-        ctx["fee_exam"]      = fe
-        ctx["fee_total"]     = fa + ft + fe  # base subtotal shown in the table
-
-        return ctx
 
     def form_valid(self, form):
         app = form.save(commit=False)
-        course = app.desired_course
 
-        # snapshot prices so they don't change later
-        app.fee_admission = (course.admission_fee or Decimal("0.00")) if course else Decimal("0.00")
-        app.fee_tuition   = (course.first_month_tuition or Decimal("0.00")) if course else Decimal("0.00")
-        app.fee_exam      = (course.exam_fee or Decimal("0.00")) if course else Decimal("0.00")
-        app.fee_bus       = (course.bus_fee or Decimal("0.00")) if course else Decimal("0.00")
-        app.fee_hostel    = (course.hostel_fee or Decimal("0.00")) if course else Decimal("0.00")
-        app.fee_marksheet = (course.marksheet_fee or Decimal("0.00")) if course else Decimal("0.00")
+        # Ensure a course is set (hidden field may be missing)
+        if not app.desired_course:
+            cid = self.request.GET.get("course")
+            if cid:
+                app.desired_course = Course.objects.filter(pk=cid).first()
+        if not app.desired_course:
+            messages.error(self.request, "Please choose a course.")
+            return redirect("admissions:apply")
 
-        # three core checkboxes are plain inputs in the template
+        c = app.desired_course
+
+        # Snapshot course fees NOW so they don’t change later
+        app.fee_admission = c.admission_fee or Decimal("0.00")
+        app.fee_tuition   = c.first_month_tuition or Decimal("0.00")
+        app.fee_exam      = c.exam_fee or Decimal("0.00")
+        app.fee_bus       = c.bus_fee or Decimal("0.00")
+        app.fee_hostel    = c.hostel_fee or Decimal("0.00")
+        app.fee_marksheet = c.marksheet_fee or Decimal("0.00")
+
+        # Three plain checkboxes rendered as <input type="checkbox" name="...">
         app.add_admission = bool(self.request.POST.get("add_admission"))
         app.add_tuition   = bool(self.request.POST.get("add_tuition"))
         app.add_exam      = bool(self.request.POST.get("add_exam"))
-        # (add_bus/add_hostel/add_marksheet are already bound by the ModelForm)
+        # add_bus/add_hostel/add_marksheet are bound by the ModelForm
 
-        # compute selected total (what the user ticked)
+        # Calculate what the user actually selected to pay now
         total = Decimal("0.00")
         if app.add_admission: total += app.fee_admission
         if app.add_tuition:   total += app.fee_tuition
@@ -114,48 +66,83 @@ class AdmissionApplyView(CreateView):
         if app.add_hostel:    total += app.fee_hostel
         if app.add_marksheet: total += app.fee_marksheet
 
-        app.selected_total = total
-        app.fee_total = (
-            app.fee_admission + app.fee_tuition + app.fee_exam +
-            app.fee_bus + app.fee_hostel + app.fee_marksheet
-        )
+        # ✅ use the correct field names defined in your model
+        app.fee_selected_total = total
+        app.fee_total = total
         app.payment_status = "pending"
-        app.save()
 
-        # redirect to checkout where you render the dynamic PayPal amount
+        app.save()
         return redirect("admissions:checkout", pk=app.pk)
 
 
 class AdmissionCheckoutView(DetailView):
     model = AdmissionApplication
-    template_name = "checkout.html"
+    template_name = "checkout.html"   # make sure this path matches your file
     context_object_name = "application"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         app = ctx["application"]
+        course = app.desired_course
 
-        # Prefer what we stored at form submit:
-        total = getattr(app, "fee_total", None)
+        # fallback to course fees when snapshots are zero/blank
+        def display(app_fee, course_fee):
+            a = app_fee or Decimal("0.00")
+            if a > 0:
+                return a
+            return (course_fee or Decimal("0.00")) if course else Decimal("0.00")
 
-        # Safety: if not set, recompute from flags + fee snapshots
-        if not total or total <= 0:
-            total = (
-                (app.fee_admission or 0) if app.add_admission else 0
-            ) + (
-                (app.fee_tuition or 0) if app.add_tuition else 0
-            ) + (
-                (app.fee_exam or 0) if app.add_exam else 0
-            ) + (
-                (app.fee_bus or 0) if app.add_bus else 0
-            ) + (
-                (app.fee_hostel or 0) if app.add_hostel else 0
-            ) + (
-                (app.fee_marksheet or 0) if app.add_marksheet else 0
-            )
+        fa = display(app.fee_admission, getattr(course, "admission_fee", None))
+        ft = display(app.fee_tuition,   getattr(course, "first_month_tuition", None))
+        fe = display(app.fee_exam,      getattr(course, "exam_fee", None))
+        fb = display(app.fee_bus,       getattr(course, "bus_fee", None))
+        fh = display(app.fee_hostel,    getattr(course, "hostel_fee", None))
+        fm = display(app.fee_marksheet, getattr(course, "marksheet_fee", None))
 
-        ctx["amount"] = Decimal(total)
+        # total only the items the user ticked
+        selected_total = Decimal("0.00")
+        if app.add_admission: selected_total += fa
+        if app.add_tuition:   selected_total += ft
+        if app.add_exam:      selected_total += fe
+        if app.add_bus:       selected_total += fb
+        if app.add_hostel:    selected_total += fh
+        if app.add_marksheet: selected_total += fm
+
+        # expose display values for the template, and also persist if DB has zeros
+        ctx.update({
+            "fee_admission_display": fa,
+            "fee_tuition_display":   ft,
+            "fee_exam_display":      fe,
+            "fee_bus_display":       fb,
+            "fee_hostel_display":    fh,
+            "fee_marksheet_display": fm,
+            "selected_total_display": selected_total,
+        })
+
+        # one-time repair if your row still has zeros
+        needs_save = False
+        if (app.fee_admission or 0) == 0 and fa > 0: app.fee_admission = fa; needs_save = True
+        if (app.fee_tuition   or 0) == 0 and ft > 0: app.fee_tuition   = ft; needs_save = True
+        if (app.fee_exam      or 0) == 0 and fe > 0: app.fee_exam      = fe; needs_save = True
+        if (app.fee_bus       or 0) == 0 and fb > 0: app.fee_bus       = fb; needs_save = True
+        if (app.fee_hostel    or 0) == 0 and fh > 0: app.fee_hostel    = fh; needs_save = True
+        if (app.fee_marksheet or 0) == 0 and fm > 0: app.fee_marksheet = fm; needs_save = True
+
+        if app.fee_selected_total != selected_total:
+            app.fee_selected_total = selected_total; needs_save = True
+        if app.fee_total != selected_total:
+            app.fee_total = selected_total; needs_save = True
+
+        if needs_save:
+            app.save(update_fields=[
+                "fee_admission","fee_tuition","fee_exam",
+                "fee_bus","fee_hostel","fee_marksheet",
+                "fee_selected_total","fee_total"
+            ])
+
         return ctx
+
+
 
 class AdmissionSuccessView(TemplateView):
     template_name = "admissions/success.html"
