@@ -9,7 +9,7 @@ from .forms import AdmissionApplicationForm
 from decimal import Decimal
 from typing import Dict
 
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.utils.dateparse import parse_datetime, parse_date
 from django.utils import timezone
 
@@ -257,7 +257,7 @@ def _pp_token():
     r.raise_for_status()
     return r.json()["access_token"]
 
-@csrf_exempt
+@require_http_methods(["GET", "POST"])
 def paypal_create(request):
     if request.method != "POST": return HttpResponseBadRequest("POST only")
     try: data = json.loads(request.body or "{}")

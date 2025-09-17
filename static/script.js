@@ -1445,10 +1445,5 @@ document.addEventListener('click', function (e) {
 
 
 
-  // expose endpoints for JS
-  window.PAYMENT_URLS = {
-    create: "{% url 'admissions:payment-create' application.id %}",
-    mark:   "{% url 'admissions:payment-mark-paid' application.id %}"
-  };
 
 
