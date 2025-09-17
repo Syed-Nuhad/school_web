@@ -1441,135 +1441,202 @@ document.addEventListener('click', function (e) {
     holder.remove();
   }, { once: true });
 });
-
-
-// --- tiny helpers ---
-const setStatus = (type, msg) => {
-  const el = $('payment-status'); if (!el) return;
-  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
-  el.textContent = msg;
-};
-// ✅ single backslash in the regex literal
-const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
-
-
-
-  // --- helpers ---
-  const setStatus = (type, msg) => {
+(function () {
+  // ---------- tiny helpers (define ONCE) ----------
+  const $ = (id) => document.getElementById(id);
+  function setStatus(type, msg) {
     const el = $('payment-status'); if (!el) return;
-    el.className = `alert alert-${type} py-2 mt-3 mb-0`; el.textContent = msg;
-  };
-  const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
-  const unlock = () => {
+    el.className = `alert alert-${type} py-2 mt-3 mb-0`;
+    el.textContent = msg;
+  }
+  function getCSRF() {
+    return (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+  }
+
+  // Exposed by template for this application (ensure you added the snippet on the page):
+  //   window.APP_ID
+  //   window.PAYMENT_URLS = { create: "...", mark: "..." }
+
+  // ---- server amount fetch ----
+  async function fetchServerAmount() {
+    const r = await fetch(window.PAYMENT_URLS.create, { method: 'GET', credentials: 'same-origin' });
+    if (!r.ok) throw new Error('Failed to fetch amount');
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    return {
+      value: j.amount,                // string like "2500.00"
+      currency: j.currency || 'BDT',  // default BDT
+      description: j.description || ''
+    };
+  }
+
+  // ---- mark payment paid on server (and trigger email) ----
+  async function markPaid(provider, transactionId) {
+    const r = await fetch(window.PAYMENT_URLS.mark, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRF()
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify({ provider, transaction_id: transactionId })
+    });
+    if (!r.ok) throw new Error('Failed to mark paid');
+    return r.json();
+  }
+
+  // ---- enable final submit after payment confirmed ----
+  function unlockSubmit() {
     $('submit-btn')?.removeAttribute('disabled');
-    $('print-btn')?.removeAttribute('disabled');
-    setStatus('success','Payment confirmed ✅');
-  };
+    setStatus('success', 'Payment confirmed ✅');
+  }
 
-
-
-  // --- PayPal WORKING DEMO (exact style you provided) ---
-  // Renders immediately with client-id=test. Uses demo endpoints below.
-  paypal.Buttons({
-    // Call your server to set up the transaction (DEMO endpoints)
-    createOrder: function(data, actions) {
-      return fetch('/demo/checkout/api/paypal/order/create/', {
-        method: 'post'
-      }).then(function(res) {
-        return res.json();
-      }).then(function(orderData) {
-        return orderData.id;
-      });
-    },
-
-    // Call your server to finalize the transaction (DEMO endpoints)
-    onApprove: function(data, actions) {
-      return fetch('/demo/checkout/api/paypal/order/' + data.orderID + '/capture/', {
-        method: 'post'
-      }).then(function(res) {
-        return res.json();
-      }).then(function(orderData) {
-        // If there’s a recoverable decline
-        var errorDetail = Array.isArray(orderData.details) && orderData.details[0];
-        if (errorDetail && errorDetail.issue === 'INSTRUMENT_DECLINED') {
-          return actions.restart();
+  // ---- PayPal: create with server-locked amount; capture; mark paid ----
+  if (window.paypal && $('#paypal-button-container')) {
+    paypal.Buttons({
+      createOrder: async (data, actions) => {
+        try {
+          const { value, currency, description } = await fetchServerAmount();
+          return actions.order.create({
+            intent: 'CAPTURE',
+            purchase_units: [
+              {
+                amount: { currency_code: currency, value: value },
+                description: description
+              }
+            ]
+          });
+        } catch (e) {
+          console.error(e);
+          setStatus('danger', 'Could not start payment. Please reload and try again.');
+          throw e;
         }
-        if (errorDetail) {
-          var msg = 'Sorry, your transaction could not be processed.';
-          if (errorDetail.description) msg += '\n\n' + errorDetail.description;
-          if (orderData.debug_id) msg += ' (' + orderData.debug_id + ')';
-          return alert(msg);
+      },
+      onApprove: async (data, actions) => {
+        try {
+          const details = await actions.order.capture();
+          const captureId =
+            (details?.purchase_units?.[0]?.payments?.captures?.[0]?.id) ||
+            details?.id ||
+            data?.orderID;
+
+          await markPaid('paypal', captureId);
+          unlockSubmit();
+        } catch (e) {
+          console.error(e);
+          setStatus('danger', 'Payment captured but final confirmation failed. Please contact support.');
         }
+      },
+      onError: (err) => {
+        console.error(err);
+        setStatus('danger', 'Payment error. Please try again.');
+      }
+    }).render('#paypal-button-container');
+  }
 
-        // Successful capture!
-        console.log('Capture result', orderData);
-        unlock();
-      });
-    }
-  }).render('#paypal-button-container');
-
-  // If returning from a provider with ?paid=1
-  (function(){
+  // Optional: if you redirect back with ?paid=1, unlock
+  (function () {
     const q = new URLSearchParams(location.search);
-    if (q.get('paid') === '1') unlock();
+    if (q.get('paid') === '1') unlockSubmit();
   })();
+
+  // --------- REMOVE all old demo checkbox/amount code ----------
+  // (No optBus/optHostel/optMarksheet handlers, no client total calculation)
+  // -------------------------------------------------------------
+})();
+
+
+
+
+  // expose endpoints for JS
+  window.PAYMENT_URLS = {
+    create: "{% url 'admissions:payment-create' application.id %}",
+    mark:   "{% url 'admissions:payment-mark-paid' application.id %}"
+  };
 
 
 
 
   (function () {
-    // Add bootstrap classes to inputs/selects/textareas that lack them
+    // endpoints for this application
+    const createUrl = "{% url 'admissions:payment-create' application.id %}";
+    const markUrl   = "{% url 'admissions:payment-mark-paid' application.id %}";
 
+    // simple CSRF reader from cookie
+    function getCSRFCookie() {
+      const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : '';
+    }
 
+    function setStatus(type, msg) {
+      const el = document.getElementById('payment-status');
+      if (!el) return;
+      el.className = 'alert alert-' + type + ' py-2';
+      el.textContent = msg;
+    }
 
+    paypal.Buttons({
+      // 1) Ask YOUR server how much to charge for this application.
+      createOrder: function (data, actions) {
+        setStatus('info', 'Preparing your order…');
+        return fetch(createUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCSRFCookie(),
+            'Accept': 'application/json'
+          }
+        })
+        .then(r => r.json())
+        .then(info => {
+          if (!info.ok) {
+            throw new Error(info.error || 'Unable to create order.');
+          }
+          // 2) Create the PayPal order on the client with the server-returned amount.
+          return actions.order.create({
+            purchase_units: [{
+              amount: {
+                currency_code: info.currency || 'USD',
+                value: info.amount  // string from server (exact, no edits)
+              },
+              description: info.description || 'Admission payment'
+            }]
+          });
+        })
+        .catch(err => {
+          setStatus('danger', err.message || 'Error preparing payment.');
+          throw err;
+        });
+      },
 
+      // 3) Capture on PayPal, then notify YOUR server to mark as paid.
+      onApprove: function (data, actions) {
+        setStatus('info', 'Capturing payment…');
+        return actions.order.capture().then(function () {
+          return fetch(markUrl, {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': getCSRFCookie(),
+              'Accept': 'application/json'
+            }
+          })
+          .then(() => {
+            setStatus('success', 'Payment successful! A confirmation email has been sent.');
+            // optionally redirect to a success page
+            // window.location.href = "{% url 'admissions:success' %}";
+          });
+        }).catch(function (err) {
+          setStatus('danger', 'Capture failed. Please try again.');
+          console.error(err);
+        });
+      },
 
-      // checkboxes: visually toggle fee rows (demo behavior, implement real calc)
-      document.getElementById('optBus')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-bus]').textContent = e.target.checked ? '৳ 500' : '৳ 0';
-        // update total (simple parse)
-        updateTotal();
-      });
-      document.getElementById('optHostel')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-hostel]').textContent = e.target.checked ? '৳ 1500' : '৳ 0';
-        updateTotal();
-      });
-      document.getElementById('optMarksheet')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-marksheet]').textContent = e.target.checked ? '৳ 200' : '৳ 0';
-        updateTotal();
-      });
+      onCancel: function () {
+        setStatus('warning', 'Payment was cancelled.');
+      },
 
-      function parseAmount(text) {
-        return Number(String(text).replace(/[^\d.-]/g,'') || 0);
+      onError: function (err) {
+        console.error(err);
+        setStatus('danger', 'An error occurred while loading payment options.');
       }
-      function updateTotal() {
-        const admission = parseAmount(document.querySelector('[data-fee-admission]').textContent);
-        const tuition = parseAmount(document.querySelector('[data-fee-tuition]').textContent);
-        const exam = parseAmount(document.querySelector('[data-fee-exam]').textContent);
-        const bus = parseAmount(document.querySelector('[data-fee-bus]').textContent);
-        const hostel = parseAmount(document.querySelector('[data-fee-hostel]').textContent);
-        const marksheet = parseAmount(document.querySelector('[data-fee-marksheet]').textContent);
-        const total = admission + tuition + exam + bus + hostel + marksheet;
-        document.querySelector('[data-fee-total]').textContent = '৳ ' + total;
-      }
-      // initial total calc
-      updateTotal();
-    });
+    }).render('#paypal-button-container');
   })();
-
-
-
-// ---- helpers (define ONCE) ----
-const getCSRF = () =>
-  (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || "";
-
-function setStatus(type, msg) {
-  const el = document.getElementById('payment-status');
-  if (!el) return;
-  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
-  el.textContent = msg;
-}
-
-
-
-document.getElementById('btnPrint')?.addEventListener('click', () => window.print());

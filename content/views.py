@@ -1,7 +1,7 @@
 # content/views.py
 from django.contrib import messages
 from django.core.mail import send_mail
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView, CreateView
 
@@ -344,6 +344,31 @@ def compute_fee(course: Course, *, add_bus: bool, add_hostel: bool, add_markshee
 
 
 
+def send_payment_success_email(application):
+    if not application.email:
+        return
+    subject = "Payment Successful – Your Admission Application"
+    amount  = application.fee_selected_total or application.fee_total
+    lines = [
+        f"Dear {application.full_name},",
+        "",
+        "We have received your payment successfully.",
+        f"Course: {application.desired_course}",
+        f"Amount: ৳ {amount:,.2f}",
+        f"Transaction ID: {application.payment_txn_id or 'N/A'}",
+        "",
+        "Thank you.",
+    ]
+    body = "\n".join(lines)
+    send_mail(
+        subject,
+        body,
+        getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@example.com"),
+        [application.email],
+        fail_silently=True,
+    )
+
+
 
 
 
@@ -395,11 +420,7 @@ class AdmissionApplyView(CreateView):
         app.save()
         return redirect("admissions:review", pk=app.pk)
 
-# Review (read-only snapshot before confirming)
-class AdmissionReviewView(DetailView):
-    model = AdmissionApplication
-    template_name = "admissions/review.html"
-    context_object_name = "application"
+
 
 # Confirm (marks as paid for now; later you’ll swap in real bKash/PayPal)
 class AdmissionConfirmView(DetailView):
@@ -455,3 +476,57 @@ class AdmissionReceiptView(DetailView):
             "institution_logo_url": getattr(settings, "INSTITUTION_LOGO_URL", None),
         })
         return ctx
+
+
+def _amount_for(app: AdmissionApplication) -> Decimal:
+    # you already computed and stored this on submit
+    return app.fee_selected_total or app.fee_total or Decimal("0")
+
+@require_GET
+def create_payment_order(request, pk: int):
+    """
+    Returns the exact server-computed amount that must be charged.
+    Your front-end payment button should read this amount and create a gateway order.
+    """
+    app = get_object_or_404(AdmissionApplication, pk=pk)
+    if app.payment_status == "paid":
+        return JsonResponse({"error": "already_paid"}, status=400)
+
+    amount = _amount_for(app)
+    return JsonResponse({
+        "application_id": app.pk,
+        "amount": str(amount),               # keep as string for JS safety
+        "currency": "BDT",
+        "description": f"Admission fees for {app.full_name}",
+    })
+
+@csrf_exempt
+@require_POST
+def mark_payment_paid(request, pk: int):
+    """
+    Call this AFTER your gateway confirms a successful capture.
+    Body JSON: { "provider": "paypal"|"bkash", "transaction_id": "..." }
+    """
+    import json
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        data = {}
+
+    provider = (data.get("provider") or "").lower()
+    txn_id   = data.get("transaction_id") or ""
+
+    if provider not in {"paypal", "bkash", "card", "visa", "mastercard"}:
+        return JsonResponse({"error": "invalid_provider"}, status=400)
+    if not txn_id:
+        return JsonResponse({"error": "missing_transaction_id"}, status=400)
+
+    app = get_object_or_404(AdmissionApplication, pk=pk)
+    if app.payment_status == "paid":
+        return JsonResponse({"status": "already_paid"})
+
+    # (Optional) you can verify amount again right here or verify via gateway API/IPN.
+
+    app.mark_paid(provider, txn_id)
+    send_payment_success_email(app)
+    return JsonResponse({"status": "ok"})

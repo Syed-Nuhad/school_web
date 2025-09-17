@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row g-4 justify-content-center">
+      <div class="col-lg-7">
+        <div class="card shadow border-0 rounded-4">
+          <div class="card-body p-4 p-md-5">
+            <h4 class="mb-3">Checkout</h4>
+
+            <div class="alert alert-light border">
+              <div class="fw-semibold">{{ application.full_name }}</div>
+              <div class="small text-muted">Application #{{ application.id }}</div>
+            </div>
+
+            <h6 class="mb-2">You selected to pay now:</h6>
+            <ul class="list-group mb-3">
+              {% if application.add_admission %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Admission Fee</span>
+                  <strong>৳ {{ application.fee_admission|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              {% if application.add_tuition %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Tuition Fee (1st month)</span>
+                  <strong>৳ {{ application.fee_tuition|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              {% if application.add_exam %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Exam Fee</span>
+                  <strong>৳ {{ application.fee_exam|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              {% if application.add_bus %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Bus Service</span>
+                  <strong>৳ {{ application.fee_bus|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              {% if application.add_hostel %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Hostel Seat</span>
+                  <strong>৳ {{ application.fee_hostel|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              {% if application.add_marksheet %}
+                <li class="list-group-item d-flex justify-content-between">
+                  <span>Exact Marksheet</span>
+                  <strong>৳ {{ application.fee_marksheet|floatformat:2 }}</strong>
+                </li>
+              {% endif %}
+              <li class="list-group-item d-flex justify-content-between bg-light">
+                <span class="fw-semibold">Total</span>
+                {# use the DB-stored total for what the user actually ticked #}
+                <span class="fw-bold">৳ {{ application.fee_total|floatformat:2 }}</span>
+              </li>
+            </ul>
+
+            <div id="payment-status" class="alert alert-info py-2">
+              Complete your payment below.
+            </div>
+
+            <div id="paypal-button-container" class="mt-3"></div>
+
+            <div class="mt-4 d-flex align-items-center gap-2">
+              <a href="{% url 'admissions:apply' %}" class="btn btn-outline-secondary">Back to form</a>
+              {% if application.payment_status == "paid" %}
+                <span class="badge bg-success">Already Paid</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

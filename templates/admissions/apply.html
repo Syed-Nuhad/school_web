@@ -152,6 +152,7 @@
               <hr class="my-4">
               <h5 class="mb-3">Fee Breakdown</h5>
 
+              {# --- Fee Breakdown (checkboxes on the LEFT for EVERY line) --- #}
               <div class="table-responsive">
                 <table class="table table-sm table-bordered align-middle mb-2">
                   <caption class="text-muted small">Tick the items you will pay now (Amounts in BDT)</caption>
@@ -160,7 +161,7 @@
                     <tr>
                       <th>
                         <label class="d-flex align-items-center gap-2 mb-0" for="add_admission">
-                          <input type="checkbox" name="add_admission" id="add_admission">
+                          <input type="checkbox" name="add_admission" id="add_admission" {% if form.add_admission.value %}checked{% endif %}>
                           <span>Admission Fee</span>
                         </label>
                       </th>
@@ -171,7 +172,7 @@
                     <tr>
                       <th>
                         <label class="d-flex align-items-center gap-2 mb-0" for="add_tuition">
-                          <input type="checkbox" name="add_tuition" id="add_tuition">
+                          <input type="checkbox" name="add_tuition" id="add_tuition" {% if form.add_tuition.value %}checked{% endif %}>
                           <span>Tuition Fee (1st month)</span>
                         </label>
                       </th>
@@ -182,7 +183,7 @@
                     <tr>
                       <th>
                         <label class="d-flex align-items-center gap-2 mb-0" for="add_exam">
-                          <input type="checkbox" name="add_exam" id="add_exam">
+                          <input type="checkbox" name="add_exam" id="add_exam" {% if form.add_exam.value %}checked{% endif %}>
                           <span>Exam Fee</span>
                         </label>
                       </th>
@@ -254,28 +255,26 @@
               </p>
 
 
-
-
               <!-- Payment -->
-              <hr class="my-4">
-              <h5 class="mb-3">Online Payment</h5>
+<!--              <hr class="my-4">-->
+<!--              <h5 class="mb-3">Online Payment</h5>-->
 
-              <div class="row g-3">
-                <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-2">
+<!--              <div class="row g-3">-->
+<!--                <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-2">-->
 
 
-                  <div id="paypal-button-container" class="flex-grow-1" style="min-width:250px;"></div>
-                  <div id="paypal-card-button" style="min-width:250px;"></div>
-                </div>
+<!--                  <div id="paypal-button-container" class="flex-grow-1" style="min-width:250px;"></div>-->
+<!--                  <div id="paypal-card-button" style="min-width:250px;"></div>-->
+<!--                </div>-->
 
-                <div id="payment-status" class="alert alert-info py-2 mb-0">
-                  Choose a method and complete payment.
-                </div>
-              </div>
+<!--                <div id="payment-status" class="alert alert-info py-2 mb-0">-->
+<!--                  Choose a method and complete payment.-->
+<!--                </div>-->
+<!--              </div>-->
 
               <!-- Actions -->
               <div class="d-flex flex-wrap gap-3 justify-content-center mt-4">
-                <button type="submit" id="submit-btn" class="btn btn-primary px-4 py-2" disabled>Submit Form</button>
+                <button type="submit" class="btn btn-primary px-4 py-2">Continue to checkout</button>
                 <a href="{% url 'home' %}" class="btn btn-outline-secondary px-4 py-2">Cancel</a>
               </div>
             </form>

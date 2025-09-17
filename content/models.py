@@ -598,7 +598,20 @@ class AdmissionApplication(models.Model):
         ("failed", "Failed"),
     ]
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default="pending")
+    payment_provider = models.CharField(max_length=30, blank=True)   # e.g. 'paypal', 'bkash'
+    payment_txn_id   = models.CharField(max_length=100, blank=True)  # provider's capture/trx id
+    paid_at          = models.DateTimeField(null=True, blank=True)
 
+    # helper
+    def mark_paid(self, provider: str, txn_id: str):
+        self.payment_provider = provider
+        self.payment_txn_id = txn_id
+        self.payment_status = "paid"
+        self.paid_at = timezone.now()
+        self.save(update_fields=[
+            "payment_provider","payment_txn_id",
+            "payment_status","paid_at"
+        ])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
