@@ -18,57 +18,54 @@
             </div>
 
             <h6 class="mb-2">You selected to pay now:</h6>
-
             <ul class="list-group mb-3 glx-fee-list shadow-sm rounded-3 overflow-hidden">
               {% if application.add_admission %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Admission Fee</span>
-                  <span class="glx-fee-amount">৳ {{ fee_admission_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_admission_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
               {% if application.add_tuition %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Tuition Fee (1st month)</span>
-                  <span class="glx-fee-amount">৳ {{ fee_tuition_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_tuition_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
               {% if application.add_exam %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Exam Fee</span>
-                  <span class="glx-fee-amount">৳ {{ fee_exam_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_exam_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
               {% if application.add_bus %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Bus Service</span>
-                  <span class="glx-fee-amount">৳ {{ fee_bus_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_bus_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
               {% if application.add_hostel %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Hostel Seat</span>
-                  <span class="glx-fee-amount">৳ {{ fee_hostel_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_hostel_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
               {% if application.add_marksheet %}
-                <li class="list-group-item glx-fee-row">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
                   <span class="glx-fee-title">Exact Marksheet</span>
-                  <span class="glx-fee-amount">৳ {{ fee_marksheet_display|floatformat:2 }}</span>
+                  <span class="glx-fee-amount ms-auto text-end">৳ {{ fee_marksheet_display|floatformat:2 }}</span>
                 </li>
               {% endif %}
 
-              <li class="list-group-item glx-fee-row glx-fee-total">
+              <li class="list-group-item d-flex justify-content-between align-items-center glx-fee-total">
                 <span class="glx-fee-title fw-semibold">Total</span>
-                <span class="glx-fee-amount fw-bold">৳ {{ selected_total_display|floatformat:2 }}</span>
+                <span class="glx-fee-amount ms-auto text-end fw-bold">৳ {{ selected_total_display|floatformat:2 }}</span>
               </li>
             </ul>
-
-
               <div class="row g-3">
                 <div class="d-flex flex-column flex-md-row align-items-start gap-3 mt-2">
 
@@ -102,86 +99,100 @@
 <script src="https://www.paypal.com/sdk/js?client-id=AXcoTkzjuLBB9DiaFF5H5-4OXtdoPHiZ2LhdWq0PPqt9_ZVJHhaFpIQY9rCwpeKMNU1af8op8TVfWnxV&currency=USD&components=buttons,funding-eligibility&enable-funding=card" defer></script>
 
 <script>
-/* Wrap everything to avoid polluting globals and to dodge $ collisions */
 (function () {
   const $id = (s) => document.getElementById(s);
+  const getCSRFTOKEN = () =>
+    (document.cookie.match(/(^|;\s*)csrftoken=([^;]+)/) || [])[2] || "";
+
   const setStatus = (type, msg) => {
     const el = $id('payment-status'); if (!el) return;
-    el.className = `alert alert-${type} py-2 mt-3 mb-0`;
+    el.className = `alert alert-${type} py-2 mb-0`;
     el.textContent = msg;
   };
-  const unlock = () => {
-    $id('submit-btn')?.removeAttribute('disabled');
-    $id('print-btn')?.removeAttribute('disabled');
-    setStatus('success', 'Payment confirmed ✅');
-  };
 
-  // --- bKash button (redirects to your backend-init URL) ---
-  const bkBtn = $id('bkash-btn');
-  bkBtn && bkBtn.addEventListener('click', async () => {
-    try {
-      setStatus('secondary', 'Starting bKash…');
-      const r = await fetch('/pay/bkash/init/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: 1500 })
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'Init failed');
-      location.href = j.bkash_url;
-    } catch (e) {
-      setStatus('danger', e.message || 'Could not start bKash.');
-    }
-  });
+  const createUrl = "{% url 'admissions:payment-create' application.id %}";      // expects GET
+  const markUrl   = "{% url 'admissions:payment-mark-paid' application.id %}";   // POST
 
-  // --- PayPal mount: wallet + card-only button ---
   function mountPayPal(attempt = 1) {
     if (!window.paypal) {
-      if (attempt < 30) return setTimeout(() => mountPayPal(attempt + 1), 150); // wait up to ~4.5s
-      return setStatus('danger', 'PayPal SDK not loaded. Check client-id/CSP.');
+      if (attempt < 30) return setTimeout(() => mountPayPal(attempt + 1), 150);
+      return setStatus('danger', 'PayPal SDK not loaded.');
     }
-    try {
-      // 1) Wallet button (normal PayPal)
-      paypal.Buttons({
-        style: { layout: 'horizontal', shape: 'pill', height: 45 },
-        // client-side demo create/capture; swap to server calls when ready
-        createOrder: (data, actions) => actions.order.create({
-          purchase_units: [{ amount: { value: '15.00' } }]
-        }),
-        onApprove: (data, actions) => actions.order.capture().then(unlock),
-        onError: (err) => setStatus('danger', 'PayPal error: ' + (err?.message || err))
-      }).render('#paypal-button-container');
 
-      // 2) Card-only button (Debit or Credit Card)
-      const cardBtn = paypal.Buttons({
-        fundingSource: paypal.FUNDING.CARD,
-        style: { layout: 'horizontal', shape: 'pill', height: 45 },
-        createOrder: (data, actions) => actions.order.create({
-          purchase_units: [{ amount: { value: '15.00' } }]
-        }),
-        onApprove: (data, actions) => actions.order.capture().then(unlock),
-        onError: (err) => setStatus('danger', 'Card payment error: ' + (err?.message || err))
-      });
+    const createOrderFromServer = (actions) => {
+      setStatus('info', 'Preparing your order…');
 
-      if (cardBtn.isEligible()) {
-        cardBtn.render('#paypal-card-button');
-      } else {
-        // Not eligible → account/region/currency setting
-        const s = $id('payment-status');
-        if (s) { s.className = 'alert alert-info py-2 mt-3 mb-0'; s.textContent = 'Card button not eligible for this client/country/currency.'; }
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus('danger', 'PayPal init exception. See console.');
+      return fetch(createUrl, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+      .then(async (r) => {
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch { throw new Error('Server did not return JSON (' + r.status + ').'); }
+        if (!r.ok || data.error) throw new Error(data.error || 'Server error.');
+        return actions.order.create({
+          purchase_units: [{
+            amount: {
+              value: String(data.amount),                   // e.g. "16220.00"
+              currency_code: data.currency || 'USD'
+            },
+            description: data.description || 'Admission payment'
+          }]
+        });
+      })
+      .catch((e) => { setStatus('danger', e.message); throw e; });
+    };
+
+    const onApproveCapture = (data, actions) => {
+      setStatus('info', 'Capturing payment…');
+      return actions.order.capture().then((details) => {
+        const cap =
+          details?.purchase_units?.[0]?.payments?.captures?.[0]?.id ||
+          details?.id || data?.orderID || '';
+        return fetch(markUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFTOKEN()
+          },
+          body: JSON.stringify({ provider: 'paypal', transaction_id: cap })
+        });
+      }).then(() => {
+        setStatus('success', 'Payment confirmed ✅');
+        $id('submit-btn')?.removeAttribute('disabled');
+        $id('print-btn')?.removeAttribute('disabled');
+      }).catch(() => setStatus('danger', 'Capture failed.'));
+    };
+
+    // PayPal wallet
+    paypal.Buttons({
+      style: { layout: 'horizontal', shape: 'pill', height: 45 },
+      createOrder: (_d, actions) => createOrderFromServer(actions),
+      onApprove: onApproveCapture,
+      onError: (err) => setStatus('danger', 'PayPal error: ' + (err?.message || err)),
+      onCancel: () => setStatus('warning', 'Payment was cancelled.')
+    }).render('#paypal-button-container');
+
+    // Card (if eligible)
+    const cardBtn = paypal.Buttons({
+      fundingSource: paypal.FUNDING.CARD,
+      style: { layout: 'horizontal', shape: 'pill', height: 45 },
+      createOrder: (_d, actions) => createOrderFromServer(actions),
+      onApprove: onApproveCapture,
+      onError: (err) => setStatus('danger', 'Card payment error: ' + (err?.message || err)),
+      onCancel: () => setStatus('warning', 'Payment was cancelled.')
+    });
+
+    if (cardBtn.isEligible()) {
+      cardBtn.render('#paypal-card-button');
     }
   }
 
-  // mount after window load (SDK is defer-loaded)
   window.addEventListener('load', mountPayPal);
-
-  // If coming back from a provider with ?paid=1
-  const q = new URLSearchParams(location.search);
-  if (q.get('paid') === '1') unlock();
 })();
 </script>
 {% endblock %}

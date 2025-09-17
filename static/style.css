@@ -1908,90 +1908,17 @@ body { background: #fff !important; }
 .table { font-size: 12px; }
 }
 
+/* No hover tint */
+.glx-fee-list .list-group-item:hover,
+.glx-fee-list .list-group-item:focus { background:#fff !important; }
 
-
-  /* Modern, clean fees list (no hover) */
-  .fee-list .list-group-item {
-    border: 0;                           /* remove default borders */
-    border-bottom: 1px solid var(--bs-border-color);
-    background: #fff;
-    padding: .9rem 1rem;
-  }
-  .fee-list .list-group-item:last-child { border-bottom: 0; }
-
-  .fee-row {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem;
-  }
-
-  .fee-title { color: #334155; }         /* slate-700 */
-  .amount {
-    color: #0f172a;                      /* slate-900 */
-    font-variant-numeric: tabular-nums;  /* align digits nicely */
-    letter-spacing: .2px;
-  }
-
-  /* Emphasize total row */
-  .fee-list .total {
-    background: linear-gradient(180deg, #f8fafc, #f1f5f9);
-    border-top: 1px solid var(--bs-border-color);
-    border-bottom-left-radius: .5rem;
-    border-bottom-right-radius: .5rem;
-  }
-
-  /* Remove ALL hover/focus states from the list items */
-  .fee-list .list-group-item:hover,
-  .fee-list .list-group-item:focus {
-    background: #fff;
-  }
-
-  /* Optional: make the PayPal/card row feel cohesive */
-  #paypal-button-container > div,
-  #paypal-card-button > div {
-    border-radius: 999px !important;
-  }
-
-
-/* Scoped styles to avoid collisions */
-.glx-fee-list .list-group-item {
-  border: 0;                               /* remove default borders */
-  border-bottom: 1px solid var(--bs-border-color);
-  background: #fff;
-  padding: .9rem 1rem;
-}
-.glx-fee-list .list-group-item:last-child {
-  border-bottom: 0;
-}
-
-/* Row layout: title left, amount right */
-.glx-fee-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.glx-fee-title {
-  color: #334155;                          /* slate-ish */
-}
-
-.glx-fee-amount {
-  margin-left: auto;                       /* push to right */
-  text-align: right;
-  color: #0f172a;                          /* dark text */
-  font-variant-numeric: tabular-nums;      /* aligned digits */
-  letter-spacing: .2px;
-}
+/* Amount: tabular digits for nice alignment */
+.glx-fee-amount { font-variant-numeric: tabular-nums; letter-spacing:.2px; color:#0f172a; }
+.glx-fee-title  { color:#334155; }
 
 /* Total row emphasis */
 .glx-fee-total {
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  background: linear-gradient(180deg,#f8fafc,#f1f5f9);
   border-top: 1px solid var(--bs-border-color);
-  border-bottom-left-radius: .5rem;
-  border-bottom-right-radius: .5rem;
-}
-
-/* Remove any hover/focus tinting */
-.glx-fee-list .list-group-item:hover,
-.glx-fee-list .list-group-item:focus {
-  background: #fff;
+  border-bottom-left-radius:.5rem; border-bottom-right-radius:.5rem;
 }

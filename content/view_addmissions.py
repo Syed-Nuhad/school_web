@@ -2,13 +2,12 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.core.mail import send_mail
-from django.http import JsonResponse, HttpResponseBadRequest, Http404
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import redirect, get_object_or_404
-from django.urls import reverse
-from django.utils import timezone
 from django.views import View
-from django.views.decorators.http import require_POST
-from django.views.generic import TemplateView, CreateView, DetailView
+from django.views.decorators.http import require_GET, require_POST
+from django.views.generic import CreateView, DetailView, TemplateView
+from django.utils import timezone
 
 from content.forms import AdmissionApplicationForm
 from content.models import Course, AdmissionApplication
