@@ -617,3 +617,35 @@ class AdmissionApplication(models.Model):
     def __str__(self):
         return f"{self.full_name} — {self.desired_course}"
 # END ndkfrgjkhdfigkjghkcgn
+
+
+
+
+# START FUNCTION HIGHLIGHTS
+
+class FunctionHighlight(models.Model):
+    title       = models.CharField(max_length=200)
+    image       = models.ImageField(upload_to="functions/")
+    place       = models.CharField(max_length=200, blank=True)
+    date_text   = models.CharField(max_length=120, blank=True)   # e.g. "December 20, 2025"
+    time_text   = models.CharField(max_length=120, blank=True)   # e.g. "4:00 PM onwards"
+    description = models.TextField(blank=True)
+    order       = models.PositiveIntegerField(default=0, help_text="Lower shows first")
+    is_active   = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "-id"]
+
+    def __str__(self):
+        return self.title
+
+
+    #
+    @property
+    def image_src(self):
+        if self.image:
+            try:
+                return self.image.url
+            except Exception:
+                pass
+        return self.image_url or ""

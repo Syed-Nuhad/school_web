@@ -5,8 +5,11 @@ from django.db.models import Q
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 
-from content.models import Banner, Notice, TimelineEvent, GalleryItem, AboutSection, AcademicCalendarItem, Course
-
+# views.py
+from content.models import (
+    Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
+    AcademicCalendarItem, Course, FunctionHighlight
+)
 
 def home(request):
     banners_qs = (
@@ -15,56 +18,33 @@ def home(request):
         .filter(Q(image__isnull=False) | ~Q(image_url=""))
         .order_by("order", "-created_at")
     )
-
-    notices_qs = (
-        Notice.objects.filter(is_active=True)
-        .order_by("-published_at", "-created_at")[:6]
-    )
-
-    timeline_qs = (
-        TimelineEvent.objects
-        .filter(is_active=True)
-        .order_by("date", "order")[:4]
-    )
-    gallery_qs = GalleryItem.objects.filter(is_active=True)
-    about = (
-        AboutSection.objects
-        .filter(is_active=True)
-        .order_by("order")
-        .first()
-    )
+    notices_qs = Notice.objects.filter(is_active=True).order_by("-published_at", "-created_at")[:6]
+    timeline_qs = TimelineEvent.objects.filter(is_active=True).order_by("date", "order")[:4]
+    gallery_qs  = GalleryItem.objects.filter(is_active=True)
+    about       = AboutSection.objects.filter(is_active=True).order_by("order").first()
     calendar_items = AcademicCalendarItem.objects.filter(is_active=True).order_by("order")
-    courses = Course.objects.filter(is_active=True).order_by("order", "title")
+    courses     = Course.objects.filter(is_active=True).order_by("order", "title")
+
+    # ✅ NEW: pull highlights
+    functions_qs = FunctionHighlight.objects.filter(is_active=True).order_by("order", "-id")
+
     context = {
         "banners": banners_qs,
         "gallery_items": gallery_qs,
         "about": about,
         "calendar_items": calendar_items,
         "courses": courses,
-        "banners_flat": [
-            {
-                "title": b.title,
-                "subtitle": b.subtitle,
-                "image": b.image_src,
-                "button_text": b.button_text,
-                "button_link": b.button_link,
-                "order": b.order,
-            }
-            for b in banners_qs
-        ],
+        "banners_flat": [{
+            "title": b.title, "subtitle": b.subtitle, "image": b.image_src,
+            "button_text": b.button_text, "button_link": b.button_link, "order": b.order,
+        } for b in banners_qs],
         "notices": notices_qs,
-        "notices_flat": [
-            {
-                "title": n.title,
-                "subtitle": n.subtitle,
-                "image": n.image_src,
-                "published_at": n.published_at,
-                "url": reverse("notice_detail", args=[n.pk]),
-            }
-            for n in notices_qs
-        ],
-        # ✅ put it at the top level so the template can see it
+        "notices_flat": [{
+            "title": n.title, "subtitle": n.subtitle, "image": n.image_src,
+            "published_at": n.published_at, "url": reverse("notice_detail", args=[n.pk]),
+        } for n in notices_qs],
         "timeline_events": timeline_qs,
+        "functions": functions_qs,
     }
     return render(request, "index.html", context)
 

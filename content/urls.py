@@ -5,6 +5,8 @@ from .view_addmissions import AdmissionApplyView, AdmissionSuccessView, Admissio
     payment_mark_paid
 from .views import AdmissionReceiptView, AdmissionReviewView, AdmissionConfirmView, create_payment_order, \
     mark_payment_paid
+from django.conf.urls.static import static
+
 
 app_name = "content"
 
@@ -42,4 +44,7 @@ urlpatterns = [
     # payment endpoints used by your checkout JS
     path("<int:pk>/payment/create/", payment_create, name="payment-create"),
     path("<int:pk>/payment/mark-paid/", payment_mark_paid, name="payment-mark-paid"),
+
+
 ]
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

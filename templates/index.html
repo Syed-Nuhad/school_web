@@ -110,7 +110,7 @@
 <!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
 <section class="container py-5" id="notice">
 <div class="d-flex align-items-center justify-content-between pb-5">
-  <h1 class="fw-bold text-primary mb-0">Notices</h1>
+  <h1 class="fw-normal mb-0">Notices</h1>
   <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
 </div>
   <div class="text-end align">
@@ -150,7 +150,7 @@
 <section class="py-5" id="academic-timeline">
   <div class="container" style="max-width: 1100px;">
     <div class="text-center mb-4">
-      <h1 class="fw-bold text-primary mb-1">Timeline</h1>
+      <h1 class="fw-normal mb-1">Timeline</h1>
       <p class="text-muted mb-0">All the key dates at a glance</p>
     </div>
 
@@ -191,7 +191,7 @@
 
 <section id="glx-gallery" class="container py-5">
   <div class="mb-4">
-    <h1 class="fw-bold text-primary mb-1">Campus Gallery</h1>
+    <h1 class="fw-normal mb-1">Campus Gallery</h1>
     <p class="text-muted mb-0">Photos &amp; videos from campus life</p>
   </div>
 
@@ -287,8 +287,8 @@
 <!--About section-->
 {% if about %}
 <section class="container py-5" id="about" data-aos="fade-up">
-  <div class="text-start fw-bold mb-1">
-    <h1 class="fw-bold text-primary mb-5">{{ about.title }}</h1>
+  <div class="text-start fw-normal mb-1">
+    <h1 class="fw-normal">{{ about.title }}</h1>
   </div>
 
   <div class="row align-items-center">
@@ -301,7 +301,7 @@
     </div>
 
     <div class="col-md-6 fade-in delay-2">
-      {% if about.college_name %}<h2 class="text-primary fw-bold mb-3">{{ about.college_name }}</h2>{% endif %}
+      {% if about.college_name %}<h2 class="text-primary fw-normal mb-3">{{ about.college_name }}</h2>{% endif %}
       {% if about.body %}<p class="lead text-muted">{{ about.body }}</p>{% endif %}
       {% if about.bullet_list %}
         <ul class="list-unstyled mt-3">
@@ -315,7 +315,7 @@
 
 <!--END-->
 <section class="container py-5 academic-calendar-section" data-aos="fade-up">
-  <h2 class="text-center fw-bold mb-5">Academic Calendar</h2>
+  <h2 class="text-start fw-normal mb-4">Academic Calendar</h2>
 
   <div class="row g-4">
     {% for item in calendar_items %}
@@ -324,7 +324,7 @@
           <div class="calendar-icon {{ item.icon_tone_class }}">
             <i class="{{ item.icon_class }} text-white" aria-hidden="true"></i>
           </div>
-          <h5 class="fw-bold mb-1">{{ item.title }}</h5>
+          <h5 class="fw-normal mb-1">{{ item.title }}</h5>
           <p class="text-muted mb-2">{{ item.date_text }}</p>
           {% if item.description %}
             <p class="mb-3">{{ item.description }}</p>
@@ -349,8 +349,8 @@
 
 <section id="academics" class="py-5">
   <div class="container" data-aos="fade-up">
-    <div class="text-center mb-4">
-      <h2 class="fw-bold">Programs & Courses</h2>
+    <div class="text-start mb-4">
+      <h2 class="fw-normal">Programs & Courses</h2>
       <p class="text-muted">Explore our programs — durations, eligibility, fees and downloadable syllabi.</p>
     </div>
 
@@ -454,63 +454,118 @@
 </div>
 <!--⭐ End ====[ACADEMIC SECTION] -->
 
-<!--⭐⭐⭐⭐⭐ Start : College Function Highlights -->
+<!-- ⭐⭐⭐⭐⭐ Start : College Function Highlights -->
 <section class="container my-5" id="college-functions">
-  <h2 class="text-center fw-bold text-primary mb-5" data-aos="fade-up">College Function Highlights</h2>
+  <h2 class="fw-normal">
+    College Function Highlights
+  </h2>
 
-  <div class="row g-5 align-items-center">
-    <div class="col-md-6" data-aos="fade-right">
-      <div class="media-box position-relative shadow rounded overflow-hidden">
-        <img src="{% static 'img/images.jpeg' %}" alt="Annual Function" class="img-fluid w-100 function-img" style="height: 300px; object-fit: cover;">
-        <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
-          <h4 class="mb-0">Annual Function 2025</h4>
-          <a href="#" class="btn btn-primary align-self-end mt-2">Full View</a>
+  <!-- We init LightGallery on this container -->
+  <div id="functions-gallery" class="row g-5 align-items-center">
+    {% for f in functions %}
+      {# alternate left/right every item #}
+      <div class="col-md-6 {% if forloop.counter|divisibleby:2 %}order-md-2{% endif %}"
+           data-aos="fade-{{ forloop.counter|divisibleby:2|yesno:'left,right' }}">
+        <div class="media-box position-relative shadow rounded overflow-hidden">
+
+          {% if f.image %}
+            <!-- Anchor is the gallery item -->
+            <a
+              href="{{ f.image.url }}"
+              class="js-fn-item d-block"
+              data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>"
+            >
+              <img
+                src="{{ f.image.url }}"
+                alt="{{ f.title }}"
+                class="img-fluid w-100 function-img"
+                style="height:300px;object-fit:cover;"
+              >
+            </a>
+          {% else %}
+            <div class="bg-light p-5 text-center">No image</div>
+          {% endif %}
+
+          <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
+            <h4 class="mb-0">{{ f.title }}</h4>
+            {% if f.image %}
+              <a
+                href="{{ f.image.url }}"
+                class="btn btn-primary align-self-end mt-2 js-fn-item"
+                data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>"
+              >
+                Full View
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="bg-light p-3 rounded shadow-sm mt-3">
+          {% if f.place %}<p class="mb-1"><strong>Place:</strong> {{ f.place }}</p>{% endif %}
+          {% if f.date_text %}<p class="mb-1"><strong>Date:</strong> {{ f.date_text }}</p>{% endif %}
+          {% if f.time_text %}<p class="mb-0"><strong>Time:</strong> {{ f.time_text }}</p>{% endif %}
         </div>
       </div>
-      <div class="bg-light p-3 rounded shadow-sm mt-3">
-        <p class="mb-1"><strong>Place:</strong> College Auditorium, XYZ College</p>
-        <p class="mb-1"><strong>Date:</strong> December 20, 2025</p>
-        <p class="mb-0"><strong>Time:</strong> 4:00 PM onwards</p>
-      </div>
-    </div>
 
-    <div class="col-md-6" data-aos="fade-left">
-      <div class="function-description p-4 shadow rounded bg-light">
-        <p class="mb-0">
-          Our Annual Function 2025 was filled with colorful performances, student awards, and special guest speeches. It was a day to remember, highlighting the talents and achievements of our beloved students. Explore the full event to relive the moments.
-        </p>
-      </div>
-    </div>
-
-    <div class="col-md-6 order-md-2" data-aos="fade-left">
-      <div class="media-box position-relative shadow rounded overflow-hidden">
-        <img src="{% static 'img/images (3).jpeg' %}" alt="Cultural Fest" class="img-fluid w-100 function-img" style="height: 300px; object-fit: cover;">
-        <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
-          <h4 class="mb-0">Cultural Fest 2025</h4>
-          <a href="#" class="btn btn-primary align-self-end mt-2">Full View</a>
+      <div class="col-md-6 {% if forloop.counter|divisibleby:2 %}order-md-1{% endif %}"
+           data-aos="fade-{{ forloop.counter|divisibleby:2|yesno:'right,left' }}">
+        <div class="function-description p-4 shadow rounded bg-light h-100">
+          <p class="mb-0">{{ f.description }}</p>
         </div>
       </div>
-      <div class="bg-light p-3 rounded shadow-sm mt-3">
-        <p class="mb-1"><strong>Place:</strong> Main Auditorium, XYZ College</p>
-        <p class="mb-1"><strong>Date:</strong> February 15, 2025</p>
-        <p class="mb-0"><strong>Time:</strong> 6:00 PM onwards</p>
+    {% empty %}
+      <div class="col-12">
+        <div class="alert alert-info">No function highlights yet.</div>
       </div>
-    </div>
-
-    <div class="col-md-6 order-md-1" data-aos="fade-right">
-      <div class="function-description p-4 shadow rounded bg-light">
-        <p class="mb-0">
-          Our Cultural Fest showcased a dazzling array of student talents including music, dance, and drama. The vibrant celebrations fostered a strong sense of community and cultural appreciation among students and staff alike.
-        </p>
-      </div>
-    </div>
+    {% endfor %}
   </div>
 </section>
-<!--⭐ End  College Function Highlights ================================================================= -->
+<!-- ⭐ End  College Function Highlights -->
+
+
+{# === Modal with close icon & back button === #}
+<!-- WhatsApp-like Image Viewer -->
+<div class="modal fade" id="functionImageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down modal-xl">
+    <div class="modal-content bg-black text-white">
+
+      <!-- Header: title left | actions right -->
+      <div class="modal-header py-2 px-3 border-0">
+        <div class="fw-semibold" id="fimTitle">Full View</div>
+        <div class="d-flex align-items-center gap-2">
+          <!-- download -->
+          <a id="fimDownload" class="btn btn-sm btn-outline-light" href="#" download title="Download">
+            <i class="bi bi-download"></i>
+          </a>
+          <!-- zoom - / + -->
+          <button id="fimZoomOut" class="btn btn-sm btn-outline-light" type="button" title="Zoom out">
+            <i class="bi bi-zoom-out"></i>
+          </button>
+          <button id="fimZoomIn" class="btn btn-sm btn-outline-light" type="button" title="Zoom in">
+            <i class="bi bi-zoom-in"></i>
+          </button>
+          <!-- close -->
+          <button type="button" class="btn btn-sm btn-light ms-1" data-bs-dismiss="modal" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body: centered image, pan/zoom -->
+      <div class="modal-body p-0 d-flex justify-content-center align-items-center" style="min-height:70vh;">
+        <div id="fimViewport" class="w-100 h-100 d-flex justify-content-center align-items-center overflow-hidden" style="background:#0f0f0f;">
+          <img id="fimImg" src="" alt="" style="max-width:none; max-height:none; user-select:none; -webkit-user-drag:none; cursor:grab;">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 <!-- ⭐⭐⭐⭐⭐ Start: Cultural Fest 2025 Section -->
 <section class="container my-5" id="cultural-fest">
-  <h2 class="text-center fw-bold text-primary mb-5" data-aos="fade-up">Cultural Fest 2025</h2>
+  <h2 class="text-center fw-normal text-primary mb-5" data-aos="fade-up">Cultural Fest 2025</h2>
   <div class="row g-5 align-items-center">
     <div class="col-md-6" data-aos="fade-right">
       <div class="media-box">
@@ -519,7 +574,7 @@
           Your browser does not support HTML5 video.
         </video>
         <div class="p-3 bg-light">
-          <h4 class="fw-bold mb-2 text-success">Cultural Fest 2025</h4>
+          <h4 class="fw-normal mb-2 text-success">Cultural Fest 2025</h4>
           <p class="mb-1"><strong>Place:</strong> Main Auditorium, XYZ College</p>
           <p class="mb-1"><strong>Date:</strong> February 15, 2025</p>
           <p class="mb-1"><strong>Time:</strong> 6:00 PM onwards</p>
@@ -559,7 +614,7 @@
 
 <!-- ⭐⭐⭐⭐⭐====================== Start: College Member Dashboard Section ====================== -->
 <section class="container py-5" id="college-members" data-aos="fade-up">
-  <h2 class="text-center mb-4 text-primary fw-bold">College Members</h2>
+  <h2 class="text-center mb-4 text-primary fw-normal">College Members</h2>
 
   <div class="row g-4">
     <div class="col-md-3">
@@ -609,7 +664,7 @@
 <section id="contact" class="py-5 bg-light">
   <div class="container" data-aos="fade-up">
     <div class="text-center mb-4">
-      <h2 class="fw-bold">Contact Us</h2>
+      <h2 class="fw-normal">Contact Us</h2>
       <p class="text-muted">We’d love to hear from you! Reach out using the form or visit us directly.</p>
     </div>
 
@@ -617,7 +672,7 @@
       <div class="col-lg-4">
         <div class="card shadow-sm border-0 h-100">
           <div class="card-body">
-            <h5 class="fw-bold mb-3">Get in Touch</h5>
+            <h5 class="fw-normal mb-3">Get in Touch</h5>
             <p><i class="bi bi-geo-alt-fill text-primary me-2"></i> 123 College Road, Dhaka, Bangladesh</p>
             <p><i class="bi bi-telephone-fill text-primary me-2"></i> +880 123 456 789</p>
             <p><i class="bi bi-envelope-fill text-primary me-2"></i> info@yourcollege.com</p>

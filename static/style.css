@@ -1715,6 +1715,7 @@ header {
     border-radius: .75rem;
     box-shadow: 0 10px 30px rgba(0,0,0,.08);
     border: 1px solid rgba(0,0,0,.05);
+    text: black!important;
   }
 
 
@@ -1742,14 +1743,7 @@ header {
   color:#fff !important;
 }
 
-/* ==== 3) Navbar dropdown: only open on hover for desktop, not mobile ==== */
-@media (min-width: 992px){
-  .navbar .dropdown:hover .dropdown-menu{ display:block; }
-}
-/* On small screens require click */
-@media (max-width: 991.98px){
-  .navbar .dropdown:hover .dropdown-menu{ display:none !important; }
-}
+
 
 /* ==== 4) Kill global card hover; scope it to places you want ==== */
 .card:hover{ transform:none !important; box-shadow:none !important; }
@@ -1812,9 +1806,6 @@ header {
 .btn-outline-primary{ color:#0d6efd !important; border-color:#0d6efd !important; background-image:none !important; }
 .btn-outline-primary:hover{ background-color:#0d6efd !important; color:#fff !important; }
 
-/* ==== Dropdown hover only on desktop ==== */
-@media (min-width: 992px){ .navbar .dropdown:hover .dropdown-menu{ display:block; } }
-@media (max-width: 991.98px){ .navbar .dropdown:hover .dropdown-menu{ display:none !important; } }
 
 /* ==== Kill global card hover; re-enable only where wanted ==== */
 .card:hover{ transform:none !important; box-shadow:none !important; }
@@ -1922,3 +1913,10 @@ body { background: #fff !important; }
   border-top: 1px solid var(--bs-border-color);
   border-bottom-left-radius:.5rem; border-bottom-right-radius:.5rem;
 }
+
+
+
+  /* Smooth transform for zoom/pan */
+  #fimImg { transition: transform 0.05s linear; }
+  /* When dragging */
+  #fimImg.fim-dragging { cursor: grabbing !important; }

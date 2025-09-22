@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
-from .models import Course, AdmissionApplication
+from .models import Course, AdmissionApplication, FunctionHighlight
 
 from .models import (
     Banner,
@@ -377,3 +377,13 @@ class AdmissionApplicationAdmin(admin.ModelAdmin):
         "fee_base_subtotal","fee_selected_total","fee_total",
         "created_at",
     )
+
+
+
+
+@admin.register(FunctionHighlight)
+class FunctionHighlightAdmin(OwnableAdminMixin):
+    list_display  = ("title", "place", "date_text", "order", "is_active")
+    list_filter   = ("is_active",)
+    search_fields = ("title", "place", "description")
+    list_editable = ("order", "is_active")

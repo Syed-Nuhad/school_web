@@ -867,24 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// counter for class wise result
-document.addEventListener("DOMContentLoaded", () => {
-  const counters = document.querySelectorAll(".count-number");
 
-  counters.forEach(counter => {
-    const target = +counter.closest("svg").querySelector(".circle-progress").dataset.value;
-    let current = 0;
-    const step = Math.ceil(target / 50); // adjust speed
-
-    const update = () => {
-      current += step;
-      if (current > target) current = target;
-      counter.textContent = current;
-      if (current < target) requestAnimationFrame(update);
-    };
-    update();
-  });
-});
 
 // END==================================================
 
@@ -936,51 +919,6 @@ function fillID() {
   }
 }
 
-// ✅ Print Only the ID Card in Proper Size
-function printIDCard() {
-  let card = document.getElementById("idCard").outerHTML;
-
-  let win = window.open("", "_blank");
-  win.document.write(`
-    <html>
-      <head>
-        <title>Student ID Card</title>
-        <style>
-          @page {
-            size: 86mm 54mm; /* ✅ Standard ID Card Size */
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          .id-card {
-            width: 86mm;
-            height: 54mm;
-            border: 1px solid #333;
-            padding: 5px;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-          }
-          .id-card img.photo {
-            width: 32mm;
-            height: 38mm;
-            object-fit: cover;
-          }
-        </style>
-      </head>
-      <body>
-        ${card}
-      </body>
-    </html>
-  `);
-  win.document.close();
-  win.print();
-  win.close();
-}
 
 function printIDCard() {
   window.print();
@@ -1444,6 +1382,128 @@ document.addEventListener('click', function (e) {
 
 
 
+(function () {
+  const modalEl = document.getElementById('functionImageModal');
+  if (!modalEl) return;
 
+  const img   = document.getElementById('fimImg');
+  const title = document.getElementById('fimTitle');
+  const dl    = document.getElementById('fimDownload');
+  const vp    = document.getElementById('fimViewport');
+
+  const btnIn  = document.getElementById('fimZoomIn');
+  const btnOut = document.getElementById('fimZoomOut');
+
+  // state
+  let base = 1;     // fit-to-screen baseline
+  let scale = 1;    // current scale
+  let pos = { x: 0, y: 0 };
+  let dragging = false;
+  let dragStart = { x: 0, y: 0 };
+
+  function apply() {
+    img.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+  }
+
+  function fitToScreen() {
+    if (!vp || !img.naturalWidth || !img.naturalHeight) return;
+    const vw = vp.clientWidth || 1;
+    const vh = vp.clientHeight || 1;
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+
+    base  = Math.min(vw / nw, vh / nh);
+    scale = base;
+    pos   = { x: 0, y: 0 };
+    apply();
+  }
+
+  function zoomAt(clientX, clientY, factor) {
+    const before = scale;
+    const next   = Math.min(base * 8, Math.max(base * 0.5, scale * factor));
+
+    const rect = vp.getBoundingClientRect();
+    const cx   = clientX - rect.left;
+    const cy   = clientY - rect.top;
+
+    // keep pointer position stable
+    pos.x = cx - ((cx - pos.x) * (next / before));
+    pos.y = cy - ((cy - pos.y) * (next / before));
+
+    scale = next;
+    apply();
+  }
+
+  // Bootstrap: set image when opening via data-* button
+  modalEl.addEventListener('show.bs.modal', (ev) => {
+    const btn   = ev.relatedTarget;             // <button data-img="..." data-title="...">
+    const src   = btn?.getAttribute('data-img') || '';
+    const text  = btn?.getAttribute('data-title') || 'Full View';
+
+    title.textContent = text;
+    dl.href = src;
+    try { dl.download = src.split('/').pop().split('?')[0] || 'image'; } catch(e){}
+
+    img.src = src;
+    img.alt = text;
+  });
+
+  // When shown, fit to screen
+  modalEl.addEventListener('shown.bs.modal', () => {
+    // wait a tick for dimensions
+    setTimeout(fitToScreen, 30);
+  });
+
+  // Clear when closed
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    img.src = '';
+    img.alt = '';
+    title.textContent = 'Full View';
+    scale = base = 1;
+    pos = { x: 0, y: 0 };
+  });
+
+  // Zoom buttons (+ / -)
+  btnIn.addEventListener('click',  () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1.2));
+  btnOut.addEventListener('click', () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1/1.2));
+
+  // Mouse wheel zoom (like WA)
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1/1.12);
+  }, { passive: false });
+
+  // Drag to pan
+  img.addEventListener('mousedown', (e) => {
+    dragging = true;
+    dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    img.classList.add('fim-dragging');
+  });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+    img.classList.remove('fim-dragging');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    pos.x = e.clientX - dragStart.x;
+    pos.y = e.clientY - dragStart.y;
+    apply();
+  });
+
+  // Double-click to toggle zoom (fit <-> 2x)
+  vp.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    const target = (scale > base * 1.05) ? (base / scale) : (2 / scale);
+    zoomAt(e.clientX, e.clientY, target);
+  });
+
+  // Handle image load (cache case)
+  img.addEventListener('load', fitToScreen);
+
+  // Refit on resize
+  window.addEventListener('resize', () => {
+    if (modalEl.classList.contains('show')) fitToScreen();
+  });
+})();
 
 
