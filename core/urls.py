@@ -6,6 +6,7 @@ from django.conf.urls.static import static
 
 from ui import views as ui_views
 from accounts import views as acc_views  # for honeypots
+from ui.views import contact_submit
 
 urlpatterns = [
     # Public site
@@ -27,7 +28,7 @@ urlpatterns = [
     path("notices/", ui_views.notices_list, name="notices_list"),
     path("notices/<int:pk>/", ui_views.notice_detail, name="notice_detail"),
     path("admissions/", include("content.urls_admissions", namespace="admissions")),
-
+    path("contact/submit/", contact_submit, name="contact_submit"),
 ]
 
 # Serve static & media in development

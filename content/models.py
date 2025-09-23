@@ -1,5 +1,7 @@
 # content/models.py
 from decimal import Decimal
+from urllib.parse import urlparse, parse_qs, unquote
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -293,9 +295,11 @@ class GalleryItem(models.Model):
 
 
 
+# //////////////////////////////////
+# About
+# //////////////////////////////////
 def about_upload_to(instance, filename):
     return f"about/{timezone.now():%Y/%m}/{filename}"
-
 
 class AboutSection(models.Model):
     """
@@ -402,8 +406,9 @@ class AboutSection(models.Model):
     def image_count(self):
         return len(self.image_list)
 
+# //////////////////////////////////
 # ACADEMIC CALENDAR
-
+# //////////////////////////////////
 class AcademicCalendarItem(models.Model):
     TONE_CHOICES = [
         ("blue", "Blue"),
@@ -476,17 +481,32 @@ class AcademicCalendarItem(models.Model):
         return f"icon-{self.tone}"
 
 
-    # Start Programs & Courses Section
-# ---------- Programs & Courses ----------
+# //////////////////////////////////
+# Programs & Courses
+# //////////////////////////////////
 
 def course_image_upload_to(instance, filename):
-    # Safe even on first save (does not depend on instance attrs set later)
+    """
+    Upload path for a course's cover image.
+    Kept simple so the path is stable even before the instance is saved.
+    """
     return f"courses/{instance.category}/{filename}"
 
+
 def course_syllabus_upload_to(instance, filename):
+    """
+    Upload path for a course's syllabus file (PDF/Doc, etc.).
+    """
     return f"courses/syllabi/{instance.category}/{filename}"
 
+
 class Course(models.Model):
+    """
+    A program that students can enroll into (e.g., Science, Commerce).
+    Use the fee fields to publish a transparent, itemized cost breakdown
+    in the frontend and to snapshot fees into applications.
+    """
+
     CATEGORY_CHOICES = [
         ("science", "Science"),
         ("commerce", "Commerce"),
@@ -494,39 +514,103 @@ class Course(models.Model):
         ("vocational", "Vocational"),
     ]
 
-    title = models.CharField(max_length=150)
-    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    title = models.CharField(
+        max_length=150,
+        help_text="Public name of the course as shown on the website.",
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        help_text="Bucket used for filtering and grouping courses.",
+    )
 
-    image = models.ImageField(upload_to=course_image_upload_to, blank=True, null=True)
-    syllabus_file = models.FileField(upload_to=course_syllabus_upload_to, blank=True, null=True)
+    image = models.ImageField(
+        upload_to=course_image_upload_to,
+        blank=True, null=True,
+        help_text="Optional cover image for cards/headers (recommended landscape).",
+    )
+    syllabus_file = models.FileField(
+        upload_to=course_syllabus_upload_to,
+        blank=True, null=True,
+        help_text="Attach a PDF/DOC syllabus students can download.",
+    )
 
-    duration = models.CharField(max_length=50, blank=True)
-    shift = models.CharField(max_length=50, blank=True)
-    description = models.TextField(blank=True)
-    eligibility = models.CharField(max_length=200, blank=True)
+    duration = models.CharField(
+        max_length=50, blank=True,
+        help_text="e.g., '2 years', 'Jan–Dec', or 'Semester based'.",
+    )
+    shift = models.CharField(
+        max_length=50, blank=True,
+        help_text="e.g., 'Morning', 'Day', 'Evening' (optional).",
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="A short overview of what the course covers and outcomes.",
+    )
+    eligibility = models.CharField(
+        max_length=200, blank=True,
+        help_text="Minimum requirements (e.g., 'SSC pass with GPA ≥ 3.5').",
+    )
 
     # >>> Fee fields you will set in admin <<<
-    admission_fee        = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    first_month_tuition  = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    exam_fee             = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    bus_fee              = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    hostel_fee           = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    marksheet_fee        = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    admission_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="One-time admission/registration fee.",
+    )
+    first_month_tuition = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Tuition fee for the first month (or initial installment).",
+    )
+    exam_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Internal/board exam fee (if applicable).",
+    )
+    bus_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Optional transport/bus fee (per month or fixed).",
+    )
+    hostel_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Optional hostel/accommodation fee.",
+    )
+    marksheet_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Optional marksheet/certification processing fee.",
+    )
 
     # (optional legacy)
-    monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-
-    order = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name="courses_created",
-        on_delete=models.SET_NULL, null=True, blank=True, editable=False
+    monthly_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, blank=True, null=True,
+        help_text="Legacy field. Prefer the explicit fee fields above.",
     )
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first in listings.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to hide this course from the website.",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="courses_created",
+        on_delete=models.SET_NULL, null=True, blank=True, editable=False,
+        help_text="User who created this record (set automatically).",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True, editable=False,
+        help_text="When this record was created.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True, editable=False,
+        help_text="When this record was last updated.",
+    )
 
     class Meta:
         ordering = ("order", "title")
+        verbose_name = "Course"
+        verbose_name_plural = "Courses"
 
     def __str__(self):
         return self.title
@@ -535,117 +619,708 @@ class Course(models.Model):
 # ---------- Admissions ----------
 
 def admission_photo_upload_to(instance, filename):
-    # Use current time (safe before instance exists in DB)
+    """
+    Upload path for applicant photos. Uses current timestamp folders so it
+    works before the object is saved to DB.
+    """
     dt = timezone.now()
     return f"admissions/photos/{dt:%Y/%m}/{filename}"
 
+
 def admission_doc_upload_to(instance, filename):
+    """
+    Upload path for applicant transcripts/attachments.
+    """
     dt = timezone.now()
     return f"admissions/docs/{dt:%Y/%m}/{filename}"
 
+
 class AdmissionApplication(models.Model):
-    # --- your existing fields ---
-    full_name = models.CharField(max_length=200)
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=20)
-    date_of_birth = models.DateField(blank=True, null=True)
-    address = models.TextField(blank=True)
-    guardian_name = models.CharField(max_length=200, blank=True)
-    guardian_phone = models.CharField(max_length=20, blank=True)
+    """
+    A student's online admission form. We snapshot course fees into the application
+    so that later fee changes in the Course model won't affect past applications.
+    """
+
+    full_name = models.CharField(
+        max_length=200,
+        help_text="Applicant’s full legal name.",
+    )
+    email = models.EmailField(
+        blank=True,
+        help_text="Applicant’s email (optional, but helps for communication).",
+    )
+    phone = models.CharField(
+        max_length=20,
+        help_text="Primary contact number (WhatsApp preferred if available).",
+    )
+    date_of_birth = models.DateField(
+        blank=True, null=True,
+        help_text="Optional, used for record verification.",
+    )
+    address = models.TextField(
+        blank=True,
+        help_text="Present address with district/upazila for correspondence.",
+    )
+    guardian_name = models.CharField(
+        max_length=200, blank=True,
+        help_text="Parent/guardian full name (optional).",
+    )
+    guardian_phone = models.CharField(
+        max_length=20, blank=True,
+        help_text="Parent/guardian phone number (optional).",
+    )
 
     desired_course = models.ForeignKey(
-        "content.Course", on_delete=models.PROTECT, related_name="applications", null=True, blank=True,  # adjust app label if different
+        "content.Course",
+        on_delete=models.PROTECT,
+        related_name="applications",
+        null=True, blank=True,
+        help_text="The course the applicant is applying to.",
     )
-    shift = models.CharField(max_length=20, blank=True)
+    shift = models.CharField(
+        max_length=20, blank=True,
+        help_text="Preferred shift (Morning/Day/Evening).",
+    )
 
-    previous_school = models.CharField(max_length=200, blank=True)
-    ssc_gpa = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
+    previous_school = models.CharField(
+        max_length=200, blank=True,
+        help_text="Last attended school/college (optional).",
+    )
+    ssc_gpa = models.DecimalField(
+        max_digits=3, decimal_places=2, blank=True, null=True,
+        help_text="Secondary exam GPA (or equivalent), if applicable.",
+    )
 
-    photo = models.ImageField(upload_to="admissions/photos/", blank=True, null=True)
-    transcript = models.FileField(upload_to="admissions/transcripts/", blank=True, null=True)
-    message = models.TextField(blank=True)
+    photo = models.ImageField(
+        upload_to="admissions/photos/", blank=True, null=True,
+        help_text="Passport-size photo (optional in demo).",
+    )
+    transcript = models.FileField(
+        upload_to="admissions/transcripts/", blank=True, null=True,
+        help_text="Academic transcript/certificate (optional).",
+    )
+    message = models.TextField(
+        blank=True,
+        help_text="Any additional information or questions.",
+    )
 
     # Chosen add-ons
-    add_bus = models.BooleanField(default=False)
-    add_hostel = models.BooleanField(default=False)
-    add_marksheet = models.BooleanField(default=False)
+    add_bus = models.BooleanField(
+        default=False,
+        help_text="Applicant opts for transport service.",
+    )
+    add_hostel = models.BooleanField(
+        default=False,
+        help_text="Applicant opts for hostel/accommodation.",
+    )
+    add_marksheet = models.BooleanField(
+        default=False,
+        help_text="Applicant opts for marksheet/certification processing.",
+    )
 
-    # NEW: make the 3 base rows selectable too
-    add_admission = models.BooleanField(default=False)
-    add_tuition = models.BooleanField(default=False)
-    add_exam = models.BooleanField(default=False)
+    # Base rows (allow toggling in UI)
+    add_admission = models.BooleanField(
+        default=False,
+        help_text="Include Admission fee row in snapshot.",
+    )
+    add_tuition = models.BooleanField(
+        default=False,
+        help_text="Include First Month Tuition row in snapshot.",
+    )
+    add_exam = models.BooleanField(
+        default=False,
+        help_text="Include Exam fee row in snapshot.",
+    )
 
-    # fee snapshot (you already had these)
-    fee_admission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    fee_tuition = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    fee_exam = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    fee_bus = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    fee_hostel = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
-    fee_marksheet = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    # Fee snapshot (copied from Course at the time of submit)
+    fee_admission = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of admission fee at submit time.",
+    )
+    fee_tuition = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of first-month tuition at submit time.",
+    )
+    fee_exam = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of exam fee at submit time.",
+    )
+    fee_bus = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of transport fee at submit time.",
+    )
+    fee_hostel = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of hostel fee at submit time.",
+    )
+    fee_marksheet = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Snapshot of marksheet fee at submit time.",
+    )
 
-    # keep both for clarity:
-    fee_base_subtotal = models.DecimalField(max_digits=10, decimal_places=2,
-                                            default=Decimal("0.00"))  # admission+tuition+exam
-    fee_selected_total = models.DecimalField(max_digits=10, decimal_places=2,
-                                             default=Decimal("0.00"))  # sum of ticked rows
+    fee_base_subtotal = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Admission + First Month Tuition + Exam (if chosen).",
+    )
+    fee_selected_total = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Total of all selected rows (base + add-ons).",
+    )
 
-    # (optional) keep legacy field if you already used it in admin/templates
-    fee_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    # legacy compatibility
+    fee_total = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal("0.00"),
+        help_text="Legacy total; prefer fee_selected_total.",
+    )
 
     PAYMENT_STATUS = [
         ("pending", "Pending"),
         ("paid", "Paid"),
         ("failed", "Failed"),
     ]
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default="pending")
-    payment_provider = models.CharField(max_length=30, blank=True)   # e.g. 'paypal', 'bkash'
-    payment_txn_id   = models.CharField(max_length=100, blank=True)  # provider's capture/trx id
-    paid_at          = models.DateTimeField(null=True, blank=True)
+    payment_status = models.CharField(
+        max_length=20, choices=PAYMENT_STATUS, default="pending",
+        help_text="Status of the application payment, if any.",
+    )
+    payment_provider = models.CharField(
+        max_length=30, blank=True,
+        help_text="e.g., 'paypal', 'bkash' (set when payment succeeds).",
+    )
+    payment_txn_id = models.CharField(
+        max_length=100, blank=True,
+        help_text="Gateway transaction/capture ID.",
+    )
+    paid_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Timestamp recorded when payment_status becomes Paid.",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this application was submitted.",
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Admission Application"
+        verbose_name_plural = "Admission Applications"
+
+    def __str__(self):
+        return f"{self.full_name} — {self.desired_course}"
 
     # helper
     def mark_paid(self, provider: str, txn_id: str):
+        """
+        Mark the application as paid and persist provider + transaction id.
+        """
         self.payment_provider = provider
         self.payment_txn_id = txn_id
         self.payment_status = "paid"
         self.paid_at = timezone.now()
-        self.save(update_fields=[
-            "payment_provider","payment_txn_id",
-            "payment_status","paid_at"
-        ])
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.full_name} — {self.desired_course}"
-# END ndkfrgjkhdfigkjghkcgn
+        self.save(update_fields=["payment_provider", "payment_txn_id", "payment_status", "paid_at"])
 
 
-
-
-# START FUNCTION HIGHLIGHTS
+# ---------- Function Highlights ----------
 
 class FunctionHighlight(models.Model):
-    title       = models.CharField(max_length=200)
-    image       = models.ImageField(upload_to="functions/")
-    place       = models.CharField(max_length=200, blank=True)
-    date_text   = models.CharField(max_length=120, blank=True)   # e.g. "December 20, 2025"
-    time_text   = models.CharField(max_length=120, blank=True)   # e.g. "4:00 PM onwards"
-    description = models.TextField(blank=True)
-    order       = models.PositiveIntegerField(default=0, help_text="Lower shows first")
-    is_active   = models.BooleanField(default=True)
+    """
+    A single highlight block for college functions/events.
+    One image per item; provides a simple alternating left/right layout on the homepage.
+    """
+    title = models.CharField(
+        max_length=200,
+        help_text="Headline for the function highlight (shown over the image).",
+    )
+    image = models.ImageField(
+        upload_to="functions/",
+        help_text="Primary image for this highlight.",
+    )
+    place = models.CharField(
+        max_length=200, blank=True,
+        help_text="Venue/location (optional).",
+    )
+    date_text = models.CharField(
+        max_length=120, blank=True,
+        help_text="Human-friendly date (e.g., 'December 20, 2025').",
+    )
+    time_text = models.CharField(
+        max_length=120, blank=True,
+        help_text="Human-friendly time (e.g., '4:00 PM onwards').",
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Short description shown beside the image.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to hide this highlight from the site.",
+    )
 
     class Meta:
         ordering = ["order", "-id"]
+        verbose_name = "Function Highlight"
+        verbose_name_plural = "Function Highlights"
 
     def __str__(self):
         return self.title
 
-
-    #
     @property
     def image_src(self):
+        """Return a safe URL for the image (empty string if unavailable)."""
         if self.image:
             try:
                 return self.image.url
             except Exception:
                 pass
-        return self.image_url or ""
+        return ""
+
+
+# ---------- College Festivals ----------
+
+class CollegeFestival(models.Model):
+    """
+    A festival page/card containing an optional hero (image/video/YouTube),
+    description, and a gallery of media items (see FestivalMedia).
+    """
+    title = models.CharField(
+        max_length=200,
+        help_text="Festival title as shown on cards and headers.",
+    )
+    slug = models.SlugField(
+        unique=True,
+        help_text="Unique slug for links. Auto-fill from title if unsure.",
+    )
+    place = models.CharField(
+        max_length=200, blank=True,
+        help_text="Venue/location (optional).",
+    )
+    date_text = models.CharField(
+        max_length=100, blank=True,
+        help_text="Friendly date (e.g., 'Feb 15, 2025').",
+    )
+    time_text = models.CharField(
+        max_length=100, blank=True,
+        help_text="Friendly time (e.g., '6:00 PM onwards').",
+    )
+    description = models.TextField(
+        blank=True,
+        help_text="Festival summary/notes.",
+    )
+
+    # Optional hero
+    hero_image = models.ImageField(
+        upload_to="festivals/hero/", blank=True, null=True,
+        help_text="Hero image for the festival card/header (optional).",
+    )
+    hero_video = models.FileField(
+        upload_to="festivals/video/", blank=True, null=True,
+        help_text="Upload an MP4 (or similar) to play in modal (optional).",
+    )
+    hero_youtube_url = models.URLField(
+        blank=True,
+        help_text="Paste any YouTube link (watch/shorts/embed/youtu.be).",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to hide this festival.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first across all festivals.",
+    )
+
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="festivals_created",
+        help_text="User who created this record (optional).",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this festival record was created.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this festival record was last updated.",
+    )
+
+    class Meta:
+        ordering = ("order", "-created_at")
+        verbose_name = "College Festival"
+        verbose_name_plural = "College Festivals"
+
+    def __str__(self):
+        return self.title
+
+
+class FestivalMedia(models.Model):
+    """
+    A single media item belonging to a CollegeFestival.
+    Supports both images and YouTube links with an optional custom thumbnail.
+    """
+    KIND_CHOICES = (
+        ("image", "Image"),
+        ("youtube", "YouTube"),
+    )
+
+    festival = models.ForeignKey(
+        CollegeFestival, on_delete=models.CASCADE, related_name="media_items",
+        help_text="Festival this media belongs to.",
+    )
+    kind = models.CharField(
+        max_length=20, choices=KIND_CHOICES, default="image",
+        help_text="Choose 'Image' for uploads or 'YouTube' for embedded videos.",
+    )
+
+    image = models.ImageField(
+        upload_to="festivals/gallery/", blank=True, null=True,
+        help_text="Upload the image (required if kind=Image).",
+    )
+    youtube_url = models.URLField(
+        blank=True,
+        help_text="Paste any YouTube link (required if kind=YouTube).",
+    )
+
+    thumbnail = models.ImageField(
+        upload_to="festivals/thumbs/", blank=True, null=True,
+        help_text="Optional thumbnail (otherwise we try to display the original).",
+    )
+
+    caption = models.CharField(
+        max_length=200, blank=True,
+        help_text="Short caption or credit for the media item.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first within the festival gallery.",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to hide this media item.",
+    )
+
+    class Meta:
+        ordering = ("order", "id")
+        verbose_name = "Festival Media"
+        verbose_name_plural = "Festival Media"
+
+    def __str__(self):
+        base = self.caption or (self.image.name if self.image else self.youtube_url) or "item"
+        return f"{self.festival.title} – {base}"
+
+
+# ---------- People ----------
+
+class Member(models.Model):
+    """
+    People directory for the site: HOD, Teachers, Students, and Staff.
+    You can optionally supply a hosted image via 'photo_url' if 'photo' is empty.
+    """
+
+    class Role(models.TextChoices):
+        HOD = "hod", "Head of Department"
+        TEACHER = "teacher", "Teacher"
+        STUDENT = "student", "Student"
+        STAFF = "staff", "Staff"
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to hide this member from listings.",
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Lower numbers appear first within the same role.",
+    )
+
+    role = models.CharField(
+        max_length=20, choices=Role.choices,
+        help_text="Which group this member belongs to.",
+    )
+    name = models.CharField(
+        max_length=120,
+        help_text="Full display name.",
+    )
+    post = models.CharField(
+        max_length=120, blank=True,
+        help_text="Designation/position (e.g., Professor, Lab Assistant).",
+    )
+    section = models.CharField(
+        max_length=10, blank=True,
+        help_text="Student section if relevant (e.g., 'A').",
+    )
+    bio = models.TextField(
+        blank=True,
+        help_text="Short bio/intro (optional, shown in detail cards).",
+    )
+
+    photo = models.ImageField(
+        upload_to="members/", blank=True, null=True,
+        help_text="Upload a headshot (square images look best).",
+    )
+    photo_url = models.URLField(
+        blank=True,
+        help_text="Remote image URL if you prefer not to upload.",
+    )
+
+    created_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="members_created",
+        help_text="User who created this record (optional).",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this profile was created.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this profile was last updated.",
+    )
+
+    class Meta:
+        ordering = ("order", "name")
+        verbose_name = "Member"
+        verbose_name_plural = "Members"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_role_display()})"
+
+    @property
+    def image_src(self):
+        """Return the best available image URL (uploaded photo, else photo_url, else empty)."""
+        try:
+            if self.photo and self.photo.url:
+                return self.photo.url
+        except Exception:
+            pass
+        return self.photo_url or ""
+
+
+# ---------- Contact ----------
+
+class ContactInfo(models.Model):
+    """
+    Single source of truth for the Contact section of your site.
+    Add one active record; the latest active one is shown on the homepage.
+    """
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Untick to stop showing this record on the site.",
+    )
+    address = models.CharField(
+        max_length=255, blank=True,
+        help_text="Street address and city/district.",
+    )
+    phone = models.CharField(
+        max_length=100, blank=True,
+        help_text="Primary phone number (can include multiple, separated by commas).",
+    )
+    email = models.EmailField(
+        blank=True,
+        help_text="Public contact email.",
+    )
+    hours = models.CharField(
+        max_length=255, blank=True,
+        help_text="Opening hours (e.g., 'Mon–Sat: 8:00 AM – 5:00 PM').",
+    )
+    map_embed_src = models.TextField(
+        blank=True,
+        help_text="Paste a Google Maps <iframe> src URL or an embeddable map URL.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this record was last updated.",
+    )
+
+    class Meta:
+        verbose_name = "Contact Info"
+        verbose_name_plural = "Contact Info"
+
+    def __str__(self):
+        return f"Contact Info ({'active' if self.is_active else 'inactive'})"
+
+
+class ContactMessage(models.Model):
+    """
+    Messages submitted from the site contact form. Use the 'handled' flag to
+    mark messages as processed in the admin.
+    """
+    name = models.CharField(
+        max_length=120,
+        help_text="Sender’s name.",
+    )
+    email = models.EmailField(
+        help_text="Sender’s email address.",
+    )
+    subject = models.CharField(
+        max_length=200,
+        help_text="Short subject line for the message.",
+    )
+    message = models.TextField(
+        help_text="The user’s message or inquiry.",
+    )
+    phone = models.CharField(
+        max_length=50, blank=True,
+        help_text="Optional phone number for follow-up.",
+    )
+    website = models.CharField(
+        max_length=200, blank=True,
+        help_text="Honeypot anti-spam (should stay empty for humans).",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this message was received.",
+    )
+    handled = models.BooleanField(
+        default=False,
+        help_text="Tick when the message has been replied to/resolved.",
+    )
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Contact Message"
+        verbose_name_plural = "Contact Messages"
+
+    def __str__(self):
+        return f"{self.name} <{self.email}> — {self.subject[:40]}"
+
+
+# ---------- Footer ----------
+
+class FooterSettings(models.Model):
+    """
+    Global footer configuration. Create/keep one active record; the latest active
+    one is rendered on the site. Lets non-technical admins control links, socials,
+    and branding without touching templates.
+    """
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Only active records are considered on the website.",
+    )
+    title = models.CharField(
+        max_length=120, default="Titu BD Science College",
+        help_text="Display title/brand next to contact info.",
+    )
+
+    # Contact block
+    address = models.CharField(
+        max_length=255, blank=True,
+        help_text="Footer contact address.",
+    )
+    phone = models.CharField(
+        max_length=120, blank=True,
+        help_text="Footer phone (can include multiple, separated by commas).",
+    )
+    email = models.EmailField(
+        blank=True,
+        help_text="Footer email address.",
+    )
+
+    # Quick links
+    link_home_enabled = models.BooleanField(
+        default=True,
+        help_text="Include the Home link.",
+    )
+    link_admission_label = models.CharField(
+        max_length=80, default="Admission",
+        help_text="Text label for the Admission link.",
+    )
+    link_admission_url = models.URLField(
+        blank=True,
+        help_text="URL to your admission page/form.",
+    )
+    link_results_label = models.CharField(
+        max_length=80, default="Results",
+        help_text="Text label for the Results link.",
+    )
+    link_results_url = models.URLField(
+        blank=True,
+        help_text="URL to your results portal/page.",
+    )
+    link_events_label = models.CharField(
+        max_length=80, default="Events (Highlights)",
+        help_text="Text label for the Events anchor link.",
+    )
+    link_events_anchor = models.CharField(
+        max_length=120, default="#college-functions",
+        help_text="Anchor or URL to your events/highlights section.",
+    )
+
+    # Socials
+    facebook_url = models.URLField(
+        blank=True,
+        help_text="Link to your Facebook page.",
+    )
+    whatsapp_url = models.URLField(
+        blank=True,
+        help_text="Link to your WhatsApp (group/business/profile).",
+    )
+    twitter_url = models.URLField(
+        blank=True,
+        help_text="Link to your Twitter/X profile.",
+    )
+    email_linkto = models.EmailField(
+        blank=True,
+        help_text="Different contact email for the mail icon (defaults to footer email).",
+    )
+
+    # Branding
+    logo = models.ImageField(
+        upload_to="footer/", blank=True, null=True,
+        help_text="Footer brand/logo image (small).",
+    )
+    logo_url = models.URLField(
+        blank=True,
+        help_text="Remote logo URL if you don't want to upload a file.",
+    )
+
+    # Credits / copyright
+    copyright_name = models.CharField(
+        max_length=160, default="Titu BD Science College",
+        help_text="Name displayed in copyright line.",
+    )
+    developer_name = models.CharField(
+        max_length=160, default="DS",
+        help_text="Developer/vendor credit name.",
+    )
+    developer_url = models.URLField(
+        blank=True, default="https://t2bd.com",
+        help_text="Link for the developer credit.",
+    )
+
+    # Audit
+    created_by = models.ForeignKey(
+        getattr(settings, "AUTH_USER_MODEL", "auth.User"),
+        null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="footer_settings_created",
+        help_text="User who created this footer config (optional).",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this footer record was created.",
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this footer record was last updated.",
+    )
+
+    class Meta:
+        verbose_name = "Footer Settings"
+        verbose_name_plural = "Footer Settings"
+
+    def __str__(self):
+        return f"Footer: {self.title} (active={self.is_active})"
+
+    @property
+    def logo_src(self) -> str:
+        """Return a usable logo URL (uploaded file wins; fallback to remote URL)."""
+        try:
+            if self.logo and self.logo.url:
+                return self.logo.url
+        except Exception:
+            pass
+        return self.logo_url or ""

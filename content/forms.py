@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator, RegexValidator
 
-from .models import AdmissionApplication
+from .models import AdmissionApplication, ContactMessage
 
 PHONE_RE = RegexValidator(
     regex=r"^01\d{9}$",
@@ -83,3 +83,30 @@ class AdmissionApplicationForm(forms.ModelForm):
         if gpa is not None and (gpa < 0 or gpa > 5):
             raise ValidationError("GPA must be between 0.00 and 5.00.")
         return gpa
+
+
+
+
+
+class ContactForm(forms.ModelForm):
+    # honeypot — keep hidden in template with CSS (bots will fill it)
+    website = forms.CharField(required=False)
+
+    class Meta:
+        model  = ContactMessage
+        fields = ["name", "email", "subject", "message", "phone", "website"]
+        widgets = {
+            "name":    forms.TextInput(attrs={"class": "form-control", "placeholder": "Your Name", "required": True}),
+            "email":   forms.EmailInput(attrs={"class": "form-control", "placeholder": "Your Email", "required": True}),
+            "subject": forms.TextInput(attrs={"class": "form-control", "placeholder": "Subject", "required": True}),
+            "message": forms.Textarea(attrs={"class": "form-control", "rows": 5, "placeholder": "Your Message", "required": True}),
+            "phone":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Phone (optional)"}),
+            "website": forms.TextInput(attrs={"class": "d-none"}),  # hide honeypot
+        }
+
+    def clean(self):
+        data = super().clean()
+        # if honeypot filled -> treat as spam
+        if data.get("website"):
+            raise forms.ValidationError("Spam detected.")
+        return data

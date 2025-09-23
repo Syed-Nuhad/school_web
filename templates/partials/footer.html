@@ -1,40 +1,112 @@
 {% load static %}
 
-<footer class="footer bg-dark text-white pt-5 pb-3">
+<footer class="site-footer-light pt-5 pb-3">
   <div class="container">
-    <div class="row">
-      <div class="col-md-4 mb-4">
-        <h5 class="fw-bold text-warning">📍 Contact Us</h5>
-        <p>Titu BD Science College, Mirpur-1, Dhaka, Bangladesh</p>
-        <p>Phone: +880 1234-567890</p>
-        <p>Email: info@titubdcollege.edu</p>
-      </div>
-
-      <div class="col-md-4 mb-4">
-        <h5 class="fw-bold text-warning">🔗 Quick Links</h5>
-        <ul class="list-unstyled">
-          <li><a href="{% url 'home' %}" class="footer-link text-white">Home</a></li>
-          <li><a href="#" class="footer-link text-white">Admission</a></li>
-          <li><a href="#" class="footer-link text-white">Results</a></li>
-          <li><a href="#college-functions" class="footer-link text-white">Events</a></li>
+    <div class="row g-4">
+      <!-- Contact -->
+      <div class="col-md-5">
+        <h5 class="footer-title mb-3">
+          <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
+          {{ footer.title|default:"Titu BD Science College" }}
+        </h5>
+        <ul class="list-unstyled mb-0 footer-contact">
+          <li class="mb-2">
+            <i class="bi bi-map me-2 text-secondary"></i>
+            {{ footer.address|default:"Mirpur-1, Dhaka, Bangladesh" }}
+          </li>
+          {% if footer.phone %}
+            <li class="mb-2">
+              <i class="bi bi-telephone me-2 text-secondary"></i>
+              <a class="link-plain" href="tel:{{ footer.phone }}">{{ footer.phone }}</a>
+            </li>
+          {% endif %}
+          {% if footer.email %}
+            <li class="mb-2">
+              <i class="bi bi-envelope me-2 text-secondary"></i>
+              <a class="link-plain" href="mailto:{{ footer.email }}">{{ footer.email }}</a>
+            </li>
+          {% endif %}
         </ul>
       </div>
 
-      <div class="col-md-4 mb-4">
-        <h5 class="fw-bold text-warning">🌐 Connect with Us</h5>
-        <a href="#" class="text-white me-3"><i class="fab fa-facebook fa-2x"></i></a>
-        <a href="#" class="text-white me-3"><i class="fab fa-whatsapp fa-2x"></i></a>
-        <a href="#" class="text-white me-3"><i class="fab fa-twitter fa-2x"></i></a>
-        <a href="mailto:info@titubdcollege.edu" class="text-white"><i class="fa-solid fa-envelope fa-2x"></i></a>
+      <!-- Quick Links -->
+      <div class="col-md-3">
+        <h5 class="footer-title mb-3">
+          <i class="bi bi-link-45deg me-2 text-primary"></i>Quick Links
+        </h5>
+        <ul class="list-unstyled footer-links">
+          {% if footer.link_home_enabled %}
+            <li><i class="bi bi-chevron-right text-muted"></i> <a href="{% url 'home' %}">Home</a></li>
+          {% endif %}
+          {% if footer.link_admission_url %}
+            <li><i class="bi bi-chevron-right text-muted"></i> <a href="{{ footer.link_admission_url }}">{{ footer.link_admission_label|default:"Admission" }}</a></li>
+          {% endif %}
+          {% if footer.link_results_url %}
+            <li><i class="bi bi-chevron-right text-muted"></i> <a href="{{ footer.link_results_url }}">{{ footer.link_results_label|default:"Results" }}</a></li>
+          {% endif %}
+          {% if footer.link_events_anchor %}
+            <li><i class="bi bi-chevron-right text-muted"></i> <a href="{{ footer.link_events_anchor }}">{{ footer.link_events_label|default:"Events" }}</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- Socials / Brand -->
+      <div class="col-md-4">
+        <h5 class="footer-title mb-3">
+          <i class="bi bi-people-fill me-2 text-primary"></i>Connect
+        </h5>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          {% if footer.facebook_url %}
+            <a class="social-btn-light" href="{{ footer.facebook_url }}" target="_blank" rel="noopener" aria-label="Facebook">
+              <i class="bi bi-facebook"></i>
+            </a>
+          {% endif %}
+          {% if footer.whatsapp_url %}
+            <a class="social-btn-light" href="{{ footer.whatsapp_url }}" target="_blank" rel="noopener" aria-label="WhatsApp">
+              <i class="bi bi-whatsapp"></i>
+            </a>
+          {% endif %}
+          {% if footer.twitter_url %}
+            <a class="social-btn-light" href="{{ footer.twitter_url }}" target="_blank" rel="noopener" aria-label="Twitter/X">
+              <i class="bi bi-twitter-x"></i>
+            </a>
+          {% endif %}
+          {% with em=footer.email_linkto|default:footer.email %}
+            {% if em %}
+              <a class="social-btn-light" href="mailto:{{ em }}" aria-label="Email">
+                <i class="bi bi-envelope-fill"></i>
+              </a>
+            {% endif %}
+          {% endwith %}
+        </div>
+
+        {% if footer.logo_src %}
+          <div class="d-flex align-items-center gap-2">
+            <img src="{{ footer.logo_src }}" alt="Logo" class="footer-logo">
+            <span class="text-muted small">Official brand</span>
+          </div>
+        {% endif %}
       </div>
     </div>
 
-    <hr class="bg-secondary">
-    <div class="d-flex justify-content-center align-items-center flex-wrap text-center">
-      <p class="mb-0 mx-3">&copy; <span id="y"></span> Titu BD Science College. All rights reserved.</p>
-      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" style="height: 30px; width: auto;" class="mx-3">
-      <span class="mx-3">Developed by <strong>DS</strong> • t2bd.com</span>
+    <hr class="footer-sep-light my-4">
+
+    <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-3 text-center small text-muted">
+      <span>
+        &copy; <span id="y"></span> {{ footer.copyright_name|default:"Titu BD Science College" }} — All rights reserved.
+      </span>
+      <span class="d-none d-md-inline">•</span>
+      <span>
+        <i class="bi bi-code-slash me-1"></i>Developed by
+        {% if footer.developer_url %}
+          <a class="link-plain" href="{{ footer.developer_url }}" target="_blank" rel="noopener">
+            <strong>{{ footer.developer_name|default:"DS" }}</strong>
+          </a>
+        {% else %}
+          <strong>{{ footer.developer_name|default:"DS" }}</strong>
+        {% endif %}
+      </span>
     </div>
   </div>
-  <script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+  <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
 </footer>

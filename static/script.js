@@ -195,16 +195,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-// ⭐⭐⭐⭐⭐================ Start CONTACT SECTION STYLES
 
-
-
-document.getElementById('contact-form').addEventListener('submit', function(e){
-  e.preventDefault();
-  alert("Thank you! Your message will be sent once backend is connected.");
-});
-
-// ⭐ End CONTACT SECTION STYLES ====================================================================================
 
   // ⭐⭐⭐⭐⭐===================== Start About Section Image Fade-in animation and cycling images  
 
@@ -1506,4 +1497,113 @@ document.addEventListener('click', function (e) {
   });
 })();
 
+(function () {
+  // --- Hero MP4 video via Bootstrap modal ---
+  document.addEventListener('click', function (e) {
+    var playBtn = e.target.closest('.js-play-hero');
+    if (!playBtn) return;
+    e.preventDefault();
+    var src = playBtn.getAttribute('data-video');
+    var modalEl = document.getElementById('festVideoModal');
+    var videoEl = document.getElementById('festVideoPlayer');
+    if (!modalEl || !videoEl || !src) return;
+    var modal = (window.bootstrap && new bootstrap.Modal(modalEl)) || null;
+    videoEl.src = src;
+    modal && modal.show();
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    }, { once: true });
+  });
 
+  // --- lightGallery (images + YouTube) ---
+  if (typeof window.lightGallery !== 'function') return;
+  var plugins = [];
+  if (window.lgZoom) plugins.push(window.lgZoom);
+  if (window.lgDownload) plugins.push(window.lgDownload);
+  if (window.lgVideo) plugins.push(window.lgVideo);
+
+  // Collect dynamic items for a given festival by scanning anchors with data-fest
+  function collectDynamicEl(festId) {
+    var anchors = document.querySelectorAll('.js-open-lg[data-fest="' + festId + '"]');
+    // We’ll build by index to preserve order
+    var dict = {};
+    anchors.forEach(function (a) {
+      var idx  = parseInt(a.getAttribute('data-index') || '0', 10) || 0;
+      var kind = a.getAttribute('data-kind') || 'image';
+      var src  = a.getAttribute('data-src') || '';
+      if (!src) return;
+
+      if (kind === 'youtube') {
+        dict[idx] = {
+          // lg-video expects 'src' as YouTube URL; it handles iframe
+          src: src,
+          thumb: (a.querySelector('img')?.src) || '',
+          subHtml: '',
+          video: { source: [{ src: src, type: 'youtube' }], attributes: { preload: 'none' } }
+        };
+      } else { // image
+        var thumb = (a.querySelector('img')?.src) || src;
+        dict[idx] = { src: src, thumb: thumb, subHtml: '' };
+      }
+    });
+
+    // Compact into array
+    var max = Math.max(-1, ...Object.keys(dict).map(Number));
+    var arr = [];
+    for (var i = 0; i <= max; i++) if (dict[i]) arr.push(dict[i]);
+    return arr;
+  }
+
+  // Single holder, reuse instance
+  var holder = document.createElement('div');
+  document.body.appendChild(holder);
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-open-lg');
+    if (!btn) return;
+    e.preventDefault();
+
+    var festId = btn.getAttribute('data-fest');
+    var startIndex = parseInt(btn.getAttribute('data-index') || '0', 10) || 0;
+    if (!festId) return;
+
+    // Build the dataset
+    var dynamicEl = collectDynamicEl(festId);
+    if (!dynamicEl.length) return;
+
+    // Destroy old instance if any
+    if (holder.__lgInstance) {
+      try { holder.__lgInstance.destroy(true); } catch (_){}
+      holder.__lgInstance = null;
+    }
+
+    var lg = window.lightGallery(holder, {
+      dynamic: true,
+      dynamicEl: dynamicEl,
+      licenseKey: '0000-0000-000-0000',
+      plugins: plugins,
+      download: true,
+      zoom: true,
+      actualSize: true,
+      mousewheel: true,
+      counter: false,
+      closable: true,
+      hideBarsDelay: 2000,
+      selector: null,
+      speed: 300,
+      backdropDuration: 200,
+      thumbWidth: 80,
+      // Keep UI minimal like WhatsApp (close + zoom + download)
+      controls: true,
+      // Disable extra captions/toolbars
+      appendSubHtmlTo: '.lg-item',
+      slideDelay: 0,
+      autoplayFirstVideo: false,
+      videoMaxSize: '1280-720',
+    });
+    holder.__lgInstance = lg;
+    lg.openGallery(Math.max(0, Math.min(startIndex, dynamicEl.length - 1)));
+  });
+})();

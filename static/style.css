@@ -140,11 +140,11 @@ body.section .sticky-section {
 .dropdown-menu a {
   display: block;
   padding: 8px 15px;
-  color: #fff;
+  color: black;
   white-space: nowrap;
 }
 .dropdown-menu a:hover {
-  background: #005bb5;
+  text: white!important;
 }
 
 /* Show dropdown on hover */
@@ -213,7 +213,7 @@ body.section .sticky-section {
     padding: 6px 0 8px;
   }
   .dropdown.open > .dropdown-menu { display: block; }
-  .dropdown-menu a { padding-left: 26px; }
+  .dropdown-menu a { padding-left: 26px; text: white;}
 }
 
 /* ===== END: Navigation Menu Styles ===== */
@@ -1916,7 +1916,55 @@ body { background: #fff !important; }
 
 
 
-  /* Smooth transform for zoom/pan */
-  #fimImg { transition: transform 0.05s linear; }
-  /* When dragging */
-  #fimImg.fim-dragging { cursor: grabbing !important; }
+.lg-backdrop { background: rgba(0,0,0,0.96); }
+.lg-toolbar { background: transparent; }
+.lg-counter { display: none !important; }
+.lg-sub-html { display: none !important; }
+
+
+
+
+
+
+
+
+/* Light, airy footer */
+.site-footer-light{
+  background:#ffffff;
+  border-top:1px solid #e9ecef;
+  color:#2b2f38;
+}
+.footer-title{
+  font-weight:600;
+  letter-spacing:.2px;
+  display:flex; align-items:center;
+}
+.footer-contact .link-plain,
+.link-plain{
+  color:#2b2f38; text-decoration:none;
+}
+.footer-contact .link-plain:hover,
+.link-plain:hover{ text-decoration:underline; }
+
+.footer-links li{
+  margin:.4rem 0; display:flex; align-items:center; gap:.35rem;
+}
+.footer-links a{
+  color:#495057; text-decoration:none;
+}
+.footer-links a:hover{ color:#0d6efd; }
+
+.social-btn-light{
+  width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:10px; background:#f8f9fa;
+  color:#0d6efd; text-decoration:none; transition:.2s ease;
+  border:1px solid #e9ecef;
+}
+.social-btn-light:hover{
+  transform:translateY(-2px);
+  background:#eef4ff;
+  border-color:#cfe2ff;
+}
+
+.footer-logo{ height:32px; width:auto; border-radius:6px; }
+.footer-sep-light{ border-color:#e9ecef !important; opacity:1; }

@@ -2,7 +2,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
-from .models import Course, AdmissionApplication, FunctionHighlight
+from .models import Course, AdmissionApplication, FunctionHighlight, FestivalMedia, CollegeFestival, Member, \
+    ContactInfo, ContactMessage, FooterSettings
 
 from .models import (
     Banner,
@@ -387,3 +388,214 @@ class FunctionHighlightAdmin(OwnableAdminMixin):
     list_filter   = ("is_active",)
     search_fields = ("title", "place", "description")
     list_editable = ("order", "is_active")
+
+
+
+def _thumb(obj, size=60):
+    # show thumbnail if available; else image; else –
+    try:
+        url = ""
+        if getattr(obj, "thumbnail", None) and obj.thumbnail:
+            url = obj.thumbnail.url
+        elif getattr(obj, "image", None) and obj.image:
+            url = obj.image.url
+        if url:
+            return format_html('<img src="{}" style="height:{}px;border-radius:6px">', url, size)
+    except Exception:
+        pass
+    return "—"
+
+class FestivalMediaInline(admin.TabularInline):
+    model = FestivalMedia
+    extra = 1
+    fields = ("is_active", "order", "kind", "image", "youtube_url", "thumbnail", "caption", "preview")
+    readonly_fields = ("preview",)
+
+    def preview(self, obj):
+        return _thumb(obj)
+    preview.short_description = "Preview"
+
+@admin.register(CollegeFestival)
+class CollegeFestivalAdmin(OwnableAdminMixin):
+    list_display  = ("title", "place", "date_text", "order", "is_active", "updated_at")
+    list_filter   = ("is_active",)
+    search_fields = ("title", "place", "description")
+    ordering      = ("order", "-updated_at")
+    inlines       = [FestivalMediaInline]
+    prepopulated_fields = {"slug": ("title",)}
+
+    fieldsets = (
+        ("Details", {
+            "fields": ("is_active", "order", "title", "slug", "place", "date_text", "time_text", "description")
+        }),
+        ("Hero Media", {
+            "fields": ("hero_image", "hero_video", "hero_youtube_url"),
+            "description": "Provide either a hero image, a video file, or a YouTube URL."
+        }),
+    )
+
+
+
+
+
+@admin.register(Member)
+class MemberAdmin(OwnableAdminMixin):
+    list_display  = ("name","role","post","section","is_active","order","thumb","updated_at")
+    list_filter   = ("is_active","role","section")
+    search_fields = ("name","post","bio")
+    list_editable = ("order","is_active")
+    readonly_fields = ("created_by","created_at","updated_at","preview")
+
+    fieldsets = (
+        (None, {
+            "fields": ("is_active","order","role","name","post","section","bio")
+        }),
+        ("Image", {
+            "fields": ("photo","photo_url","preview"),
+            "description": "Upload <b>photo</b> or provide a publicly accessible <b>photo URL</b>."
+        }),
+        ("Audit", {"fields": ("created_by","created_at","updated_at")}),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by_id:
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)
+
+    def thumb(self, obj):
+        src = obj.image_src
+        return format_html('<img src="{}" style="height:38px;border-radius:6px;">', src) if src else "—"
+    thumb.short_description = "Photo"
+
+    def preview(self, obj):
+        src = obj.image_src
+        return format_html('<img src="{}" style="max-height:160px;max-width:100%;border-radius:8px;">', src) if src else "—"
+    preview.short_description = "Preview"
+
+
+
+
+
+
+@admin.register(ContactInfo)
+class ContactInfoAdmin(OwnableAdminMixin):
+    """
+    Uses only fields we know exist from your code:
+    - is_active, address, phone, email, hours, map_embed_src
+    """
+    list_display  = ("is_active", "address_short", "phone", "email")
+    list_filter   = ("is_active",)
+    search_fields = ("address", "phone", "email", "hours")
+    readonly_fields = ("preview_map",)
+
+    fieldsets = (
+        ("Visibility", {
+            "fields": ("is_active",),
+        }),
+        ("Details", {
+            "fields": ("address", "phone", "email", "hours"),
+        }),
+        ("Map", {
+            # If your model has ONLY `map_embed_src`, keep this.
+            # If you later add map_input/map_zoom, put them here too.
+            "fields": ("map_embed_src", "preview_map"),
+            "description": "Paste a Google Maps embed URL (the long one that starts with https://www.google.com/maps/embed?...).",
+        }),
+    )
+
+    def address_short(self, obj):
+        if not getattr(obj, "address", ""):
+            return "—"
+        s = obj.address.strip()
+        return (s[:40] + "…") if len(s) > 40 else s
+    address_short.short_description = "Address"
+
+    def preview_map(self, obj):
+        src = getattr(obj, "map_embed_src", "") or ""
+        if not src:
+            return "—"
+        return format_html(
+            '<iframe src="{}" width="100%" height="200" style="border:0;" allowfullscreen loading="lazy"></iframe>',
+            src
+        )
+    preview_map.short_description = "Map Preview"
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(OwnableAdminMixin):
+    """
+    Minimal, avoids non-existent fields like `is_resolved`.
+    Uses: name, email, subject, message (read-only for audit).
+    """
+    list_display  = ("id", "name", "email", "subject")
+    list_filter   = ()  # no unknown fields here
+    search_fields = ("name", "email", "subject", "message")
+    readonly_fields = ("name", "email", "subject", "message")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@admin.register(FooterSettings)
+class FooterSettingsAdmin(OwnableAdminMixin):
+    list_display  = ("title", "is_active", "updated_at", "preview_logo")
+    list_filter   = ("is_active",)
+    search_fields = ("title", "address", "phone", "email", "copyright_name", "developer_name")
+    readonly_fields = ("created_at", "updated_at", "preview_logo")
+
+    fieldsets = (
+        ("Visibility & Title", {
+            "fields": ("is_active", "title")
+        }),
+        ("Contact", {
+            "fields": ("address", "phone", "email")
+        }),
+        ("Quick Links", {
+            "fields": (
+                "link_home_enabled",
+                ("link_admission_label", "link_admission_url"),
+                ("link_results_label", "link_results_url"),
+                ("link_events_label", "link_events_anchor"),
+            ),
+            "description": "Leave a URL blank to hide that quick link."
+        }),
+        ("Social Links", {
+            "fields": ("facebook_url", "whatsapp_url", "twitter_url", "email_linkto"),
+            "description": "If Email Link is blank, footer uses the Contact email."
+        }),
+        ("Branding", {
+            "fields": ("logo", "logo_url", "preview_logo"),
+            "description": "Upload a logo or provide a direct URL. Uploaded image takes precedence."
+        }),
+        ("Credits", {
+            "fields": ("copyright_name", "developer_name", "developer_url")
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at")
+        }),
+    )
+
+    def preview_logo(self, obj):
+        if not obj:
+            return "—"
+        src = obj.logo_src
+        if not src:
+            return "—"
+        return format_html('<img src="{}" style="height:40px;">', src)
+    preview_logo.short_description = "Logo Preview"
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)

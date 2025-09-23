@@ -349,7 +349,7 @@
 
 <section id="academics" class="py-5">
   <div class="container" data-aos="fade-up">
-    <div class="text-start mb-4">
+    <div class="text-center mb-4">
       <h2 class="fw-normal">Programs & Courses</h2>
       <p class="text-muted">Explore our programs — durations, eligibility, fees and downloadable syllabi.</p>
     </div>
@@ -456,31 +456,20 @@
 
 <!-- ⭐⭐⭐⭐⭐ Start : College Function Highlights -->
 <section class="container my-5" id="college-functions">
-  <h2 class="fw-normal">
-    College Function Highlights
-  </h2>
+  <h2 class="fw-normal">College Function Highlights</h2>
 
-  <!-- We init LightGallery on this container -->
   <div id="functions-gallery" class="row g-5 align-items-center">
-    {% for f in functions %}
-      {# alternate left/right every item #}
+    {% for f in functions_page %}
       <div class="col-md-6 {% if forloop.counter|divisibleby:2 %}order-md-2{% endif %}"
            data-aos="fade-{{ forloop.counter|divisibleby:2|yesno:'left,right' }}">
         <div class="media-box position-relative shadow rounded overflow-hidden">
-
           {% if f.image %}
-            <!-- Anchor is the gallery item -->
-            <a
-              href="{{ f.image.url }}"
-              class="js-fn-item d-block"
-              data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>"
-            >
-              <img
-                src="{{ f.image.url }}"
-                alt="{{ f.title }}"
-                class="img-fluid w-100 function-img"
-                style="height:300px;object-fit:cover;"
-              >
+            <a href="{{ f.image.url }}"
+               class="js-fn-item d-block"
+               data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
+              <img src="{{ f.image.url }}" alt="{{ f.title }}"
+                   class="img-fluid w-100 function-img"
+                   style="height:300px;object-fit:cover;">
             </a>
           {% else %}
             <div class="bg-light p-5 text-center">No image</div>
@@ -489,11 +478,9 @@
           <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
             <h4 class="mb-0">{{ f.title }}</h4>
             {% if f.image %}
-              <a
-                href="{{ f.image.url }}"
-                class="btn btn-primary align-self-end mt-2 js-fn-item"
-                data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>"
-              >
+              <a href="{{ f.image.url }}"
+                 class="btn btn-primary align-self-end mt-2 js-fn-item"
+                 data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
                 Full View
               </a>
             {% endif %}
@@ -519,8 +506,45 @@
       </div>
     {% endfor %}
   </div>
+
+  {# --- Bootstrap-default pager (no spacing classes) --- #}
+  {% if functions_page.paginator.num_pages > 1 %}
+    <nav aria-label="Function pagination" class="mt-4 text-align-center align-items-center justify-content-center">
+      <ul class="pagination text-align-center align-items-center justify-content-center">
+        {% if functions_page.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?fpage={{ functions_page.previous_page_number }}#college-functions">Previous</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        {% for p in functions_page.paginator.page_range %}
+          {% if p == functions_page.number %}
+            <li class="page-item active" aria-current="page">
+              <a class="page-link" href="?fpage={{ p }}#college-functions">{{ p }}</a>
+            </li>
+          {% else %}
+            <li class="page-item">
+              <a class="page-link" href="?fpage={{ p }}#college-functions">{{ p }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+
+        {% if functions_page.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?fpage={{ functions_page.next_page_number }}#college-functions">Next</a>
+          </li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
 </section>
+
 <!-- ⭐ End  College Function Highlights -->
+
 
 
 {# === Modal with close icon & back button === #}
@@ -563,142 +587,437 @@
 </div>
 
 
-<!-- ⭐⭐⭐⭐⭐ Start: Cultural Fest 2025 Section -->
-<section class="container my-5" id="cultural-fest">
-  <h2 class="text-center fw-normal text-primary mb-5" data-aos="fade-up">Cultural Fest 2025</h2>
-  <div class="row g-5 align-items-center">
-    <div class="col-md-6" data-aos="fade-right">
-      <div class="media-box">
-        <video class="w-100 mt-3" style="height: 200px; object-fit: cover; cursor: pointer;" onclick="openVideoModal('{% static 'videos/fest-video.mp4' %}')">
-          <source src="{% static 'img/video/devmunzereen 2025-04-14 03-33-29.mp4' %}" type="video/mp4">
-          Your browser does not support HTML5 video.
-        </video>
-        <div class="p-3 bg-light">
-          <h4 class="fw-normal mb-2 text-success">Cultural Fest 2025</h4>
-          <p class="mb-1"><strong>Place:</strong> Main Auditorium, XYZ College</p>
-          <p class="mb-1"><strong>Date:</strong> February 15, 2025</p>
-          <p class="mb-1"><strong>Time:</strong> 6:00 PM onwards</p>
-        </div>
-        <div class="d-flex justify-content-between p-3 bg-white">
-          <a href="#" class="btn btn-primary px-4">Full View</a>
-        </div>
-      </div>
-    </div>
+<!-- ⭐⭐⭐⭐⭐ Start: College Festivals -->
+<section class="container my-5" id="college-festivals">
+  <h2 class="text-start fw-normal mb-5" data-aos="fade-up">College Festivals</h2>
 
-    <div class="col-md-6" data-aos="fade-left">
-      <div class="p-4 shadow rounded bg-light">
-        <p class="mb-0">
-          The Cultural Fest 2025 was a grand celebration of art, music, dance, and creativity.
-          Students showcased their talents, blending traditional and modern performances.
-          The auditorium was alive with energy, making it a night to remember.
-        </p>
+  {% if festivals_page.object_list %}
+    {% for fest in festivals_page %}
+      {% with is_even=forloop.counter|divisibleby:2 %}
+      <div class="row g-5 align-items-center mb-5" data-fest-box="{{ fest.id }}">
+        <!-- Media side -->
+        <div class="col-md-6 {% if is_even %}order-md-2{% endif %}"
+             data-aos="fade-{% if is_even %}left{% else %}right{% endif %}">
+          <div class="position-relative shadow rounded overflow-hidden">
+
+            {# HERO: video wins > youtube > image #}
+            {% if fest.hero_video %}
+              <a href="#" class="d-block js-play-hero" data-video="{{ fest.hero_video.url }}" aria-label="Play video">
+                {% if fest.hero_image %}
+                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+                {% else %}
+                  <div class="bg-dark d-flex align-items-center justify-content-center text-white" style="height:300px">Play Video</div>
+                {% endif %}
+              </a>
+            {% elif fest.hero_youtube_url %}
+              <a href="#" class="d-block js-open-lg" data-fest="{{ fest.id }}" data-kind="youtube" data-src="{{ fest.hero_youtube_url }}" data-index="0">
+                {% if fest.hero_image %}
+                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+                {% else %}
+                  <div class="bg-dark d-flex align-items-center justify-content-center text-white" style="height:300px">Watch on YouTube</div>
+                {% endif %}
+              </a>
+            {% elif fest.hero_image %}
+              <a href="#" class="d-block js-open-lg" data-fest="{{ fest.id }}" data-kind="image" data-src="{{ fest.hero_image.url }}" data-index="0">
+                <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+              </a>
+            {% else %}
+              <div class="bg-light p-5 text-center">No media</div>
+            {% endif %}
+
+            <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
+              <h4 class="mb-0">{{ fest.title }}</h4>
+              <div class="align-self-end d-flex gap-2">
+                {% if fest.hero_video %}
+                  <a href="#" class="btn btn-primary btn-sm js-play-hero" data-video="{{ fest.hero_video.url }}">Play</a>
+                {% endif %}
+                {% if fest.hero_image or fest.hero_youtube_url %}
+                  <a href="#" class="btn btn-outline-light btn-sm js-open-lg" data-fest="{{ fest.id }}" data-index="0">Full View</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-light p-3 rounded shadow-sm mt-3">
+            {% if fest.place %}<p class="mb-1"><strong>Place:</strong> {{ fest.place }}</p>{% endif %}
+            {% if fest.date_text %}<p class="mb-1"><strong>Date:</strong> {{ fest.date_text }}</p>{% endif %}
+            {% if fest.time_text %}<p class="mb-0"><strong>Time:</strong> {{ fest.time_text }}</p>{% endif %}
+          </div>
+        </div>
+
+        <!-- Text + thumbs -->
+        <div class="col-md-6 {% if is_even %}order-md-1{% endif %}"
+             data-aos="fade-{% if is_even %}right{% else %}left{% endif %}">
+          <div class="p-4 shadow rounded bg-light h-100">
+            <p class="mb-0">{{ fest.description }}</p>
+
+            {% if fest.media_items.all %}
+              <div class="row g-2 mt-3">
+                {% for m in fest.media_items.all %}
+                  {% if m.is_active %}
+                    <div class="col-4">
+                      {% if m.kind == 'image' and m.image %}
+                        <a href="#" class="d-block js-open-lg"
+                           data-fest="{{ fest.id }}" data-kind="image"
+                           data-src="{{ m.image.url }}" data-index="{{ forloop.counter0 }}">
+                          <img src="{{ m.thumbnail.url|default:m.image.url }}" class="img-fluid rounded" alt="{{ m.caption }}">
+                        </a>
+                      {% elif m.kind == 'youtube' and m.youtube_url %}
+                        <a href="#" class="d-block js-open-lg"
+                           data-fest="{{ fest.id }}" data-kind="youtube"
+                           data-src="{{ m.youtube_url }}" data-index="{{ forloop.counter0 }}">
+                          {% if m.thumbnail %}
+                            <img src="{{ m.thumbnail.url }}" class="img-fluid rounded" alt="{{ m.caption }}">
+                          {% else %}
+                            <div class="ratio ratio-16x9 rounded bg-dark text-white d-flex align-items-center justify-content-center">
+                              YT
+                            </div>
+                          {% endif %}
+                        </a>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+      {% endwith %}
+    {% endfor %}
+
+    {# --- PAGER --- #}
+    {% if festivals_page.paginator.num_pages > 1 %}
+      <nav aria-label="Festivals pagination" class="mt-4">
+        <ul class="pagination text-align-center align-items-center justify-content-center">
+          {% if festivals_page.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?festpage={{ festivals_page.previous_page_number }}#college-festivals">Previous</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+
+          {% for p in festivals_page.paginator.page_range %}
+            {% if p == festivals_page.number %}
+              <li class="page-item active" aria-current="page">
+                <a class="page-link" href="?festpage={{ p }}#college-festivals">{{ p }}</a>
+              </li>
+            {% else %}
+              <li class="page-item">
+                <a class="page-link" href="?festpage={{ p }}#college-festivals">{{ p }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if festivals_page.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?festpage={{ festivals_page.next_page_number }}#college-festivals">Next</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info">No festivals yet.</div>
+  {% endif %}
 </section>
+<!-- ⭐ End: College Festivals -->
 
-<!-- Bootstrap Video Modal -->
-<div class="modal fade" id="videoModal" tabindex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg">
-    <div class="modal-content bg-dark">
+<!-- Bootstrap Video Modal (for hero MP4) -->
+<div class="modal fade" id="festVideoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content bg-dark border-0">
+      <button type="button" class="btn-close btn-close-white position-absolute end-0 m-2" data-bs-dismiss="modal" aria-label="Close"></button>
       <div class="modal-body p-0">
-        <video id="modalVideo" class="w-100" controls></video>
-      </div>
-      <div class="modal-footer bg-dark border-0">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+        <video id="festVideoPlayer" class="w-100" controls playsinline></video>
       </div>
     </div>
   </div>
 </div>
-<!--⭐ End College Function Highlights ================================================================= -->
+
+
 
 <!-- ⭐⭐⭐⭐⭐====================== Start: College Member Dashboard Section ====================== -->
 <section class="container py-5" id="college-members" data-aos="fade-up">
-  <h2 class="text-center mb-4 text-primary fw-normal">College Members</h2>
+  <h2 class="text-start mb-4 fw-normal">College Members</h2>
 
   <div class="row g-4">
+    <!-- HOD -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3 shadow-sm">
         <div class="card-icon mb-2 fs-1">👨‍💼</div>
         <h5 class="card-title">Head of Department</h5>
-        <div class="card-buttons mt-3">
-          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        <div class="small text-muted mb-2">{{ members_counts.hod|default_if_none:"0" }} total</div>
+        <div class="card-buttons mt-2">
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#membersModalHod">
+            View All
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- Teachers -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3 shadow-sm">
         <div class="card-icon mb-2 fs-1">👩‍🏫</div>
         <h5 class="card-title">Teachers</h5>
-        <div class="card-buttons mt-3">
-          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        <div class="small text-muted mb-2">{{ members_counts.teacher|default_if_none:"0" }} total</div>
+        <div class="card-buttons mt-2">
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#membersModalTeacher">
+            View All
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- Students -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3 shadow-sm">
         <div class="card-icon mb-2 fs-1">👨‍🎓</div>
         <h5 class="card-title">Students</h5>
-        <div class="card-buttons mt-3">
-          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        <div class="small text-muted mb-2">{{ members_counts.student|default_if_none:"0" }} total</div>
+        <div class="card-buttons mt-2">
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#membersModalStudent">
+            View All
+          </button>
         </div>
       </div>
     </div>
 
+    <!-- Staff -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3 shadow-sm">
         <div class="card-icon mb-2 fs-1">🧑‍🔧</div>
         <h5 class="card-title">Staff</h5>
-        <div class="card-buttons mt-3">
-          <a href="#" class="btn btn-sm btn-primary">View All</a>
+        <div class="small text-muted mb-2">{{ members_counts.staff|default_if_none:"0" }} total</div>
+        <div class="card-buttons mt-2">
+          <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#membersModalStaff">
+            View All
+          </button>
         </div>
       </div>
     </div>
   </div>
 </section>
+
+{# Modals — ids use {{ sec.key|title }} → Hod / Teacher / Student / Staff #}
+{% for sec in member_sections %}
+  <div class="modal fade" id="membersModal{{ sec.key|title }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ sec.label }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            {% if sec.items %}
+              {% for m in sec.items %}
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3 border rounded p-2">
+                    {% if m.photo %}
+                      <img src="{{ m.photo.url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;">
+                    {% elif m.photo_url %}
+                      <img src="{{ m.photo_url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;">
+                    {% endif %}
+                    <div>
+                      <div class="fw-semibold">{{ m.name }}</div>
+                      {% if m.post %}<div class="small text-muted">{{ m.post }}</div>{% endif %}
+                      {% if m.section %}<div class="small text-muted">Section: {{ m.section }}</div>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="col-12">
+                <div class="text-muted small">No entries yet.</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
 <!-- ⭐ End: College Member Dashboard Section ================================================== -->
 
-<!--⭐⭐⭐⭐⭐================================================ Start CONTACT SECTION  -->
-<section id="contact" class="py-5 bg-light">
+{# ✅ Four reusable modals (Bootstrap) — NO .split() calls #}
+{% for sec in member_sections %}
+  {# id uses TitleCase so: hod -> Hod, teacher -> Teacher, etc. #}
+  <div class="modal fade" id="membersModal{{ sec.key|title }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ sec.label }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="row g-3">
+            {% if sec.items %}
+              {% for m in sec.items %}
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3 border rounded p-2">
+                    {% if m.photo %}
+                      <img src="{{ m.photo.url }}" alt="{{ m.name }}" class="rounded"
+                           style="width:64px;height:64px;object-fit:cover;">
+                    {% endif %}
+                    <div>
+                      <div class="fw-semibold">{{ m.name }}</div>
+                      {% if m.post %}<div class="small text-muted">{{ m.post }}</div>{% endif %}
+                      {% if m.section %}<div class="small text-muted">Section: {{ m.section }}</div>{% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="col-12">
+                <div class="text-muted small">No entries yet.</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+<!-- ⭐ End: College Member Dashboard Section ================================================== -->
+
+
+
+
+<!-- ⭐⭐⭐⭐⭐======================= Start: Contact Section ======================= -->
+<section id="contact" class="py-5">
   <div class="container" data-aos="fade-up">
+    <!-- Django flash messages (success/error) near the form anchor -->
+    {% if messages %}
+      <div class="mb-3">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
     <div class="text-center mb-4">
       <h2 class="fw-normal">Contact Us</h2>
       <p class="text-muted">We’d love to hear from you! Reach out using the form or visit us directly.</p>
     </div>
 
     <div class="row g-4">
+      <!-- Left: Contact info from admin -->
       <div class="col-lg-4">
         <div class="card shadow-sm border-0 h-100">
           <div class="card-body">
             <h5 class="fw-normal mb-3">Get in Touch</h5>
-            <p><i class="bi bi-geo-alt-fill text-primary me-2"></i> 123 College Road, Dhaka, Bangladesh</p>
-            <p><i class="bi bi-telephone-fill text-primary me-2"></i> +880 123 456 789</p>
-            <p><i class="bi bi-envelope-fill text-primary me-2"></i> info@yourcollege.com</p>
-            <p><i class="bi bi-clock-fill text-primary me-2"></i> Mon–Sat: 8:00 AM – 5:00 PM</p>
+
+            {% if contact_info and contact_info.address %}
+              <p class="mb-2">
+                <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+                {{ contact_info.address }}
+              </p>
+            {% endif %}
+
+            {% if contact_info and contact_info.phone %}
+              <p class="mb-2">
+                <i class="bi bi-telephone-fill text-primary me-2"></i>
+                <a href="tel:{{ contact_info.phone|cut:' ' }}" class="text-decoration-none">
+                  {{ contact_info.phone }}
+                </a>
+              </p>
+            {% endif %}
+
+            {% if contact_info and contact_info.email %}
+              <p class="mb-2">
+                <i class="bi bi-envelope-fill text-primary me-2"></i>
+                <a href="mailto:{{ contact_info.email }}" class="text-decoration-none">
+                  {{ contact_info.email }}
+                </a>
+              </p>
+            {% endif %}
+
+            {% if contact_info and contact_info.hours %}
+              <p class="mb-0">
+                <i class="bi bi-clock-fill text-primary me-2"></i>
+                {{ contact_info.hours }}
+              </p>
+            {% endif %}
           </div>
         </div>
       </div>
 
+      <!-- Right: Contact form (Django form fields) -->
       <div class="col-lg-8">
         <div class="card shadow-sm border-0">
           <div class="card-body">
-            <form id="contact-form">
+            <form id="contact-form" method="post" action="{% url 'contact_submit' %}#contact" novalidate>
+              {% csrf_token %}
+
               <div class="row g-3">
                 <div class="col-md-6">
-                  <input type="text" class="form-control" placeholder="Your Name" required>
+                  <label class="form-label small text-muted mb-1">Your Name</label>
+                  {{ contact_form.name }}
+                  {% if contact_form.name.errors %}
+                    <div class="text-danger small mt-1">{{ contact_form.name.errors|striptags }}</div>
+                  {% endif %}
                 </div>
+
                 <div class="col-md-6">
-                  <input type="email" class="form-control" placeholder="Your Email" required>
+                  <label class="form-label small text-muted mb-1">Your Email</label>
+                  {{ contact_form.email }}
+                  {% if contact_form.email.errors %}
+                    <div class="text-danger small mt-1">{{ contact_form.email.errors|striptags }}</div>
+                  {% endif %}
                 </div>
+
                 <div class="col-md-12">
-                  <input type="text" class="form-control" placeholder="Subject" required>
+                  <label class="form-label small text-muted mb-1">Subject</label>
+                  {{ contact_form.subject }}
+                  {% if contact_form.subject.errors %}
+                    <div class="text-danger small mt-1">{{ contact_form.subject.errors|striptags }}</div>
+                  {% endif %}
                 </div>
+
                 <div class="col-md-12">
-                  <textarea class="form-control" rows="5" placeholder="Your Message" required></textarea>
+                  <label class="form-label small text-muted mb-1">Your Message</label>
+                  {{ contact_form.message }}
+                  {% if contact_form.message.errors %}
+                    <div class="text-danger small mt-1">{{ contact_form.message.errors|striptags }}</div>
+                  {% endif %}
                 </div>
-                <div class="col-md-12 text-end">
+
+                <div class="col-md-6">
+                  <label class="form-label small text-muted mb-1">Phone (optional)</label>
+                  {{ contact_form.phone }}
+                  {% if contact_form.phone.errors %}
+                    <div class="text-danger small mt-1">{{ contact_form.phone.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+
+                <!-- Honeypot (hidden) -->
+                <div class="d-none">
+                  {{ contact_form.website }}
+                </div>
+
+                <!-- Non-field errors -->
+                {% if contact_form.non_field_errors %}
+                  <div class="col-12">
+                    <div class="text-danger small">{{ contact_form.non_field_errors|striptags }}</div>
+                  </div>
+                {% endif %}
+
+                <div class="col-12 text-end">
                   <button type="submit" class="btn btn-primary px-4">Send Message</button>
                 </div>
               </div>
@@ -707,17 +1026,26 @@
         </div>
       </div>
 
+      <!-- Map (admin-managed embed URL) -->
       <div class="col-12">
         <div class="map-container shadow-sm">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3650.1721552263!2d90.42110437503967!3d23.8110586786376!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755c712b4b38a01%3A0x8e4e1f2d8f0a1b5d!2sDhaka%20College!5e0!3m2!1sen!2sbd!4v1694777851886!5m2!1sen!2sbd"
-            width="100%" height="350" style="border:0;" allowfullscreen="" loading="lazy">
-          </iframe>
+          {% if contact_info and contact_info.map_embed_src %}
+            <iframe
+              src="{{ contact_info.map_embed_src }}"
+              width="100%" height="350" style="border:0;" allowfullscreen="" loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade">
+            </iframe>
+          {% else %}
+            <div class="alert alert-light border text-muted mb-0">
+              Map not configured yet. Add an <strong>Embed URL</strong> in Admin → Contact Info.
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
   </div>
 </section>
-<!-- ⭐ [ End CONTACT SECTION] ================================================================================= -->
+<!-- ⭐ End: Contact Section =================================================== -->
+
 
 {% endblock %}
