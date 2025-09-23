@@ -1324,3 +1324,87 @@ class FooterSettings(models.Model):
         except Exception:
             pass
         return self.logo_url or ""
+
+
+
+
+
+
+def gallery_upload_image_to(instance, filename):
+    dt = timezone.now()
+    return f"gallery/images/{dt:%Y/%m}/{filename}"
+
+def gallery_upload_video_to(instance, filename):
+    dt = timezone.now()
+    return f"gallery/videos/{dt:%Y/%m}/{filename}"
+
+class GalleryPost(models.Model):
+    KIND_IMAGE  = "image"
+    KIND_VIDEO  = "video"
+    KIND_YT     = "youtube"
+    KIND_CHOICES = [
+        (KIND_IMAGE, "Image"),
+        (KIND_VIDEO, "Video (MP4)"),
+        (KIND_YT,    "YouTube URL"),
+    ]
+
+    is_active   = models.BooleanField(default=True)
+    order       = models.PositiveIntegerField(default=0, help_text="Lower numbers appear first.")
+    kind        = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_IMAGE)
+
+    title       = models.CharField(max_length=200)
+    # one of the following depending on kind
+    image       = models.ImageField(upload_to=gallery_upload_image_to, blank=True, null=True)
+    video       = models.FileField(upload_to=gallery_upload_video_to, blank=True, null=True)   # e.g. .mp4
+    youtube_url = models.URLField(blank=True)
+
+    created_by  = models.ForeignKey(
+        getattr(settings, "AUTH_USER_MODEL", "auth.User"),
+        null=True, blank=True, on_delete=models.SET_NULL, related_name="gallery_posts_created"
+    )
+    created_at  = models.DateTimeField(auto_now_add=True)
+    updated_at  = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("order", "-created_at")
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def thumb_src(self) -> str:
+        """
+        For image: the image URL.
+        For video: use the video tag (no thumb) — template shows a play badge.
+        For YouTube: try to render the standard thumbnail.
+        """
+        if self.kind == self.KIND_IMAGE and self.image:
+            try:
+                return self.image.url
+            except Exception:
+                return ""
+        if self.kind == self.KIND_YT and self.youtube_id:
+            # default thumbnail
+            return f"https://img.youtube.com/vi/{self.youtube_id}/hqdefault.jpg"
+        return ""
+
+    @property
+    def youtube_id(self) -> str:
+        """
+        Extract a video ID from common YouTube URL shapes (watch, youtu.be, shorts, embed).
+        """
+        import re
+        url = (self.youtube_url or "").strip()
+        if not url:
+            return ""
+        # patterns: youtu.be/ID, v=ID, /embed/ID, /shorts/ID
+        for pat in [
+            r"youtu\.be/([A-Za-z0-9_-]{6,})",
+            r"[?&]v=([A-Za-z0-9_-]{6,})",
+            r"/embed/([A-Za-z0-9_-]{6,})",
+            r"/shorts/([A-Za-z0-9_-]{6,})",
+        ]:
+            m = re.search(pat, url)
+            if m:
+                return m.group(1)
+        return ""

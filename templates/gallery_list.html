@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% block title %}Gallery{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/css/lightgallery-bundle.min.css">
+{% endblock %}
+
+{% block content %}
+<section class="container py-5" id="gallery">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="fw-normal mb-0">Gallery</h1>
+  </div>
+
+  {% if page.object_list %}
+    <div id="lightgallery" class="row g-3">
+
+      {% for item in page.object_list %}
+        <div class="col-12 col-sm-6 col-lg-3">
+          <article class="card h-100 shadow-sm border-0 overflow-hidden gallery-card">
+
+            {# === IMAGE (kept with lightGallery) === #}
+            {% if item.kind == "image" and item.image %}
+              <a
+                class="lg-trigger d-block position-relative"
+                href="javascript:void(0)"
+                data-src="{{ item.image.url }}"
+                data-sub-html="<h4 class='mb-0'>{{ item.title|escape }}</h4>"
+                data-download-url="{{ item.image.url }}"
+                data-lg-size="1600-1200"
+              >
+                <div class="ratio ratio-16x9 glx-thumb">
+                  <img
+                    src="{{ item.thumb_src|default:item.image.url }}"
+                    alt="{{ item.title }}"
+                    class="w-100 h-100 object-fit-cover"
+                    loading="lazy">
+                </div>
+                <span class="glx-chip"><i class="bi bi-image"></i></span>
+              </a>
+
+            {# === MP4 (kept with lightGallery) === #}
+            {% elif item.kind == "video" and item.video %}
+              <a
+                class="lg-trigger d-block position-relative"
+                href="javascript:void(0)"
+                data-src="{{ item.video.url }}"
+                data-sub-html="<h4 class='mb-0'>{{ item.title|escape }}</h4>"
+                data-download-url="{{ item.video.url }}"
+                data-lg-size="1280-720"
+                data-video='{
+                  "source":[{ "src":"{{ item.video.url|escapejs }}", "type":"video/mp4" }],
+                  "attributes":{ "preload":"metadata", "controls": true, "playsinline": true }
+                }'
+              >
+                <div class="ratio ratio-16x9 glx-thumb">
+                  {% if item.thumb_src %}
+                    <img src="{{ item.thumb_src }}" alt="{{ item.title }}" class="w-100 h-100 object-fit-cover" loading="lazy">
+                  {% else %}
+                    <div class="w-100 h-100 bg-dark d-flex align-items-center justify-content-center text-white">
+                      <i class="bi bi-play-circle-fill" style="font-size:2.2rem;"></i>
+                    </div>
+                  {% endif %}
+                </div>
+                <span class="glx-chip"><i class="bi bi-film"></i></span>
+              </a>
+
+            {# === YOUTUBE (official IFrame Player API in Bootstrap modal) === #}
+            {% elif item.kind == "youtube" and item.youtube_id %}
+              <a
+                class="yt-trigger d-block position-relative"
+                href="javascript:void(0)"
+                data-yt-id="{{ item.youtube_id }}"
+                data-yt-title="{{ item.title|escape }}"
+              >
+                <div class="ratio ratio-16x9 glx-thumb">
+                  <img
+                    src="https://img.youtube.com/vi/{{ item.youtube_id }}/hqdefault.jpg"
+                    alt="{{ item.title }}"
+                    class="w-100 h-100 object-fit-cover"
+                    loading="lazy">
+                </div>
+                <span class="glx-chip"><i class="bi bi-youtube"></i></span>
+              </a>
+
+            {% else %}
+              <div class="ratio ratio-16x9 bg-light d-flex align-items-center justify-content-center text-muted">
+                No media
+              </div>
+            {% endif %}
+
+            <div class="p-2">
+              <h6 class="mb-0 text-truncate" title="{{ item.title }}">{{ item.title }}</h6>
+            </div>
+          </article>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page.paginator.num_pages > 1 %}
+      <nav class="mt-4" aria-label="Gallery pagination">
+        <ul class="pagination justify-content-center">
+          {% if page.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}#gallery">← Prev</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">← Prev</span></li>
+          {% endif %}
+
+          {% for p in page.paginator.page_range %}
+            {% if p >= page.number|add:-1 and p <= page.number|add:1 %}
+              {% if p == page.number %}
+                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+              {% else %}
+                <li class="page-item"><a class="page-link" href="?page={{ p }}#gallery">{{ p }}</a></li>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+
+          {% if page.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}#gallery">Next →</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next →</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info mb-0">No gallery items yet.</div>
+  {% endif %}
+</section>
+
+{# === YouTube modal (IFrame Player API will mount the player here) === #}
+<div class="modal fade" id="ytModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-body p-0 position-relative">
+        <div class="ratio ratio-16x9">
+          <div id="ytPlayerMount"></div>
+        </div>
+
+        <button type="button" class="btn-close btn-close-white position-absolute" data-bs-dismiss="modal"
+                style="right:.75rem; top:.75rem" aria-label="Close"></button>
+
+        <button type="button" class="btn btn-light btn-sm position-absolute yt-prev"
+                style="left:.75rem; top:50%; transform:translateY(-50%)">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <button type="button" class="btn btn-light btn-sm position-absolute yt-next"
+                style="right:.75rem; top:50%; transform:translateY(-50%)">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+
+        <div id="ytCaption"
+             class="position-absolute start-0 end-0 text-center small text-white-50"
+             style="bottom:.5rem;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/lightgallery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/plugins/zoom/lg-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/plugins/thumbnail/lg-thumbnail.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/plugins/fullscreen/lg-fullscreen.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lightgallery@2.8.2/plugins/video/lg-video.min.js"></script>
+<script>
+  // Don’t navigate away when clicking an LG trigger
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a.lg-trigger');
+    if (a) e.preventDefault();
+  });
+
+  // Initialize with arrows/controls kept visible
+  const lgGrid = document.getElementById('lightgallery');
+  const lgInstance = lightGallery(lgGrid, {
+    selector: '.lg-trigger',
+    plugins: [lgZoom, lgThumbnail, lgFullscreen, lgVideo],
+    loop: true,
+    download: true,
+    speed: 350,
+    hash: false,
+    autoplayFirstVideo: false,
+    controls: true,          // make sure next/prev are enabled
+    hideBarsDelay: 0,        // never auto-hide the UI
+  });
+
+  // Optional: ensure arrows show as soon as the overlay opens
+  lgGrid.addEventListener('lgAfterOpen', () => {
+    document.querySelectorAll('.lg-prev, .lg-next').forEach(el => {
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+      el.style.pointerEvents = 'auto';
+    });
+  });
+</script>
+<script>
+  // ----- 1) Prevent default nav for LG items (unchanged) -----
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a.lg-trigger');
+    if (a) e.preventDefault();
+  });
+
+  // ----- 2) Build a mixed index of all cards in DOM order -----
+  let ytPlayer=null, ytIndex=0, allIndex=0;
+  let ytTriggers=[], lgTriggers=[], allItems=[];
+
+  function buildIndex(){
+    ytTriggers = Array.from(document.querySelectorAll('.yt-trigger'));
+    lgTriggers = Array.from(document.querySelectorAll('.lg-trigger'));
+    allItems = [];
+
+    document.querySelectorAll('#lightgallery .gallery-card').forEach(card=>{
+      const link = card.querySelector('a.yt-trigger, a.lg-trigger');
+      if(!link) return;
+      if(link.classList.contains('yt-trigger')){
+        const idx = ytTriggers.indexOf(link);
+        link.dataset.allIndex = allItems.length;
+        allItems.push({type:'yt', idx});
+      }else{
+        const idx = lgTriggers.indexOf(link);
+        link.dataset.allIndex = allItems.length;
+        allItems.push({type:'lg', idx});
+      }
+    });
+  }
+  buildIndex();
+
+  // ----- 3) Init lightGallery for images/MP4s -----
+  const gridEl = document.getElementById('lightgallery');
+  const lgInstance = lightGallery(gridEl, {
+    selector: '.lg-trigger',
+    plugins: [lgZoom, lgThumbnail, lgFullscreen, lgVideo],
+    loop: true,
+    download: true,
+    speed: 350,
+    hash: false,
+    autoplayFirstVideo: false
+  });
+
+  // Track current "mixed" index when an LG thumb is clicked
+  document.addEventListener('click', e=>{
+    const a = e.target.closest('.lg-trigger');
+    if(!a) return;
+    allIndex = parseInt(a.dataset.allIndex || '0', 10);
+  });
+
+  // >>> Bridge: while sliding inside lightGallery, if the next mixed item is YT,
+  // close LG and open the YT modal at that item.
+  gridEl.addEventListener('lgBeforeSlide', evt=>{
+    const { index, prevIndex } = evt.detail;
+    const prevAll = parseInt(lgTriggers[prevIndex].dataset.allIndex);
+    const nextAll = parseInt(lgTriggers[index].dataset.allIndex);
+    const step = nextAll > prevAll ? 1 : -1;
+
+    // search for the first YT card between prevAll and nextAll
+    let hop = prevAll + step;
+    while (hop !== nextAll + step) {
+      if (allItems[hop] && allItems[hop].type === 'yt') {
+        try { lgInstance.closeGallery(); } catch(_) {}
+        openByAllIndex(hop);
+        return; // stop LG's own slide; we’ve jumped to YT
+      }
+      hop += step;
+    }
+    // normal LG slide (no YT in-between)
+    allIndex = nextAll;
+  });
+
+  // ----- 4) YouTube IFrame Player API (official) -----
+  (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
+
+  window.onYouTubeIframeAPIReady = function(){
+    ytPlayer = new YT.Player('ytPlayerMount', {
+      width:'100%', height:'100%', videoId:'',
+      playerVars:{ origin:window.location.origin, rel:0, modestbranding:1, playsinline:1, controls:1 },
+      events:{
+        onError: function(){
+          const cap = document.getElementById('ytCaption');
+          const rec = allItems[allIndex];
+          if(cap && rec && rec.type==='yt'){
+            const id = ytTriggers[rec.idx].getAttribute('data-yt-id');
+            cap.innerHTML = 'Video unavailable. '+
+              '<a class="link-light text-decoration-underline" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v='+encodeURIComponent(id)+'">Watch on YouTube</a>';
+          }
+        }
+      }
+    });
+  };
+
+  function showYouTubeByIndex(mixedIdx){
+    allIndex = (mixedIdx + allItems.length) % allItems.length;
+    const rec = allItems[allIndex];
+    if(!rec || rec.type!=='yt') return;
+    const a   = ytTriggers[rec.idx];
+    const id  = a.getAttribute('data-yt-id');
+    const ttl = a.getAttribute('data-yt-title') || '';
+    const cap = document.getElementById('ytCaption');
+    if(cap) cap.textContent = ttl;
+
+    const mEl = document.getElementById('ytModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(mEl);
+    modal.show();
+
+    (function cue(){
+      if(ytPlayer && ytPlayer.loadVideoById){ ytPlayer.loadVideoById(id); }
+      else { setTimeout(cue, 80); }
+    })();
+  }
+
+  // Open by mixed index (will pick LG or YT as needed)
+  function openByAllIndex(mixedIdx){
+    allIndex = (mixedIdx + allItems.length) % allItems.length;
+    const rec = allItems[allIndex];
+    if(rec.type === 'yt'){
+      // ensure LG is closed
+      try { lgInstance.closeGallery(); } catch(_) {}
+      showYouTubeByIndex(allIndex);
+    }else{
+      // close YT, open LG at that lg slide
+      const mEl = document.getElementById('ytModal');
+      bootstrap.Modal.getOrCreateInstance(mEl).hide();
+      if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+      lgInstance.openGallery(rec.idx);
+    }
+  }
+
+  // Clicking a YT thumb starts mixed carousel from that item
+  document.addEventListener('click', e=>{
+    const a = e.target.closest('.yt-trigger');
+    if(!a) return;
+    e.preventDefault();
+    openByAllIndex(parseInt(a.dataset.allIndex || '0', 10));
+  });
+
+  // YT modal Prev/Next traverse the mixed list (can jump into LG)
+  document.querySelector('#ytModal .yt-prev').addEventListener('click', ()=> openByAllIndex(allIndex - 1));
+  document.querySelector('#ytModal .yt-next').addEventListener('click', ()=> openByAllIndex(allIndex + 1));
+
+  // Stop video when YT modal closes
+  document.getElementById('ytModal').addEventListener('hidden.bs.modal', ()=> {
+    if (ytPlayer && ytPlayer.stopVideo) ytPlayer.stopVideo();
+  });
+
+  // Rebuild mapping after navigation/pagination
+  window.addEventListener('pageshow', buildIndex);
+</script>
+
+<style>
+  /* Force show next/prev arrows and make them bigger */
+  .lg-outer .lg-prev, .lg-outer .lg-next {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  /* Make buttons larger with a soft backdrop so they’re easy to spot */
+  .lg-outer .lg-prev, .lg-outer .lg-next {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.25);
+  }
+  .lg-outer .lg-prev:hover, .lg-outer .lg-next:hover {
+    background: rgba(0,0,0,.55);
+  }
+  .lg-outer .lg-prev .lg-icon, .lg-outer .lg-next .lg-icon {
+    transform: scale(1.15);
+  }
+
+  /* If theme tries to hide items after idle, keep arrows visible */
+  .lg-outer.lg-hide-items .lg-prev,
+  .lg-outer.lg-hide-items .lg-next {
+    opacity: 1 !important;
+  }
+</style>
+{% endblock %}
+
+

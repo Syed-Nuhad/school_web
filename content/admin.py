@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
 from .models import Course, AdmissionApplication, FunctionHighlight, FestivalMedia, CollegeFestival, Member, \
-    ContactInfo, ContactMessage, FooterSettings
+    ContactInfo, ContactMessage, FooterSettings, GalleryPost
 
 from .models import (
     Banner,
@@ -599,3 +599,36 @@ class FooterSettingsAdmin(OwnableAdminMixin):
         if not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
         return super().save_model(request, obj, form, change)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@admin.register(GalleryPost)
+class GalleryPostAdmin(OwnableAdminMixin):
+    list_display  = ("title", "kind", "is_active", "order", "created_at")
+    list_filter   = ("kind", "is_active", "created_at")
+    search_fields = ("title", "youtube_url")
+    ordering      = ("order", "-created_at")
+    fieldsets = (
+        (None, {"fields": ("is_active", "order", "title", "kind")}),
+        ("Media", {"fields": ("image", "video", "youtube_url"),
+                   "description": "Upload an image for Image type; MP4 for Video; or paste a YouTube link."}),
+        ("Meta", {"fields": ("created_by",)}),
+    )
+    readonly_fields = ("created_by",)
+
+    def save_model(self, request, obj, form, change):
+        if not obj.created_by:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)

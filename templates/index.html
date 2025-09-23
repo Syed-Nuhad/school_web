@@ -109,32 +109,41 @@
 
 <!-- ⭐⭐⭐⭐⭐======================== Start  Notice Board -->
 <section class="container py-5" id="notice">
-<div class="d-flex align-items-center justify-content-between pb-5">
-  <h1 class="fw-normal mb-0">Notices</h1>
-  <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
-</div>
-  <div class="text-end align">
+  <div class="d-flex align-items-center justify-content-between pb-4">
+    <h1 class="fw-normal mb-0">Notices</h1>
+    <a href="{% url 'notices_list' %}" class="btn btn-sm btn-outline-primary">View all</a>
   </div>
+
   {% if notices %}
-    <div class="row align-items-start justify-content-start">
-      {% for n in notices %}
-        <div class="col-12 col-sm-6 col-lg-4">
-          <article class="h-100 border rounded-3 overflow-hidden">
+    <div class="row g-3">
+      {# show ONLY the latest 4, even if the view passed more #}
+      {% for n in notices|slice:":4" %}
+        <div class="col-12 col-sm-6 col-lg-3">
+          <article class="h-100 border rounded-3 overflow-hidden bg-white">
             {% if n.image_src %}
               <a class="ratio ratio-16x9 d-block" href="{% url 'notice_detail' n.pk %}" aria-label="Open notice">
                 <div class="w-100 h-100"
                      style="background-image:url('{{ n.image_src|escape }}');
                             background-size:cover;background-position:center;"></div>
               </a>
+            {% else %}
+              <a class="ratio ratio-16x9 d-block bg-light text-decoration-none"
+                 href="{% url 'notice_detail' n.pk %}" aria-label="Open notice">
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted">
+                  No image
+                </div>
+              </a>
             {% endif %}
+
             <div class="p-3">
               <h3 class="h6 mb-2 text-primary">{{ n.title }}</h3>
               {% if n.subtitle %}
                 <p class="text-muted small mb-3">{{ n.subtitle|truncatechars:120 }}</p>
               {% endif %}
+
               <div class="d-flex justify-content-between align-items-center">
                 <small class="text-muted">Published: {{ n.published_at|date:"M j, Y" }}</small>
-                <a href="{% url 'notice_detail' n.pk %}" class="btn btn-sm btn-outline-primary">Read More</a>
+                <a href="{% url 'notice_detail' n.pk %}" class="btn btn-sm btn-outline-primary">Read</a>
               </div>
             </div>
           </article>
@@ -146,37 +155,46 @@
   {% endif %}
 </section>
 <!-- ⭐ End: Notice Board -->
+<!-- ⭐ End: Notice Board -->
 <!-- ✅ Modern Timeline (Bootstrap + inline styles only) -->
 <section class="py-5" id="academic-timeline">
-  <div class="container" style="max-width: 1100px;">
-    <div class="text-center mb-4">
+  <div class="container" style="max-width:1100px;">
+    <div class="text-start mb-4">
       <h1 class="fw-normal mb-1">Timeline</h1>
       <p class="text-muted mb-0">All the key dates at a glance</p>
     </div>
 
     {% for e in timeline_events %}
-      <div class="row gx-4 gy-3 align-items-start justify-content-start mb-4">
-        <!-- Date (left) -->
-        <div class="col-12 col-md-3 text-md-end">
-          <span class="badge rounded-pill text-bg-info" style="font-weight:600;">
-            {{ e.date|date:"M j, Y" }}
-          </span>
-        </div>
+      <!-- keep the whole row narrow on xl to avoid “centered” feel -->
+      <div class="row gx-4 gy-3 align-items-start mb-4">
+        <div class="col-12 col-xl-10">
 
-        <!-- Content (right with rail) -->
-        <div class="col-12 col-md-9 position-relative" style="border-left:2px solid #0ea5e9;">
-          <!-- Dot on rail -->
-          <span class="position-absolute d-none d-md-inline-block"
-                style="left:-7px; top:14px; width:14px; height:14px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 6px rgba(14,165,233,.18);"></span>
-          <span class="position-absolute d-inline-block d-md-none"
-                style="left:-6px; top:10px; width:12px; height:12px; border-radius:50%; background:#0ea5e9; box-shadow:0 0 0 5px rgba(14,165,233,.18);"></span>
+          <div class="row gx-4 gy-3 align-items-start">
+            <!-- date: auto width, left-aligned -->
+            <div class="col-12 col-md-auto text-start">
+              <span class="badge rounded-pill text-bg-info fw-semibold">
+                {{ e.date|date:"M j, Y" }}
+              </span>
+            </div>
 
-          <div class="bg-white shadow-sm rounded-3 p-3 p-md-4" style="border:1px solid #e5e7eb;">
-            <h5 class="mb-1" style="font-weight:700;">{{ e.title }}</h5>
-            {% if e.description %}
-              <p class="mb-0 text-muted">{{ e.description }}</p>
-            {% endif %}
+            <!-- content: takes the rest, but capped using cols -->
+            <div class="col-12 col-md-9 col-lg-8 position-relative border-start border-2 border-info">
+
+              <!-- dot on rail -->
+              <span class="position-absolute d-none d-md-inline-block rounded-circle bg-info"
+                    style="left:-7px; top:14px; width:14px; height:14px; box-shadow:0 0 0 6px rgba(13,202,240,.18);"></span>
+              <span class="position-absolute d-inline-block d-md-none rounded-circle bg-info"
+                    style="left:-6px; top:10px; width:12px; height:12px; box-shadow:0 0 0 5px rgba(13,202,240,.18);"></span>
+
+              <div class="bg-white shadow-sm rounded-3 p-3 p-md-4 border border-light-subtle">
+                <h5 class="mb-1 fw-bold">{{ e.title }}</h5>
+                {% if e.description %}
+                  <p class="mb-0 text-muted">{{ e.description }}</p>
+                {% endif %}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
     {% empty %}

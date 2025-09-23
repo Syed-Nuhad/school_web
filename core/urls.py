@@ -4,10 +4,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-from ui import views as ui_views
+from ui import views as ui_views, views
 from accounts import views as acc_views  # for honeypots
 from ui.views import contact_submit
-
 urlpatterns = [
     # Public site
     path("", ui_views.home, name="home"),
@@ -29,6 +28,9 @@ urlpatterns = [
     path("notices/<int:pk>/", ui_views.notice_detail, name="notice_detail"),
     path("admissions/", include("content.urls_admissions", namespace="admissions")),
     path("contact/submit/", contact_submit, name="contact_submit"),
+
+    path("gallery/", views.gallery_page, name="gallery"),
+
 ]
 
 # Serve static & media in development

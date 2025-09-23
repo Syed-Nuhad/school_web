@@ -13,7 +13,7 @@ from django.core.mail import EmailMessage, send_mail
 
 from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
-    AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings
+    AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost
 )
 from content.forms import ContactForm
 
@@ -50,7 +50,11 @@ def home(request):
         .filter(Q(image__isnull=False) | ~Q(image_url=""))
         .order_by("order", "-created_at")
     )
-    notices_qs   = Notice.objects.filter(is_active=True).order_by("-published_at", "-created_at")[:6]
+    notices_qs = (
+        Notice.objects
+        .filter(is_active=True)
+        .order_by("-published_at", "-created_at")[:4]  # ← only 4
+    )
     timeline_qs  = TimelineEvent.objects.filter(is_active=True).order_by("date", "order")[:4]
     gallery_qs   = GalleryItem.objects.filter(is_active=True)
     about        = AboutSection.objects.filter(is_active=True).order_by("order").first()
@@ -242,25 +246,39 @@ def notices_list(request):
 
 
 def notice_detail(request, pk: int):
-    """
-    Detail page for a single notice + right-rail 'More notices'.
-    """
-    # NOTE: No select_related('posted_by') because model has no such FK now.
     notice = get_object_or_404(
         Notice.objects.filter(is_active=True),
         pk=pk,
     )
 
+    # Right-rail “more” list (unchanged)
     more_notices = (
         Notice.objects.filter(is_active=True)
         .exclude(pk=notice.pk)
         .order_by("-published_at", "-created_at")[:8]
     )
 
+    # Neighbor notices for step-by-step nav
+    prev_notice = (
+        Notice.objects.filter(is_active=True, published_at__gt=notice.published_at)
+        .order_by("published_at", "created_at")
+        .first()
+    )
+    next_notice = (
+        Notice.objects.filter(is_active=True, published_at__lt=notice.published_at)
+        .order_by("-published_at", "-created_at")
+        .first()
+    )
+
     return render(
         request,
         "notice_detail.html",
-        {"notice": notice, "more_notices": more_notices},
+        {
+            "notice": notice,
+            "more_notices": more_notices,
+            "prev_notice": prev_notice,   # ← add
+            "next_notice": next_notice,   # ← add
+        },
     )
 
 
@@ -268,3 +286,15 @@ def notice_detail(request, pk: int):
 
 
 
+def gallery_page(request):
+    qs = GalleryPost.objects.filter(is_active=True).order_by("order", "-created_at")
+    paginator = Paginator(qs, 12)   # 12 items per page
+    page_number = request.GET.get("page") or 1
+    page = paginator.get_page(page_number)
+
+    footer = FooterSettings.objects.filter(is_active=True).order_by("-updated_at").first()
+
+    return render(request, "gallery_list.html", {
+        "page": page,
+        "footer": footer,
+    })
