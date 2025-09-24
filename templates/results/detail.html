@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}{{ summary.klass }} — {{ summary.term }}{% endblock %}
+
+{% block content %}
+<section class="container py-5" id="class-result-detail">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <a href="{% url 'class_results_overview' %}" class="btn btn-outline-secondary btn-sm me-2">← All classes</a>
+      <h1 class="h4 d-inline align-middle mb-0">{{ summary.klass }}</h1>
+      <span class="text-muted ms-2">{{ summary.term }}</span>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Summary stats -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-6 col-lg-2">
+              <div class="p-3 bg-light rounded-3 h-100">
+                <div class="text-muted small">Total students</div>
+                <div class="fs-5 fw-semibold">{{ summary.total_students }}</div>
+              </div>
+            </div>
+            <div class="col-6 col-lg-2">
+              <div class="p-3 bg-light rounded-3 h-100">
+                <div class="text-muted small">Appeared</div>
+                <div class="fs-5 fw-semibold">{{ summary.appeared }}</div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="p-3 bg-light rounded-3 h-100">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted small">Pass rate</span>
+                  <span class="small fw-semibold">{{ summary.pass_rate_pct }}%</span>
+                </div>
+                <div class="progress" role="progressbar" aria-label="Pass rate">
+                  <div class="progress-bar" style="width: {{ summary.pass_rate_pct }}%"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-2 small text-muted">
+                  <span>Lowest: {{ summary.lowest_pct }}%</span>
+                  <span>Highest: {{ summary.highest_pct }}%</span>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="p-3 bg-light rounded-3 h-100">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted small">Overall Average</span>
+                  <span class="small fw-semibold">{{ summary.overall_avg_pct }}%</span>
+                </div>
+                <div class="progress" role="progressbar" aria-label="Overall average">
+                  <div class="progress-bar bg-info" style="width: {{ summary.overall_avg_pct }}%"></div>
+                </div>
+                {% if summary.remarks %}
+                  <div class="small text-muted mt-2">{{ summary.remarks }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toppers -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h5 mb-0">Toppers</h2>
+            <span class="text-muted small">{{ summary.toppers.count }} student{{ summary.toppers.count|pluralize }}</span>
+          </div>
+
+          {% if summary.toppers.all %}
+            <div class="row g-3">
+              {% for t in summary.toppers.all %}
+                <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+                  <div class="h-100 border rounded-3 p-3 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3">
+                      {% if t.profile_image %}
+                        <img src="{{ t.profile_image.url }}" alt="{{ t.name }}" width="64" height="64" class="rounded-circle" style="object-fit:cover;">
+                      {% else %}
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width:64px;height:64px;font-size:1.25rem;">
+                          {{ t.name|first|upper }}
+                        </div>
+                      {% endif %}
+                      <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2">
+                          <h3 class="h6 mb-0">{{ t.name }}</h3>
+                          <span class="badge bg-success-subtle text-success border border-success-subtle">#{{ t.rank }}</span>
+                        </div>
+                        {% if t.roll_no %}
+                          <div class="text-muted small">Roll: {{ t.roll_no }}</div>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <div class="mt-3 d-flex align-items-center gap-2">
+                      <div class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Grade: {{ t.grade|default:"—" }}</div>
+                      <div class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">Total: {{ t.total_pct }}%</div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-muted">No toppers recorded for this class & term.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject averages -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Subject Averages</h2>
+          {% if summary.subject_avgs.all %}
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col">Subject</th>
+                    <th scope="col" class="text-center">Avg / Out of</th>
+                    <th scope="col" style="width:280px;">Average %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for a in summary.subject_avgs.all %}
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">{{ a.subject.code }}</div>
+                        <div class="text-muted small">{{ a.subject.title }}</div>
+                      </td>
+                      <td class="text-center">
+                        {{ a.avg_score }} / {{ a.out_of }}
+                      </td>
+                      <td>
+                        <div class="d-flex justify-content-between">
+                          <span class="small text-muted">0%</span>
+                          <span class="small fw-semibold">{{ a.avg_pct }}%</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="Subject avg">
+                          <div class="progress-bar bg-secondary" style="width: {{ a.avg_pct }}%"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-muted">No subject-wise averages recorded.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_body %}
+<style>
+  .bg-primary-subtle { background: rgba(13,110,253,.12) !important; }
+  .text-primary { color: #0d6efd !important; }
+  .border-primary-subtle { border-color: rgba(13,110,253,.3) !important; }
+
+  .bg-info-subtle { background: rgba(13,202,240,.12) !important; }
+  .text-info { color: #0dcaf0 !important; }
+  .border-info-subtle { border-color: rgba(13,202,240,.3) !important; }
+
+  .bg-success-subtle { background: rgba(25,135,84,.12) !important; }
+  .text-success { color: #198754 !important; }
+  .border-success-subtle { border-color: rgba(25,135,84,.3) !important; }
+</style>
+{% endblock %}

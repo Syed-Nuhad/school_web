@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}All Class Results{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Visuals only (Bootstrap handles layout) */
+  .result-card .card{transition:transform .15s ease, box-shadow .15s ease}
+  .result-card:hover .card{transform:translateY(-2px);box-shadow:0 .9rem 1.5rem rgba(0,0,0,.08)}
+
+  .badge-soft-primary{
+    color:#0d6efd;background:rgba(13,110,253,.10);
+    border:1px solid rgba(13,110,253,.22)
+  }
+
+  /* Bigger donut ring */
+  .donut{ --pct:0; width:64px; height:64px; position:relative; }
+  .donut svg{ width:100%; height:100%; display:block; transform:rotate(-90deg); }
+  .donut .val{ position:absolute; inset:0; display:grid; place-items:center; font-weight:600; font-size:.9rem; }
+  .donut .track{ stroke: var(--bs-border-color); }
+  .donut .bar{
+    stroke: var(--bs-primary); stroke-linecap: round; stroke-width:6;
+    /* r=24 ⇒ C≈150.796447372 */
+    stroke-dasharray:150.796;
+    stroke-dashoffset: calc(150.796 - (150.796 * var(--pct))/100);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-4 py-md-5">
+
+  <!-- Header & search -->
+  <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-4">
+    <h1 class="h5 mb-0">All Class Results</h1>
+    <form class="d-flex align-items-center gap-2" method="get" action="">
+      <input name="q" value="{{ request.GET.q }}" class="form-control form-control-sm" type="search"
+             placeholder="Search class, term, year…" aria-label="Search">
+      {% if request.GET.page %}<input type="hidden" name="page" value="{{ request.GET.page }}">{% endif %}
+      <button class="btn btn-primary btn-sm" type="submit">Search</button>
+    </form>
+  </div>
+
+  {% if summaries %}
+    <!-- Pure Bootstrap grid -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-4">
+      {% for s in summaries %}
+        <div class="col">
+          <a class="result-card d-block text-decoration-none text-reset" href="{% url 'results_detail' s.id %}">
+            <div class="card h-100 border-0 shadow-lg">
+              <div class="card-body p-4">  {# bigger padding #}
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="badge rounded-pill badge-soft-primary">{{ s.term.name }} {{ s.term.year }}</span>
+                  <small class="text-muted">{{ s.created_at|date:"M j, Y" }}</small>
+                </div>
+
+                <h2 class="fs-5 fw-semibold mb-4">  {# bigger title #}
+                  {{ s.klass.name }}{% if s.klass.section %} – {{ s.klass.section }}{% endif %}
+                  <span class="text-muted fw-normal">({{ s.klass.year }})</span>
+                </h2>
+
+                <!-- KPI tiles using Bootstrap only -->
+                <div class="row g-3">
+                  <div class="col-6">
+                    <div class="border rounded-3 py-3 px-2 d-flex flex-column align-items-center justify-content-center">
+                      {% with pct=s.pass_rate_pct|default_if_none:'0' %}
+                        <div class="donut mb-1" style="--pct: {{ pct }}">
+                          <svg viewBox="0 0 64 64" aria-hidden="true">
+                            <circle class="track" cx="32" cy="32" r="24" fill="none" stroke-width="6"></circle>
+                            <circle class="bar"   cx="32" cy="32" r="24" fill="none" stroke-width="6"></circle>
+                          </svg>
+                          <span class="val">{{ pct|floatformat:0 }}%</span>
+                        </div>
+                      {% endwith %}
+                      <div class="small text-muted">Pass %</div>
+                    </div>
+                  </div>
+
+                  <div class="col-6">
+                    <div class="border rounded-3 py-3 px-2 d-flex flex-column align-items-center justify-content-center">
+                      {% with pct=s.overall_avg_pct|default_if_none:'0' %}
+                        <div class="donut mb-1" style="--pct: {{ pct }}">
+                          <svg viewBox="0 0 64 64" aria-hidden="true">
+                            <circle class="track" cx="32" cy="32" r="24" fill="none" stroke-width="6"></circle>
+                            <circle class="bar"   cx="32" cy="32" r="24" fill="none" stroke-width="6"></circle>
+                          </svg>
+                          <span class="val">{{ pct|floatformat:0 }}%</span>
+                        </div>
+                      {% endwith %}
+                      <div class="small text-muted">Avg %</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page and page.paginator.num_pages > 1 %}
+      <nav class="mt-4" aria-label="Results pagination">
+        <ul class="pagination justify-content-center">
+          {% if page.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">← Prev</a></li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+          {% if page.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">Next →</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info mb-0">No results recorded yet.</div>
+  {% endif %}
+</section>
+{% endblock %}

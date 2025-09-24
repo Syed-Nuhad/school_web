@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 
 from ui import views as ui_views, views
 from accounts import views as acc_views  # for honeypots
-from ui.views import contact_submit
+from ui.views import contact_submit, results_filter, results_detail
+
 urlpatterns = [
     # Public site
     path("", ui_views.home, name="home"),
@@ -31,6 +32,12 @@ urlpatterns = [
 
     path("gallery/", views.gallery_page, name="gallery"),
 
+
+    # 3) Class+term details (with toppers)
+    # path("class/<int:klass_id>/term/<int:term_id>/", class_overview, name="class_overview"),
+    path("results/", ui_views.class_results_overview, name="index"),
+    path("results/filter/", ui_views.class_results_filter, name="results_filter"),
+    path("results/<int:summary_id>/", ui_views.class_results_detail, name="results_detail"),
 ]
 
 # Serve static & media in development

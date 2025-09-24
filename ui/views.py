@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from django.shortcuts import get_object_or_404
 
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q
+from django.db.models import Q, Prefetch
 from django.apps import apps
 from django.contrib import messages
 from django.conf import settings
@@ -13,7 +15,8 @@ from django.core.mail import EmailMessage, send_mail
 
 from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
-    AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost
+    AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost,
+    ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg
 )
 from content.forms import ContactForm
 
@@ -298,3 +301,221 @@ def gallery_page(request):
         "page": page,
         "footer": footer,
     })
+
+
+
+
+
+
+
+
+def _apply_result_filters(qs, request):
+    """
+    Optional GET filters:
+      ?year=2025
+      ?term_id=3
+      ?class_id=12
+      ?name=Class 8
+      ?section=A
+    """
+    year = request.GET.get("year")
+    term_id = request.GET.get("term_id")
+    class_id = request.GET.get("class_id")
+    name = request.GET.get("name")
+    section = request.GET.get("section")
+
+    if year:
+        qs = qs.filter(term__year=year)
+    if term_id:
+        qs = qs.filter(term_id=term_id)
+    if class_id:
+        qs = qs.filter(klass_id=class_id)
+    if name:
+        qs = qs.filter(klass__name__iexact=name)
+    if section:
+        qs = qs.filter(klass__section__iexact=section)
+
+    return qs
+
+
+# ---------- views ----------
+def results_index(request):
+    """
+    List/overview: shows paginated ClassResultSummary rows (class-level aggregates).
+    """
+    base_qs = (
+        ClassResultSummary.objects
+        .select_related("klass", "term")
+        .order_by("-term__year", "term__name", "klass__name", "klass__section", "-id")
+    )
+    qs = _apply_result_filters(base_qs, request)
+
+    paginator = Paginator(qs, 24)  # 24 summaries per page
+    page = paginator.get_page(request.GET.get("page") or 1)
+
+    # (Optional) filter dropdown data
+    years = list(
+        ExamTerm.objects.order_by("-year").values_list("year", flat=True).distinct()
+    )
+    terms = ExamTerm.objects.order_by("name", "-year").values("id", "name", "year")
+    classes = AcademicClass.objects.order_by("-year", "name", "section").values(
+        "id", "name", "section", "year"
+    )
+
+    ctx = {
+        "page": page,
+        "summaries": page.object_list,
+        "filters": {
+            "year": request.GET.get("year") or "",
+            "term_id": request.GET.get("term_id") or "",
+            "class_id": request.GET.get("class_id") or "",
+            "name": request.GET.get("name") or "",
+            "section": request.GET.get("section") or "",
+        },
+        "years": years,
+        "terms": terms,
+        "classes": classes,
+    }
+    return render(request, "results/results_index.html", ctx)
+
+
+def results_filter(request):
+    """
+    A simple alias to results_index so `{% url 'results:filter' %}` works.
+    If you make a dedicated filter UI template later, you can render it here.
+    """
+    return results_index(request)
+
+
+def results_detail(request, summary_id: int):
+    """
+    Detail page for a given ClassResultSummary (one Class + one Term).
+    Includes toppers and optional per-subject class averages.
+    """
+    summary = get_object_or_404(
+        ClassResultSummary.objects.select_related("klass", "term")
+        .prefetch_related(
+            # toppers in rank order
+            Prefetch("toppers", queryset=summary_toppers_qs()),
+            # subject averages with subject loaded
+            Prefetch(
+                "subject_avgs",
+                queryset=ClassResultSubjectAvg.objects.select_related("subject")
+                .order_by("subject__code"),
+            ),
+        ),
+        pk=summary_id,
+    )
+
+    ctx = {
+        "summary": summary,
+        "klass": summary.klass,
+        "term": summary.term,
+        "toppers": summary.toppers.all(),          # already ordered by prefetch
+        "subject_avgs": summary.subject_avgs.all(),# already ordered by prefetch
+    }
+    return render(request, "results/results_detail.html", ctx)
+
+
+# ---------- tiny query helper so we keep 'rank' order everywhere ----------
+def summary_toppers_qs():
+    from content.models import ClassTopper
+    return ClassTopper.objects.order_by("rank", "id")
+
+
+def class_results_overview(request):
+    qs = (
+        ClassResultSummary.objects
+        .select_related("klass", "term")
+        .order_by("-created_at", "klass__name", "klass__section")
+    )
+    paginator = Paginator(qs, 20)
+    page_number = request.GET.get("page") or 1
+    page_obj = paginator.get_page(page_number)
+
+    return render(
+        request,
+        "results/results_index.html",
+        {
+            "summaries": page_obj.object_list,
+            "page_obj": page_obj,
+        },
+    )
+
+def class_results_detail(request, summary_id: int):
+    summary = get_object_or_404(
+        ClassResultSummary.objects
+        .select_related("klass", "term")
+        .prefetch_related("toppers", "subject_avgs__subject"),
+        pk=summary_id,
+    )
+
+    # Coerce to safe values so the template never shows blanks
+    safe = {
+        "total_students": summary.total_students or 0,
+        "appeared": summary.appeared or 0,
+        "pass_rate_pct": summary.pass_rate_pct or Decimal("0"),
+        "overall_avg_pct": summary.overall_avg_pct or Decimal("0"),
+        "highest_pct": summary.highest_pct or Decimal("0"),
+        "lowest_pct": summary.lowest_pct or Decimal("0"),
+    }
+
+    return render(
+        request,
+        "results/class_overview.html",
+        {
+            "summary": summary,
+            "klass": summary.klass,            # used in the heading
+            "term": summary.term,              # used in the heading
+            "safe": safe,                      # safe numbers for the cards
+            "toppers": summary.toppers.all().order_by("rank", "id"),
+            "subject_avgs": summary.subject_avgs.all().order_by("subject__code"),
+        },
+    )
+
+def class_results_filter(request):
+    # keep simple for now – you can extend later
+    return render(request, "results/filter.html", {})
+
+
+def results_index(request):
+    qs = (ClassResultSummary.objects
+          .select_related("klass", "term")
+          .order_by("-created_at", "klass__name", "klass__section"))
+    page = Paginator(qs, 20).get_page(request.GET.get("page") or 1)
+    return render(request, "results/results_index.html", {
+        "page": page,
+        "summaries": page.object_list,
+    })
+
+def results_detail(request, summary_id: int):
+    s = get_object_or_404(
+        ClassResultSummary.objects
+        .select_related("klass", "term")
+        .prefetch_related("toppers", "subject_avgs__subject"),
+        pk=summary_id
+    )
+    # always provide numbers (no blanks)
+    safe = {
+        "total":     s.total_students or 0,
+        "appeared":  s.appeared or 0,
+        "pass_pct":  s.pass_rate_pct or Decimal("0"),
+        "avg_pct":   s.overall_avg_pct or Decimal("0"),
+        "hi":        s.highest_pct or Decimal("0"),
+        "lo":        s.lowest_pct or Decimal("0"),
+    }
+    return render(request, "results/class_overview.html", {
+        "summary": s,
+        "klass": s.klass,
+        "term": s.term,
+        "safe": safe,
+        "toppers": s.toppers.all().order_by("rank", "id"),
+        "subject_avgs": s.subject_avgs.all().order_by("subject__code"),
+    })
+
+# (optional) quick sanity page
+from django.http import HttpResponse
+def results_debug(_):
+    c = ClassResultSummary.objects.count()
+    s = ClassResultSummary.objects.select_related("klass","term").first()
+    return HttpResponse(f"Summaries={c} | First={s}")

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ klass }} — {{ term }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .stat{border-radius:12px;background:#fff}
+  .stat .label{font-size:.8rem;color:#6c757d}
+  .stat .value{font-weight:600;font-size:1.15rem}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <span class="badge rounded-pill badge-soft-primary">{{ term.name }} {{ term.year }}</span>
+      <h1 class="h4 d-inline ms-2 mb-0">{{ klass.name }}{% if klass.section %} – {{ klass.section }}{% endif %} <span class="text-muted fw-normal">({{ klass.year }})</span></h1>
+    </div>
+    <a href="{% url 'results_index' %}" class="btn btn-outline-secondary btn-sm">← All results</a>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3"><div class="p-3 border stat"><div class="label">Total / Appeared</div><div class="value">{{ safe.total }} / {{ safe.appeared }}</div></div></div>
+    <div class="col-6 col-lg-3"><div class="p-3 border stat"><div class="label">Pass Rate</div><div class="value">{{ safe.pass_pct }}%</div></div></div>
+    <div class="col-6 col-lg-3"><div class="p-3 border stat"><div class="label">Overall Average</div><div class="value">{{ safe.avg_pct }}%</div></div></div>
+    <div class="col-6 col-lg-3"><div class="p-3 border stat"><div class="label">Highest / Lowest</div><div class="value">{{ safe.hi }}% / {{ safe.lo }}%</div></div></div>
+  </div>
+
+  <h2 class="h6 mb-3">Toppers</h2>
+  {% if toppers %}
+    <div class="row g-3 mb-4">
+      {% for t in toppers %}
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="p-3 border rounded-3 d-flex gap-3 align-items-center bg-white">
+            <img src="{{ t.profile_image.url }}" onerror="this.style.display='none'"
+                 class="rounded-circle" style="width:64px;height:64px;object-fit:cover;">
+            <div>
+              <div class="small text-muted">Rank {{ t.rank }}{% if t.roll_no %} • Roll {{ t.roll_no }}{% endif %}</div>
+              <div class="fw-semibold">{{ t.name }}</div>
+              <div class="small text-muted">{{ t.total_pct }}% • {{ t.grade }}</div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-light border">No toppers recorded.</div>
+  {% endif %}
+
+  {% if subject_avgs %}
+    <h2 class="h6 mb-3">Subject Averages</h2>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Subject</th><th class="text-end">Average</th><th class="text-end">Out of</th><th class="text-end">Avg %</th></tr></thead>
+        <tbody>
+          {% for sa in subject_avgs %}
+          <tr>
+            <td>{{ sa.subject.code }} — {{ sa.subject.title }}</td>
+            <td class="text-end">{{ sa.avg_score }}</td>
+            <td class="text-end">{{ sa.out_of }}</td>
+            <td class="text-end">{{ sa.avg_pct }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

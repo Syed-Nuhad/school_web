@@ -3,7 +3,8 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.conf import settings
 from .models import Course, AdmissionApplication, FunctionHighlight, FestivalMedia, CollegeFestival, Member, \
-    ContactInfo, ContactMessage, FooterSettings, GalleryPost
+    ContactInfo, ContactMessage, FooterSettings, GalleryPost, AcademicClass, Subject, ExamTerm, \
+    ClassResultSubjectAvg, ClassResultSummary, ClassTopper, AttendanceRecord, AttendanceStatus, AttendanceSession
 
 from .models import (
     Banner,
@@ -363,7 +364,7 @@ class CourseAdmin(OwnableAdminMixin):
 
 
 @admin.register(AdmissionApplication)
-class AdmissionApplicationAdmin(admin.ModelAdmin):
+class AdmissionApplicationAdmin(OwnableAdminMixin):
     list_display = (
         "full_name","desired_course",
         "add_admission","add_tuition","add_exam",
@@ -632,3 +633,91 @@ class GalleryPostAdmin(OwnableAdminMixin):
         if not obj.created_by:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+
+@admin.register(AcademicClass)
+class AcademicClassAdmin(OwnableAdminMixin):
+    list_display = ("name", "section", "year")
+    list_filter = ("year", "name", "section")
+    search_fields = ("name", "section")
+
+@admin.register(Subject)
+class SubjectAdmin(OwnableAdminMixin):
+    list_display = ("code", "title")
+    search_fields = ("code", "title")
+
+@admin.register(ExamTerm)
+class ExamTermAdmin(OwnableAdminMixin):
+    list_display = ("name", "year", "start_date")
+    list_filter = ("year", "name")
+
+class SubjectAvgInline(admin.TabularInline):
+    model = ClassResultSubjectAvg
+    extra = 1
+
+class TopperInline(admin.TabularInline):
+    model = ClassTopper
+    extra = 1
+    fields = ("rank", "name", "roll_no", "total_pct", "grade", "profile_image")
+    ordering = ("rank",)
+
+@admin.register(ClassResultSummary)
+class ClassResultSummaryAdmin(OwnableAdminMixin):
+    list_display = ("klass", "term", "appeared", "pass_rate_pct", "overall_avg_pct", "created_at")
+    list_filter = ("term__year", "term__name", "klass__year", "klass__name", "klass__section")
+    search_fields = ("klass__name", "klass__section")
+    inlines = [SubjectAvgInline, TopperInline]
+
+
+
+
+
+
+
+
+
+
+
+class AttendanceRecordInline(admin.TabularInline):
+    model = AttendanceRecord
+    extra = 0
+    fields = ("student", "status", "minutes_late", "reason", "marked_by", "marked_at")
+    readonly_fields = ("marked_at",)
+    autocomplete_fields = ("student",)
+
+
+@admin.register(AttendanceSession)
+class AttendanceSessionAdmin(admin.ModelAdmin):
+    list_display  = (
+        "date", "school_class", "created_by", "created_at",
+        "total_students", "present_count", "absent_count", "late_count", "excused_count",
+    )
+    list_filter   = ("date", "school_class")
+    search_fields = ("school_class__name", "notes")
+    inlines       = [AttendanceRecordInline]
+    autocomplete_fields = ("school_class",)
+    date_hierarchy = "date"
+
+    @admin.display(description="Total")
+    def total_students(self, obj): return obj.records.count()
+
+    @admin.display(description="Present")
+    def present_count(self, obj): return obj.records.filter(status=AttendanceStatus.PRESENT).count()
+
+    @admin.display(description="Absent")
+    def absent_count(self, obj):  return obj.records.filter(status=AttendanceStatus.ABSENT).count()
+
+    @admin.display(description="Late")
+    def late_count(self, obj):    return obj.records.filter(status=AttendanceStatus.LATE).count()
+
+    @admin.display(description="Excused")
+    def excused_count(self, obj): return obj.records.filter(status=AttendanceStatus.EXCUSED).count()
+
+
+@admin.register(AttendanceRecord)
+class AttendanceRecordAdmin(admin.ModelAdmin):
+    list_display  = ("session", "student", "status", "minutes_late", "marked_by", "marked_at")
+    list_filter   = ("status", "session__date", "session__school_class")
+    search_fields = ("student__name", "session__school_class__name", "reason")
+    autocomplete_fields = ("student", "session")

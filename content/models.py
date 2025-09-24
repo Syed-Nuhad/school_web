@@ -4,6 +4,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -1408,3 +1409,296 @@ class GalleryPost(models.Model):
             if m:
                 return m.group(1)
         return ""
+
+
+
+
+
+
+class AcademicClass(models.Model):
+    name = models.CharField(
+        max_length=80,
+        help_text='Class name as shown to users, e.g. "Class 8" or "Grade 10".'
+    )
+    section = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Optional section/stream label, e.g. "A", "Science". Leave empty if not used.'
+    )
+    year = models.PositiveIntegerField(
+        default=timezone.now().year,
+        help_text="Academic year for this class (e.g., 2025)."
+    )
+
+    class Meta:
+        unique_together = ("name", "section", "year")
+        ordering = ("-year", "name", "section")
+
+    def __str__(self):
+        return f"{self.name}{' - ' + self.section if self.section else ''} ({self.year})"
+
+
+class Subject(models.Model):
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        help_text='Short code for the subject, e.g. "ENG", "MATH". Must be unique.'
+    )
+    title = models.CharField(
+        max_length=120,
+        help_text='Full subject title as shown to users, e.g. "English", "Mathematics".'
+    )
+
+    class Meta:
+        ordering = ("code",)
+
+    def __str__(self):
+        return f"{self.code} — {self.title}"
+
+
+class ExamTerm(models.Model):
+    name = models.CharField(
+        max_length=80,
+        help_text='Exam term name, e.g. "Midterm", "Final", "Term 1".'
+    )
+    year = models.PositiveIntegerField(
+        default=timezone.now().year,
+        help_text="Calendar year of the exam term (e.g., 2025)."
+    )
+    start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Optional date when the exam term starts (for reference)."
+    )
+
+    class Meta:
+        unique_together = ("name", "year")
+        ordering = ("-year", "name")
+
+    def __str__(self):
+        return f"{self.name} {self.year}"
+
+
+class ClassResultSummary(models.Model):
+    """
+    One row per (Class, Term) with class-level aggregates only.
+    """
+    klass = models.ForeignKey(
+        AcademicClass,
+        on_delete=models.CASCADE,
+        related_name="result_summaries",
+        help_text="Which class these results belong to."
+    )
+    term = models.ForeignKey(
+        ExamTerm,
+        on_delete=models.CASCADE,
+        related_name="result_summaries",
+        help_text="Which exam term these results summarize."
+    )
+
+    total_students = models.PositiveIntegerField(
+        default=0,
+        help_text="Total students enrolled in the class."
+    )
+    appeared = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of students who appeared for the exam in this term."
+    )
+    pass_rate_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Pass percentage for the class (0–100)."
+    )
+    overall_avg_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Overall average percentage for the class (0–100)."
+    )
+    highest_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Highest percentage achieved in the class (0–100)."
+    )
+    lowest_pct = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Lowest percentage achieved in the class (0–100)."
+    )
+    remarks = models.TextField(
+        blank=True,
+        help_text="Optional notes or remarks shown on the class result page."
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Timestamp when this summary was created (auto)."
+    )
+
+    class Meta:
+        unique_together = ("klass", "term")
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"{self.klass} — {self.term}"
+
+
+class ClassResultSubjectAvg(models.Model):
+    """
+    Optional per-subject class averages.
+    """
+    summary = models.ForeignKey(
+        ClassResultSummary,
+        on_delete=models.CASCADE,
+        related_name="subject_avgs",
+        help_text="Select the (Class, Term) summary this average belongs to."
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.PROTECT,
+        related_name="class_avgs",
+        help_text="Subject for which you are recording the class average."
+    )
+    avg_score = models.DecimalField(
+        max_digits=6, decimal_places=2,
+        help_text="Average marks the class scored in this subject."
+    )
+    out_of = models.PositiveIntegerField(
+        default=100,
+        help_text="Maximum possible marks for this subject average (e.g., 100)."
+    )
+
+    class Meta:
+        unique_together = ("summary", "subject")
+        ordering = ("subject__code",)
+
+    def __str__(self):
+        return f"{self.summary} — {self.subject.code}"
+
+    @property
+    def avg_pct(self) -> float:
+        try:
+            return round(float(self.avg_score) / float(self.out_of) * 100.0, 2)
+        except Exception:
+            return 0.0
+
+
+def upload_student_profile_to(instance, filename):
+    dt = timezone.now()
+    return f"students/profiles/{dt:%Y/%m}/{filename}"
+
+
+class ClassTopper(models.Model):
+    """
+    Toppers for a given class+term summary. No per-student subject rows—just the essentials.
+    """
+    summary = models.ForeignKey(
+        ClassResultSummary,
+        on_delete=models.CASCADE,
+        related_name="toppers",
+        help_text="Select the (Class, Term) summary this topper belongs to."
+    )
+    rank = models.PositiveIntegerField(
+        default=1,
+        help_text="Rank in the class for this term (1 = topper)."
+    )
+    name = models.CharField(
+        max_length=120,
+        help_text="Student full name as it should appear on the site."
+    )
+    roll_no = models.CharField(
+        max_length=40,
+        blank=True,
+        help_text="Optional roll number / ID for reference."
+    )
+    profile_image = models.ImageField(
+        upload_to=upload_student_profile_to,
+        blank=True, null=True,
+        help_text="Optional student profile photo (square crop recommended)."
+    )
+
+    total_pct = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        help_text="Overall % (e.g., 92.50)."
+    )
+    grade = models.CharField(
+        max_length=8,
+        blank=True,
+        help_text='Optional grade label, e.g., "A+", "A".'
+    )
+
+    class Meta:
+        unique_together = ("summary", "rank")
+        ordering = ("rank", "id")
+
+    def __str__(self):
+        return f"{self.summary} — Rank {self.rank}: {self.name}"
+
+
+
+
+
+
+class AttendanceStatus(models.TextChoices):
+    PRESENT = "P", "Present"
+    ABSENT  = "A", "Absent"
+    LATE    = "L", "Late"
+    EXCUSED = "E", "Excused"
+
+
+class AttendanceSession(models.Model):
+    """
+    One class on one calendar date. Create one per day per class.
+    """
+    school_class = models.ForeignKey(
+        "academics.SchoolClass",
+        on_delete=models.CASCADE,
+        related_name="attendance_sessions",
+    )
+    date        = models.DateField(default=timezone.localdate)
+    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+    notes       = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["school_class", "date"],
+                name="uniq_attendance_session_per_class_day",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["school_class", "date"]),
+            models.Index(fields=["date"]),
+        ]
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return f"{self.school_class} – {self.date}"
+
+
+class AttendanceRecord(models.Model):
+    """
+    A single student's attendance for a given session/date.
+    """
+    session      = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE, related_name="records")
+    student      = models.ForeignKey("academics.Student", on_delete=models.CASCADE, related_name="attendance_records")
+    status       = models.CharField(max_length=1, choices=AttendanceStatus.choices, default=AttendanceStatus.PRESENT)
+    minutes_late = models.PositiveIntegerField(default=0)  # relevant if status=L
+    reason       = models.CharField(max_length=160, blank=True)
+    marked_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    marked_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "student"],
+                name="uniq_record_per_student_per_session",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["session", "status"]),
+            models.Index(fields=["student"]),
+        ]
+
+    def __str__(self):
+        return f"{self.student} – {self.get_status_display()} @ {self.session.date}"
