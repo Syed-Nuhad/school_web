@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
 import re
@@ -1693,3 +1694,71 @@ class AttendanceSession(models.Model):
             return 0.0
         # Excused counts as non-absent
         return round(100.0 * ((self.present_count or 0) + (self.excused_count or 0)) / total, 1)
+
+
+
+
+
+
+
+
+
+
+
+class ExamRoutine(models.Model):
+    """
+    A published exam routine image for a given class and term/semester, with exam dates.
+    """
+    is_active = models.BooleanField(default=True)
+
+    school_class = models.ForeignKey(
+        "content.AcademicClass",
+        on_delete=models.CASCADE,
+        related_name="exam_routines",
+    )
+    term = models.ForeignKey(
+        "content.ExamTerm",
+        on_delete=models.CASCADE,
+        related_name="exam_routines",
+    )
+
+    title = models.CharField(max_length=160, blank=True)
+    routine_image = models.ImageField(upload_to="exam_routines/%Y/%m/", blank=True, null=True)
+    routine_image_url = models.URLField(blank=True, default="")  # fallback if you prefer linking
+
+    exam_start_date = models.DateField()
+    exam_end_date = models.DateField(blank=True, null=True)  # optional (single-day if empty)
+    notes = models.TextField(blank=True, default="")
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-exam_start_date", "-id")
+        constraints = [
+            models.CheckConstraint(
+                name="exam_date_range_valid",
+                check=Q(exam_end_date__gte=F("exam_start_date")) | Q(exam_end_date__isnull=True),
+            )
+        ]
+
+    def __str__(self):
+        base = self.title or f"{self.school_class} — {self.term}"
+        if self.exam_end_date and self.exam_end_date != self.exam_start_date:
+            return f"{base} ({self.exam_start_date} → {self.exam_end_date})"
+        return f"{base} ({self.exam_start_date})"
+
+    @property
+    def image_src(self) -> str:
+        """Prefer uploaded image, fall back to URL."""
+        try:
+            if self.routine_image and self.routine_image.url:
+                return self.routine_image.url
+        except Exception:
+            pass
+        return self.routine_image_url or ""
