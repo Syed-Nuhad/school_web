@@ -35,10 +35,24 @@ urlpatterns = [
 
     # 3) Class+term details (with toppers)
     # path("class/<int:klass_id>/term/<int:term_id>/", class_overview, name="class_overview"),
-    path("results/", ui_views.class_results_overview, name="index"),
-    path("results/filter/", ui_views.class_results_filter, name="results_filter"),
-    path("results/<int:summary_id>/", ui_views.class_results_detail, name="results_detail"),
+    path("results/", views.results_index, name="index"),
+    path("results/filter/", views.results_filter, name="results_filter"),
+    path("results/<int:summary_id>/", views.results_detail, name="results_detail"),
+
+    # (optional) tiny debug endpoint you had
+    path("results-debug/", views.results_debug, name="results_debug"),
+
+    # ---------------------------
+    # Attendance JSON (backend for the next UI step)
+    # ---------------------------
+    path("attendance/overview/<int:class_id>/",
+         views.attendance_class_overview_json, name="attendance_class_overview_json"),
+    path("attendance/day/<int:class_id>/",
+         views.attendance_classday_get, name="attendance_classday_get"),
+    path("attendance/day/upsert/",
+         views.attendance_classday_upsert, name="attendance_classday_upsert"),
 ]
+
 
 # Serve static & media in development
 if settings.DEBUG:

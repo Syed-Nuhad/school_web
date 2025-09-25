@@ -1642,32 +1642,34 @@ class ClassTopper(models.Model):
 CLASS_MODEL_LABEL   = getattr(settings, "ATTENDANCE_CLASS_MODEL",   "academics.Classroom")
 STUDENT_MODEL_LABEL = getattr(settings, "ATTENDANCE_STUDENT_MODEL", "students.Student")
 
-
-class AttendanceStatus(models.TextChoices):
-    PRESENT = "P", "Present"
-    ABSENT  = "A", "Absent"
-    LATE    = "L", "Late"
-    EXCUSED = "E", "Excused"
-
-
 class AttendanceSession(models.Model):
     """
-    One class on one calendar date (at most one per class per day).
+    One class on one calendar date (counts only; no per-student rows).
+    Unique per (class, date).
     """
     school_class = models.ForeignKey(
-        CLASS_MODEL_LABEL,
+        "content.AcademicClass",
         on_delete=models.CASCADE,
         related_name="attendance_sessions",
     )
     date        = models.DateField(default=timezone.localdate)
-    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    created_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                    null=True, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
     notes       = models.CharField(max_length=255, blank=True)
 
+    # ---- COUNT FIELDS (class-wise) ----
+    present_count = models.PositiveIntegerField(default=0)
+    absent_count  = models.PositiveIntegerField(default=0)
+    late_count    = models.PositiveIntegerField(default=0)
+    excused_count = models.PositiveIntegerField(default=0)
+
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["school_class", "date"],
-                                    name="uniq_attendance_session_per_class_day"),
+            models.UniqueConstraint(
+                fields=["school_class", "date"],
+                name="uniq_class_day_session",
+            ),
         ]
         indexes = [
             models.Index(fields=["school_class", "date"]),
@@ -1678,27 +1680,16 @@ class AttendanceSession(models.Model):
     def __str__(self):
         return f"{self.school_class} – {self.date}"
 
+    # Convenience properties (nice for admin / templates)
+    @property
+    def total_count(self) -> int:
+        return (self.present_count or 0) + (self.absent_count or 0) + \
+               (self.late_count or 0) + (self.excused_count or 0)
 
-class AttendanceRecord(models.Model):
-    """
-    A single student's attendance inside a session.
-    """
-    session      = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE, related_name="records")
-    student      = models.ForeignKey(STUDENT_MODEL_LABEL, on_delete=models.CASCADE, related_name="attendance_records")
-    status       = models.CharField(max_length=1, choices=AttendanceStatus.choices, default=AttendanceStatus.PRESENT)
-    minutes_late = models.PositiveIntegerField(default=0)  # used when status = LATE
-    reason       = models.CharField(max_length=160, blank=True)
-    marked_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
-    marked_at    = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["session", "student"], name="uniq_record_per_student_per_session"),
-        ]
-        indexes = [
-            models.Index(fields=["session", "status"]),
-            models.Index(fields=["student"]),
-        ]
-
-    def __str__(self):
-        return f"{self.student} – {self.get_status_display()} @ {self.session.date}"
+    @property
+    def attendance_rate_pct(self) -> float:
+        total = self.total_count
+        if not total:
+            return 0.0
+        # Excused counts as non-absent
+        return round(100.0 * ((self.present_count or 0) + (self.excused_count or 0)) / total, 1)

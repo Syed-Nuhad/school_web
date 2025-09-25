@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Class Attendance — {{ klass.name }}{% if klass.section %} – {{ klass.section }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<!-- Chart.js (lightweight, CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-4 py-md-5" id="att-root"
+         data-class-id="{{ klass.id }}"
+         data-url-overview="{% url 'attendance_class_overview_json' 0 %}"
+         data-url-day="{% url 'attendance_classday_get' 0 %}"
+         data-url-upsert="{% url 'attendance_classday_upsert' %}">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+      <h1 class="h5 mb-1">Class Attendance</h1>
+      <div class="text-muted">
+        {{ klass.name }}{% if klass.section %} – {{ klass.section }}{% endif %}
+        <span class="ms-1">({{ klass.year }})</span>
+      </div>
+    </div>
+
+    <!-- Range picker -->
+    <form class="d-flex flex-wrap gap-2 align-items-center" id="rangeForm">
+      <input class="form-control form-control-sm" type="date" id="startDate" name="start">
+      <span class="text-muted">to</span>
+      <input class="form-control form-control-sm" type="date" id="endDate" name="end">
+      <button class="btn btn-primary btn-sm" type="submit">Load</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" id="btnThisMonth">This month</button>
+      <button class="btn btn-outline-secondary btn-sm" type="button" id="btnLast30">Last 30 days</button>
+    </form>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3 mb-4">
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Present</div>
+          <div class="h4 mb-0" id="kpiPresent">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Absent</div>
+          <div class="h4 mb-0" id="kpiAbsent">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Late</div>
+          <div class="h4 mb-0" id="kpiLate">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Excused</div>
+          <div class="h4 mb-0" id="kpiExcused">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Total</div>
+          <div class="h4 mb-0" id="kpiTotal">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small mb-1">Attendance Rate</div>
+          <div class="h4 mb-0"><span id="kpiRate">0.0</span>%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card shadow-sm mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">Daily attendance rate</span>
+      <small class="text-muted" id="rangeText"></small>
+    </div>
+    <div class="card-body">
+      <canvas id="rateChart" height="110"></canvas>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span class="fw-semibold">Days</span>
+      <button class="btn btn-primary btn-sm" type="button" id="btnAddToday">Add / Edit Today</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="min-width:110px">Date</th>
+            <th class="text-end">Present</th>
+            <th class="text-end">Absent</th>
+            <th class="text-end">Late</th>
+            <th class="text-end">Excused</th>
+            <th class="text-end">Total</th>
+            <th class="text-end">Rate %</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="daysTbody">
+          <!-- rows injected -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="editForm">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Edit counts — <span id="editDateText"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="date" class="form-control mb-3" id="editDate" name="date">
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small">Present</label>
+            <input type="number" min="0" class="form-control" id="fPresent" name="present" value="0">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Absent</label>
+            <input type="number" min="0" class="form-control" id="fAbsent" name="absent" value="0">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Late</label>
+            <input type="number" min="0" class="form-control" id="fLate" name="late" value="0">
+          </div>
+          <div class="col-6">
+            <label class="form-label small">Excused</label>
+            <input type="number" min="0" class="form-control" id="fExcused" name="excused" value="0">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const root = document.getElementById("att-root");
+  const classId = Number(root.dataset.classId);
+  const urlOverviewTpl = root.dataset.urlOverview; // has trailing /0/
+  const urlDayTpl = root.dataset.urlDay;           // has trailing /0/
+  const urlUpsert = root.dataset.urlUpsert;
+
+  const urlOverview = (cid, start, end) => {
+    const base = urlOverviewTpl.replace(/0\/?$/, cid.toString() + "/");
+    const params = new URLSearchParams();
+    if (start) params.set("start", start);
+    if (end) params.set("end", end);
+    return base + (params.toString() ? "?" + params.toString() : "");
+    };
+  const urlDay = (cid, dateStr) => {
+    const base = urlDayTpl.replace(/0\/?$/, cid.toString() + "/");
+    return base + (dateStr ? ("?date=" + encodeURIComponent(dateStr)) : "");
+  };
+
+  const el = (id) => document.getElementById(id);
+  const kpiPresent = el("kpiPresent"), kpiAbsent = el("kpiAbsent"),
+        kpiLate = el("kpiLate"), kpiExcused = el("kpiExcused"),
+        kpiTotal = el("kpiTotal"), kpiRate = el("kpiRate"),
+        rangeText = el("rangeText"), daysTbody = el("daysTbody");
+
+  // Dates
+  const toISO = (d) => d.toISOString().slice(0,10);
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  el("startDate").value = toISO(firstOfMonth);
+  el("endDate").value = toISO(today);
+
+  // Chart
+  let chart;
+  function drawChart(labels, data) {
+    const ctx = document.getElementById("rateChart");
+    if (chart) chart.destroy();
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "Rate %",
+          data,
+          tension: 0.25,
+          fill: false,
+          pointRadius: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+        }
+      }
+    });
+  }
+
+  function fmt(n){ return (n ?? 0).toLocaleString(); }
+  function pct(n){ return (n ?? 0).toFixed(1); }
+
+  async function loadOverview() {
+    const start = el("startDate").value;
+    const end = el("endDate").value;
+    const res = await fetch(urlOverview(classId, start, end));
+    if (!res.ok) { console.error("overview failed"); return; }
+    const json = await res.json();
+
+    // KPIs
+    kpiPresent.textContent = fmt(json.totals.present);
+    kpiAbsent.textContent  = fmt(json.totals.absent);
+    kpiLate.textContent    = fmt(json.totals.late);
+    kpiExcused.textContent = fmt(json.totals.excused);
+    kpiTotal.textContent   = fmt(json.totals.total);
+    const rate = json.totals.total
+      ? ((json.totals.present + json.totals.excused) * 100 / json.totals.total)
+      : 0.0;
+    kpiRate.textContent = pct(rate);
+    rangeText.textContent = `${json.range.start} → ${json.range.end}`;
+
+    // Chart
+    const labels = json.by_day.map(d => d.date);
+    const data   = json.by_day.map(d => d.rate_pct);
+    drawChart(labels, data);
+
+    // Table
+    daysTbody.innerHTML = "";
+    if (json.by_day.length === 0) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="8" class="text-center text-muted py-4">No attendance saved in this range.</td>`;
+      daysTbody.appendChild(tr);
+    } else {
+      for (const d of json.by_day) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><span class="text-nowrap">${d.date}</span></td>
+          <td class="text-end">${fmt(d.present)}</td>
+          <td class="text-end">${fmt(d.absent)}</td>
+          <td class="text-end">${fmt(d.late)}</td>
+          <td class="text-end">${fmt(d.excused)}</td>
+          <td class="text-end">${fmt(d.total)}</td>
+          <td class="text-end">${pct(d.rate_pct)}</td>
+          <td class="text-end"><button class="btn btn-outline-primary btn-sm" data-edit="${d.date}">Edit</button></td>
+        `;
+        daysTbody.appendChild(tr);
+      }
+    }
+  }
+
+  // CSRF
+  function getCsrfFromForm(){
+    const input = document.querySelector('#editForm input[name="csrfmiddlewaretoken"]');
+    return input ? input.value : "";
+  }
+
+  // Edit modal
+  const editModalEl = document.getElementById('editModal');
+  const editModal = new bootstrap.Modal(editModalEl);
+  const fDate = el("editDate"), fPresent = el("fPresent"), fAbsent = el("fAbsent"),
+        fLate = el("fLate"), fExcused = el("fExcused"), editDateText = el("editDateText");
+
+  async function openEdit(dateStr){
+    const res = await fetch(urlDay(classId, dateStr));
+    const j = await res.json();
+    fDate.value = j.date;
+    editDateText.textContent = j.date;
+    fPresent.value = j.present ?? 0;
+    fAbsent.value  = j.absent ?? 0;
+    fLate.value    = j.late ?? 0;
+    fExcused.value = j.excused ?? 0;
+    editModal.show();
+  }
+
+  // Wire table edit buttons
+  daysTbody.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-edit]");
+    if (!btn) return;
+    openEdit(btn.getAttribute("data-edit"));
+  });
+
+  // Add/Edit today
+  document.getElementById("btnAddToday").addEventListener("click", () => {
+    const t = new Date();
+    const d = t.toISOString().slice(0,10);
+    openEdit(d);
+  });
+
+  // Save form
+  document.getElementById("editForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fd = new FormData();
+    fd.set("class_id", String(classId));
+    fd.set("date", fDate.value);
+    fd.set("present", fPresent.value || "0");
+    fd.set("absent",  fAbsent.value  || "0");
+    fd.set("late",    fLate.value    || "0");
+    fd.set("excused", fExcused.value || "0");
+
+    const res = await fetch(urlUpsert, {
+      method: "POST",
+      headers: { "X-CSRFToken": getCsrfFromForm() },
+      body: fd
+    });
+    if (!res.ok) {
+      alert("Save failed");
+      return;
+    }
+    editModal.hide();
+    loadOverview();
+  });
+
+  // Range form
+  document.getElementById("rangeForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadOverview();
+  });
+  document.getElementById("btnThisMonth").addEventListener("click", () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    el("startDate").value = toISO(start);
+    el("endDate").value = toISO(now);
+    loadOverview();
+  });
+  document.getElementById("btnLast30").addEventListener("click", () => {
+    const now = new Date();
+    const start = new Date(now.getTime() - 29*86400000);
+    el("startDate").value = toISO(start);
+    el("endDate").value = toISO(now);
+    loadOverview();
+  });
+
+  // Initial load
+  loadOverview();
+});
+</script>
+{% endblock %}
