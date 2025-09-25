@@ -532,3 +532,11 @@ def attendance_classday_upsert(request):
         "present": present, "absent": absent, "late": late, "excused": excused,
         "total": total, "rate_pct": rate,
     }, status=200)
+
+
+
+
+@login_required
+def attendance_class_page(request, class_id: int):
+    klass = get_object_or_404(AcademicClass, pk=class_id)
+    return render(request, "attendance/class_attendance.html", {"klass": klass})

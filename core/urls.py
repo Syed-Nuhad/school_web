@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 
 from ui import views as ui_views, views
 from accounts import views as acc_views  # for honeypots
-from ui.views import contact_submit, results_filter, results_detail
+from ui.views import contact_submit, results_filter, results_detail, attendance_class_overview_json
 
 urlpatterns = [
     # Public site
@@ -45,12 +45,30 @@ urlpatterns = [
     # ---------------------------
     # Attendance JSON (backend for the next UI step)
     # ---------------------------
-    path("attendance/overview/<int:class_id>/",
-         views.attendance_class_overview_json, name="attendance_class_overview_json"),
-    path("attendance/day/<int:class_id>/",
-         views.attendance_classday_get, name="attendance_classday_get"),
-    path("attendance/day/upsert/",
-         views.attendance_classday_upsert, name="attendance_classday_upsert"),
+    # ---------------------------
+    # Attendance (JSON + Page)
+    # ---------------------------
+    path(
+        "attendance/overview/<int:class_id>/",
+        views.attendance_class_overview_json,
+        name="attendance_class_overview_json",
+    ),
+    path(
+        "attendance/day/<int:class_id>/",
+        views.attendance_classday_get,
+        name="attendance_classday_get",
+    ),
+    path(
+        "attendance/day/upsert/",
+        views.attendance_classday_upsert,
+        name="attendance_classday_upsert",
+    ),
+    # PAGE VIEW (this is what templates should link to)
+    path(
+        "attendance/class/<int:class_id>/",
+        ui_views.attendance_class_page,  # <-- use the page view, not the JSON view
+        name="attendance_class_page",
+    ),
 ]
 
 

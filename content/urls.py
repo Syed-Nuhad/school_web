@@ -48,7 +48,5 @@ urlpatterns = [
     path("<int:pk>/payment/mark-paid/", payment_mark_paid, name="payment-mark-paid"),
     path("contact/submit/", contact_submit, name="contact_submit"),
     # ... your existing urls ...
-    path("attendance/overview/<int:class_id>/", attendance_class_overview_json,
-         name="attendance_class_overview_json"),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

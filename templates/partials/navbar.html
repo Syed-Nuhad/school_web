@@ -45,7 +45,16 @@
           <ul class="dropdown-menu" aria-labelledby="studentDropdown">
             <li><a class="dropdown-item" href="#academics" target="" rel="noopener">Online Admission Form</a></li>
             <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Student ID Card</a></li>
-            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Class Attendance Overview</a></li>
+            {% if default_class_id %}
+              <li>
+                <a class="dropdown-item"
+                   href="{% url 'attendance_class_page' default_class_id %}">
+                  Class Attendance Overview
+                </a>
+              </li>
+            {% else %}
+              <li><span class="dropdown-item disabled">Class Attendance Overview</span></li>
+            {% endif %}
             <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">School Bus Information</a></li>
           </ul>
         </li>
