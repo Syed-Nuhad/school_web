@@ -30,7 +30,7 @@ from .models import (
     ClassResultSummary,
     ClassTopper,
     # Attendance
-    AttendanceSession,
+    AttendanceSession, ExamRoutine,
 )
 
 # -------------------------------------------------------------------
@@ -629,3 +629,51 @@ class AttendanceSessionAdmin(OwnableAdminMixin):
         ("late_count", "excused_count"),
         "notes",
     )
+
+
+
+
+@admin.register(ExamRoutine)
+class ExamRoutineAdmin(OwnableAdminMixin):
+    list_display = ("title_or_default", "school_class", "term", "date_span", "is_active", "updated_at", "thumb")
+    list_filter  = ("is_active", "term", "school_class")
+    search_fields = ("title", "school_class__name", "school_class__section", "term__name", "term__year")
+    readonly_fields = ("created_by", "created_at", "updated_at", "preview")
+
+    fieldsets = (
+        ("Visibility", {"fields": ("is_active",)}),
+        ("Who / When", {"fields": ("school_class", "term", ("exam_start_date", "exam_end_date"))}),
+        ("Title & Notes", {"fields": ("title", "notes")}),
+        ("Media", {
+            "fields": ("routine_image", "routine_image_url", "preview"),
+            "description": "Upload the routine image or paste a direct image URL. Uploaded image takes precedence."
+        }),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
+    )
+
+    autocomplete_fields = ("school_class", "term")
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)
+
+    def title_or_default(self, obj):
+        return obj.title or f"{obj.school_class} — {obj.term}"
+    title_or_default.short_description = "Title"
+
+    def date_span(self, obj):
+        if obj.exam_end_date and obj.exam_end_date != obj.exam_start_date:
+            return f"{obj.exam_start_date} → {obj.exam_end_date}"
+        return f"{obj.exam_start_date}"
+    date_span.short_description = "Exam dates"
+
+    def thumb(self, obj):
+        src = obj.image_src
+        return format_html('<img src="{}" style="height:38px;border-radius:6px;">', src) if src else "—"
+    thumb.short_description = "Image"
+
+    def preview(self, obj):
+        src = obj.image_src
+        return format_html('<img src="{}" style="max-height:260px;max-width:100%;border-radius:8px;">', src) if src else "—"
+    preview.short_description = "Preview"

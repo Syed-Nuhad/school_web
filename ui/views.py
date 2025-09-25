@@ -14,13 +14,14 @@ from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils.dateparse import parse_date
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_GET
 
 from content.forms import ContactForm
 from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
     AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost,
-    ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg, AttendanceSession, Member
+    ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg, AttendanceSession, Member,
+    ExamRoutine
 )
 
 # -------------------------------------------------------------------
@@ -540,3 +541,101 @@ def attendance_classday_upsert(request):
 def attendance_class_page(request, class_id: int):
     klass = get_object_or_404(AcademicClass, pk=class_id)
     return render(request, "attendance/class_attendance.html", {"klass": klass})
+
+
+
+
+
+
+
+
+
+
+
+
+@login_required
+@require_GET
+def exam_routines_json(request):
+    """
+    List exam routines. Optional filters:
+      ?class_id=   (AcademicClass pk)
+      ?term_id=    (ExamTerm pk)
+      ?year=       (ExamTerm.year)
+      ?active=0/1  (default 1)
+    """
+    qs = ExamRoutine.objects.select_related("school_class", "term")
+
+    active = request.GET.get("active")
+    if active is None or active == "1":
+        qs = qs.filter(is_active=True)
+
+    class_id = request.GET.get("class_id")
+    term_id  = request.GET.get("term_id")
+    year     = request.GET.get("year")
+
+    if class_id:
+        qs = qs.filter(school_class_id=class_id)
+    if term_id:
+        qs = qs.filter(term_id=term_id)
+    if year:
+        qs = qs.filter(term__year=year)
+
+    qs = qs.order_by("-exam_start_date", "-id")
+
+    data = []
+    for r in qs:
+        data.append({
+            "id": r.id,
+            "title": r.title or "",
+            "image": r.image_src,
+            "class": {
+                "id": r.school_class.id,
+                "name": r.school_class.name,
+                "section": r.school_class.section,
+                "year": r.school_class.year,
+            },
+            "term": {
+                "id": r.term.id,
+                "name": r.term.name,
+                "year": r.term.year,
+            },
+            "exam_start_date": r.exam_start_date.isoformat(),
+            "exam_end_date": r.exam_end_date.isoformat() if r.exam_end_date else None,
+            "notes": r.notes,
+            "is_active": r.is_active,
+            "updated_at": r.updated_at.isoformat(),
+        })
+    return JsonResponse({"items": data})
+
+
+@login_required
+@require_GET
+def exam_routine_detail_json(request, pk: int):
+    """
+    Single routine by id.
+    """
+    r = get_object_or_404(
+        ExamRoutine.objects.select_related("school_class", "term"),
+        pk=pk,
+    )
+    return JsonResponse({
+        "id": r.id,
+        "title": r.title or "",
+        "image": r.image_src,
+        "class": {
+            "id": r.school_class.id,
+            "name": r.school_class.name,
+            "section": r.school_class.section,
+            "year": r.school_class.year,
+        },
+        "term": {
+            "id": r.term.id,
+            "name": r.term.name,
+            "year": r.term.year,
+        },
+        "exam_start_date": r.exam_start_date.isoformat(),
+        "exam_end_date": r.exam_end_date.isoformat() if r.exam_end_date else None,
+        "notes": r.notes,
+        "is_active": r.is_active,
+        "updated_at": r.updated_at.isoformat(),
+    })
