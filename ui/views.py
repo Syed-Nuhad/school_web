@@ -1,25 +1,32 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 from decimal import Decimal
 
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import get_object_or_404
 
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Count, Case, When, IntegerField
 from django.apps import apps
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMessage, send_mail
+from django.utils.dateparse import parse_date
+from django.views.decorators.http import require_http_methods
 
 from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
     AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost,
-    ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg
+    ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg, AttendanceRecord, AttendanceStatus,
+    AttendanceSession
 )
 from content.forms import ContactForm
 
+def _staff(user):
+    return user.is_authenticated and user.is_staff
 
 def _paginate(request, queryset, param_name: str, per_page: int):
     """Small helper to DRY pagination."""
@@ -514,8 +521,195 @@ def results_detail(request, summary_id: int):
     })
 
 # (optional) quick sanity page
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+
+
 def results_debug(_):
     c = ClassResultSummary.objects.count()
     s = ClassResultSummary.objects.select_related("klass","term").first()
     return HttpResponse(f"Summaries={c} | First={s}")
+
+
+
+
+
+
+
+
+
+CLASS_MODEL_LABEL   = getattr(settings, "ATTENDANCE_CLASS_MODEL",   "academics.Classroom")
+STUDENT_MODEL_LABEL = getattr(settings, "ATTENDANCE_STUDENT_MODEL", "students.Student")
+ROSTER_ATTR         = getattr(settings, "ATTENDANCE_ROSTER_ATTR",   "students")
+
+def _model(label: str):
+    app_label, model_name = label.split(".", 1)
+    return apps.get_model(app_label, model_name)
+
+ClassModel = _model(CLASS_MODEL_LABEL)
+
+def _staff(user): return user.is_authenticated and user.is_staff
+
+
+@login_required
+@require_http_methods(["GET"])
+def attendance_class_overview_json(request, class_id: int):
+    """
+    GET ?start=YYYY-MM-DD&end=YYYY-MM-DD  (defaults last 30 days)
+    Aggregated totals + per-day breakdown for one class.
+    """
+    try:
+        school_class = ClassModel.objects.get(pk=class_id)
+    except ClassModel.DoesNotExist:
+        return JsonResponse({"error": "Class not found"}, status=404)
+
+    end   = parse_date(request.GET.get("end") or "")   or date.today()
+    start = parse_date(request.GET.get("start") or "") or (end - timedelta(days=30))
+
+    qs = AttendanceRecord.objects.filter(
+        session__school_class=school_class,
+        session__date__gte=start,
+        session__date__lte=end,
+    )
+
+    agg = qs.aggregate(
+        present=Count(Case(When(status=AttendanceStatus.PRESENT, then=1), output_field=IntegerField())),
+        absent =Count(Case(When(status=AttendanceStatus.ABSENT,  then=1), output_field=IntegerField())),
+        late   =Count(Case(When(status=AttendanceStatus.LATE,    then=1), output_field=IntegerField())),
+        excused=Count(Case(When(status=AttendanceStatus.EXCUSED, then=1), output_field=IntegerField())),
+        total  =Count("id"),
+    )
+
+    per_day = (
+        qs.values("session__date")
+          .annotate(
+              present=Count(Case(When(status=AttendanceStatus.PRESENT, then=1), output_field=IntegerField())),
+              absent =Count(Case(When(status=AttendanceStatus.ABSENT,  then=1), output_field=IntegerField())),
+              late   =Count(Case(When(status=AttendanceStatus.LATE,    then=1), output_field=IntegerField())),
+              excused=Count(Case(When(status=AttendanceStatus.EXCUSED, then=1), output_field=IntegerField())),
+              total  =Count("id"),
+          )
+          .order_by("session__date")
+    )
+
+    by_day = []
+    for row in per_day:
+        total = row["total"] or 1
+        rate  = round(100.0 * (row["present"] + row["excused"]) / total, 1)  # excused counts as not-absent
+        by_day.append({
+            "date": row["session__date"].isoformat(),
+            "present": row["present"],
+            "absent": row["absent"],
+            "late": row["late"],
+            "excused": row["excused"],
+            "total": total,
+            "rate_pct": rate,
+        })
+
+    return JsonResponse({
+        "class": {"id": school_class.id, "name": getattr(school_class, "name", str(school_class))},
+        "range": {"start": start.isoformat(), "end": end.isoformat()},
+        "totals": agg,
+        "by_day": by_day,
+    })
+
+
+@login_required
+@user_passes_test(_staff)
+@require_http_methods(["POST"])
+def attendance_create_session(request):
+    """
+    Create a session for {class_id, date}; optionally populate student records from the class roster.
+    POST form: class_id (required), date=YYYY-MM-DD (optional), populate=yes|no (default yes)
+    """
+    class_id = request.POST.get("class_id")
+    if not class_id:
+        return HttpResponseBadRequest("class_id required")
+
+    try:
+        school_class = ClassModel.objects.get(pk=class_id)
+    except ClassModel.DoesNotExist:
+        return JsonResponse({"error": "Class not found"}, status=404)
+
+    the_date = parse_date(request.POST.get("date") or "") or date.today()
+    populate = (request.POST.get("populate") or "yes").lower() in ("1", "true", "yes")
+
+    session, created = AttendanceSession.objects.get_or_create(
+        school_class=school_class,
+        date=the_date,
+        defaults={"created_by": request.user},
+    )
+
+    created_records = 0
+    if populate and created:
+        roster = getattr(school_class, ROSTER_ATTR, None) or getattr(school_class, "student_set", None)
+        if roster and hasattr(roster, "all"):
+            students = list(roster.all())
+            bulk = [
+                AttendanceRecord(
+                    session=session, student=s,
+                    status=AttendanceStatus.PRESENT, marked_by=request.user
+                ) for s in students
+            ]
+            if bulk:
+                AttendanceRecord.objects.bulk_create(bulk, ignore_conflicts=True)
+                created_records = len(bulk)
+
+    return JsonResponse({
+        "session_id": session.id,
+        "created": created,
+        "created_records": created_records,
+        "class": school_class.id,
+        "date": the_date.isoformat(),
+    }, status=201 if created else 200)
+
+
+@login_required
+@user_passes_test(_staff)
+@require_http_methods(["POST"])
+def attendance_update_record(request):
+    """
+    Update a student's record.
+    POST: record_id OR (session_id & student_id), and any of: status(P/A/L/E), minutes_late, reason
+    """
+    record_id  = request.POST.get("record_id")
+    session_id = request.POST.get("session_id")
+    student_id = request.POST.get("student_id")
+
+    if record_id:
+        try:
+            rec = AttendanceRecord.objects.get(pk=record_id)
+        except AttendanceRecord.DoesNotExist:
+            return JsonResponse({"error": "Record not found"}, status=404)
+    else:
+        if not (session_id and student_id):
+            return HttpResponseBadRequest("Provide record_id OR session_id and student_id")
+        try:
+            rec = AttendanceRecord.objects.get(session_id=session_id, student_id=student_id)
+        except AttendanceRecord.DoesNotExist:
+            return JsonResponse({"error": "Record not found"}, status=404)
+
+    status_val = request.POST.get("status")
+    if status_val:
+        if status_val not in {"P", "A", "L", "E"}:
+            return HttpResponseBadRequest("Invalid status (use P/A/L/E)")
+        rec.status = status_val
+
+    if "minutes_late" in request.POST:
+        try:
+            rec.minutes_late = max(0, int(request.POST.get("minutes_late") or 0))
+        except ValueError:
+            return HttpResponseBadRequest("minutes_late must be integer ≥ 0")
+
+    if "reason" in request.POST:
+        rec.reason = request.POST.get("reason") or ""
+
+    rec.marked_by = request.user
+    rec.save(update_fields=["status", "minutes_late", "reason", "marked_by", "marked_at"])
+
+    return JsonResponse({
+        "record_id": rec.id,
+        "status": rec.status,
+        "minutes_late": rec.minutes_late,
+        "reason": rec.reason,
+        "marked_at": rec.marked_at.isoformat(),
+    })

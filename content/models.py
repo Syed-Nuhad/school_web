@@ -1638,6 +1638,11 @@ class ClassTopper(models.Model):
 
 
 
+# Use the model labels from settings (e.g., "school.Class")
+CLASS_MODEL_LABEL   = getattr(settings, "ATTENDANCE_CLASS_MODEL",   "academics.Classroom")
+STUDENT_MODEL_LABEL = getattr(settings, "ATTENDANCE_STUDENT_MODEL", "students.Student")
+
+
 class AttendanceStatus(models.TextChoices):
     PRESENT = "P", "Present"
     ABSENT  = "A", "Absent"
@@ -1647,10 +1652,10 @@ class AttendanceStatus(models.TextChoices):
 
 class AttendanceSession(models.Model):
     """
-    One class on one calendar date. Create one per day per class.
+    One class on one calendar date (at most one per class per day).
     """
     school_class = models.ForeignKey(
-        "academics.SchoolClass",
+        CLASS_MODEL_LABEL,
         on_delete=models.CASCADE,
         related_name="attendance_sessions",
     )
@@ -1661,10 +1666,8 @@ class AttendanceSession(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["school_class", "date"],
-                name="uniq_attendance_session_per_class_day",
-            ),
+            models.UniqueConstraint(fields=["school_class", "date"],
+                                    name="uniq_attendance_session_per_class_day"),
         ]
         indexes = [
             models.Index(fields=["school_class", "date"]),
@@ -1678,22 +1681,19 @@ class AttendanceSession(models.Model):
 
 class AttendanceRecord(models.Model):
     """
-    A single student's attendance for a given session/date.
+    A single student's attendance inside a session.
     """
     session      = models.ForeignKey(AttendanceSession, on_delete=models.CASCADE, related_name="records")
-    student      = models.ForeignKey("academics.Student", on_delete=models.CASCADE, related_name="attendance_records")
+    student      = models.ForeignKey(STUDENT_MODEL_LABEL, on_delete=models.CASCADE, related_name="attendance_records")
     status       = models.CharField(max_length=1, choices=AttendanceStatus.choices, default=AttendanceStatus.PRESENT)
-    minutes_late = models.PositiveIntegerField(default=0)  # relevant if status=L
+    minutes_late = models.PositiveIntegerField(default=0)  # used when status = LATE
     reason       = models.CharField(max_length=160, blank=True)
     marked_by    = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     marked_at    = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["session", "student"],
-                name="uniq_record_per_student_per_session",
-            ),
+            models.UniqueConstraint(fields=["session", "student"], name="uniq_record_per_student_per_session"),
         ]
         indexes = [
             models.Index(fields=["session", "status"]),

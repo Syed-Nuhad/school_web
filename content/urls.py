@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.urls import path
 
-from ui.views import contact_submit
+from ui.views import contact_submit, attendance_update_record, attendance_create_session, attendance_class_overview_json
 from . import views
 from .view_addmissions import AdmissionApplyView, AdmissionSuccessView, AdmissionCheckoutView, payment_create, \
     payment_mark_paid
@@ -47,6 +47,10 @@ urlpatterns = [
     path("<int:pk>/payment/create/", payment_create, name="payment-create"),
     path("<int:pk>/payment/mark-paid/", payment_mark_paid, name="payment-mark-paid"),
     path("contact/submit/", contact_submit, name="contact_submit"),
-
+    # ... your existing urls ...
+    path("attendance/overview/<int:klass_id>/", attendance_class_overview_json,
+         name="attendance_class_overview_json"),
+    path("attendance/session/create/", attendance_create_session, name="attendance_create_session"),
+    path("attendance/record/update/", attendance_update_record, name="attendance_update_record"),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

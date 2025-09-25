@@ -671,14 +671,6 @@ class ClassResultSummaryAdmin(OwnableAdminMixin):
 
 
 
-
-
-
-
-
-
-
-
 class AttendanceRecordInline(admin.TabularInline):
     model = AttendanceRecord
     extra = 0
@@ -686,14 +678,14 @@ class AttendanceRecordInline(admin.TabularInline):
     readonly_fields = ("marked_at",)
     autocomplete_fields = ("student",)
 
-
 @admin.register(AttendanceSession)
-class AttendanceSessionAdmin(admin.ModelAdmin):
+class AttendanceSessionAdmin(OwnableAdminMixin):
     list_display  = (
         "date", "school_class", "created_by", "created_at",
         "total_students", "present_count", "absent_count", "late_count", "excused_count",
     )
     list_filter   = ("date", "school_class")
+    # Adjust the field name on the right if your class model uses a different title field
     search_fields = ("school_class__name", "notes")
     inlines       = [AttendanceRecordInline]
     autocomplete_fields = ("school_class",)
@@ -714,10 +706,9 @@ class AttendanceSessionAdmin(admin.ModelAdmin):
     @admin.display(description="Excused")
     def excused_count(self, obj): return obj.records.filter(status=AttendanceStatus.EXCUSED).count()
 
-
 @admin.register(AttendanceRecord)
-class AttendanceRecordAdmin(admin.ModelAdmin):
+class AttendanceRecordAdmin(OwnableAdminMixin):
     list_display  = ("session", "student", "status", "minutes_late", "marked_by", "marked_at")
     list_filter   = ("status", "session__date", "session__school_class")
-    search_fields = ("student__name", "session__school_class__name", "reason")
+    search_fields = ("session__school_class__name", "reason")
     autocomplete_fields = ("student", "session")
