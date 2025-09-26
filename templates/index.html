@@ -50,10 +50,8 @@
                  text-align:center;background:none;z-index:2;">
             <div class="px-3">
               {% if b.title %}
-                <h2 class="mb-2 text-white"
-                    style="font-weight:800;
-                           font-size:clamp(1.9rem,3.6vw + 1rem,3.6rem);
-                           letter-spacing:.2px;">
+                <h2 class="mb-2 fw-normal text-white"
+                    style="font-size:clamp(1.9rem,3.6vw + 1rem,3.6rem);">
                   {{ b.title }}
                 </h2>
               {% endif %}
@@ -187,7 +185,7 @@
                     style="left:-6px; top:10px; width:12px; height:12px; box-shadow:0 0 0 5px rgba(13,202,240,.18);"></span>
 
               <div class="bg-white shadow-sm rounded-3 p-3 p-md-4 border border-light-subtle">
-                <h5 class="mb-1 fw-bold">{{ e.title }}</h5>
+                <h5 class="mb-1 fw-normal">{{ e.title }}</h5>
                 {% if e.description %}
                   <p class="mb-0 text-muted">{{ e.description }}</p>
                 {% endif %}

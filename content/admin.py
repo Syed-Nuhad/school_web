@@ -31,7 +31,7 @@ from .models import (
     ClassTopper,
     # Attendance + Exams
     AttendanceSession,
-    ExamRoutine,
+    ExamRoutine, BusRoute, BusStop,
 )
 
 # -------------------------------------------------------------------
@@ -622,3 +622,55 @@ class ExamTermAdmin(OwnableAdminMixin):
     list_filter   = ("year",)
     search_fields = ("name",)   # required for autocomplete
     ordering      = ("-year", "name")
+
+
+
+class BusStopInline(admin.TabularInline):
+    model = BusStop
+    extra = 1
+    fields = (
+        "is_active", "order", "name", "landmark",
+        "time_text_morning", "time_text_evening", "lat", "lng",
+    )
+    ordering = ("order", "id")
+
+@admin.register(BusRoute)
+class BusRouteAdmin(OwnableAdminMixin):
+    list_display = (
+        "name", "code", "is_active", "driver_name", "driver_phone",
+        "vehicle_plate", "vehicle_capacity", "order", "updated_at"
+    )
+    list_filter = ("is_active",)
+    search_fields = ("name", "code", "driver_name", "driver_phone", "assistant_name", "assistant_phone", "notes")
+    ordering = ("order", "name")
+    inlines = [BusStopInline]
+    readonly_fields = ("created_by", "created_at", "updated_at", "preview")
+
+    fieldsets = (
+        ("Visibility & Order", {"fields": ("is_active", "order")}),
+        ("Basics", {"fields": ("name", "code", ("start_point", "end_point"), "operating_days_text")}),
+        ("Contacts & Vehicle", {"fields": (
+            ("driver_name", "driver_phone"),
+            ("assistant_name", "assistant_phone"),
+            ("vehicle_plate", "vehicle_capacity"),
+            "fare_info",
+        )}),
+        ("Map & Media", {"fields": ("route_image", "route_image_url", "map_embed_src", "preview")}),
+        ("Notes", {"fields": ("notes",)}),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
+    )
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        return super().save_model(request, obj, form, change)
+
+    def preview(self, obj):
+        try:
+            src = obj.image_src
+            if src:
+                return format_html('<img src="{}" style="max-height:200px;max-width:100%;border-radius:8px;">', src)
+        except Exception:
+            pass
+        return "—"
+    preview.short_description = "Preview"

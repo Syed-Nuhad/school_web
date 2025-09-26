@@ -5,7 +5,7 @@
     <!-- Brand -->
     <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
       <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" class="me-2" style="height:36px;width:auto;">
-      <span class="fw-semibold">Titu BD Science College</span>
+      <span class="fw-normal">Titu BD Science College</span>
     </a>
 
     <!-- Toggler -->
@@ -55,7 +55,7 @@
             {% else %}
               <li><span class="dropdown-item disabled">Class Attendance Overview</span></li>
             {% endif %}
-            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">School Bus Information</a></li>
+            <li><a class="dropdown-item" href="{% url 'content:bus_routes_page' %}" rel="noopener">School Bus Information</a></li>
           </ul>
         </li>
 
@@ -68,7 +68,7 @@
           <ul class="dropdown-menu" aria-labelledby="examDropdown">
             <li><a class="dropdown-item" href="{% url 'content:exam_routines_page' %}">Exam Routines</a></li>
             <li><a class="dropdown-item" href="{% url 'index' %}" rel="noopener">Class-wise Result Overview</a></li>
-            <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Mark Sheet</a></li>
+            <li><a class="dropdown-item" href="#"  rel="noopener">Mark Sheet</a></li>
           </ul>
         </li>
 

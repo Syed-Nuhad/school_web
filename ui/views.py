@@ -21,7 +21,7 @@ from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
     AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost,
     ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg, AttendanceSession, Member,
-    ExamRoutine
+    ExamRoutine, BusRoute
 )
 
 # -------------------------------------------------------------------
@@ -439,26 +439,63 @@ def attendance_class_overview_json(request, class_id: int):
 
 
 @login_required
-@user_passes_test(_staff)
 @require_http_methods(["GET"])
 def attendance_classday_get(request, class_id: int):
     """
     Get counts for a single class+date.
-    GET: date=YYYY-MM-DD (defaults today)
+
+    Query params:
+      - date=YYYY-MM-DD | today | now   (optional; defaults to server's today)
+      - fallback=1/0                    (optional; default 1)
+        If no record on the requested date and fallback=1, returns the latest
+        available session for that class instead of zeros.
+
+    Response:
+      {
+        "class_id": ...,
+        "date": "requested_date",
+        "effective_date": "date_of_data_returned",
+        "source": "exact" | "latest" | "none",
+        "present": ..., "absent": ..., "late": ..., "excused": ...,
+        "total": ..., "rate_pct": ...
+      }
     """
-    try:
-        klass = AcademicClass.objects.get(pk=class_id)
-    except AcademicClass.DoesNotExist:
-        return JsonResponse({"error": "Class not found"}, status=404)
+    klass = get_object_or_404(AcademicClass, pk=class_id)
 
-    the_date = parse_date(request.GET.get("date") or "") or date.today()
+    date_param = (request.GET.get("date") or "").strip().lower()
+    if date_param in ("", "today", "now"):
+        the_date = date.today()
+    else:
+        parsed = parse_date(date_param)
+        the_date = parsed or date.today()
 
+    use_fallback = (request.GET.get("fallback", "1") != "0")
+
+    # Try exact day first
     day = AttendanceSession.objects.filter(school_class=klass, date=the_date).first()
+    source = "exact"
+    effective_date = the_date
+
+    # If none and fallback allowed, use latest available
+    if not day and use_fallback:
+        latest = (AttendanceSession.objects
+                  .filter(school_class=klass)
+                  .order_by("-date")
+                  .first())
+        if latest:
+            day = latest
+            source = "latest"
+            effective_date = latest.date
+
     if not day:
+        # Nothing at all; return zeros
         return JsonResponse({
             "class_id": klass.id,
             "date": the_date.isoformat(),
-            "present": 0, "absent": 0, "late": 0, "excused": 0, "total": 0, "rate_pct": 0.0,
+            "effective_date": the_date.isoformat(),
+            "source": "none",
+            "present": 0, "absent": 0, "late": 0, "excused": 0,
+            "total": 0, "rate_pct": 0.0,
         })
 
     present = int(day.present_count or 0)
@@ -470,11 +507,12 @@ def attendance_classday_get(request, class_id: int):
 
     return JsonResponse({
         "class_id": klass.id,
-        "date": the_date.isoformat(),
+        "date": the_date.isoformat(),            # what was requested
+        "effective_date": effective_date.isoformat(),  # where counts came from
+        "source": source,
         "present": present, "absent": absent, "late": late, "excused": excused,
         "total": total, "rate_pct": rate,
     })
-
 
 @login_required
 @user_passes_test(_staff)
@@ -703,3 +741,150 @@ def exam_routine_detail(request, pk: int):
         pk=pk,
     )
     return render(request, "exams/routine_detail.html", {"routine": routine})
+
+
+################################
+# bus routine
+################################
+
+
+
+@require_GET
+def bus_routes_json(request):
+    """
+    Public list of active routes.
+    Filters:
+      - q=search
+      - active=1/0 (default 1)
+      - include_stops=1 to embed stops
+    """
+    qs = BusRoute.objects.all().order_by("order", "name")
+
+    active = request.GET.get("active", "1")
+    if active == "1":
+        qs = qs.filter(is_active=True)
+
+    q = (request.GET.get("q") or "").strip()
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(code__icontains=q) |
+            Q(driver_name__icontains=q) |
+            Q(driver_phone__icontains=q) |
+            Q(assistant_name__icontains=q) |
+            Q(assistant_phone__icontains=q)
+        )
+
+    include_stops = request.GET.get("include_stops") == "1"
+
+    items = []
+    for r in qs.select_related().prefetch_related("stops"):
+        obj = {
+            "id": r.id,
+            "name": r.name,
+            "code": r.code,
+            "is_active": r.is_active,
+            "start_point": r.start_point,
+            "end_point": r.end_point,
+            "operating_days": r.operating_days_text,
+            "driver": {"name": r.driver_name, "phone": r.driver_phone},
+            "assistant": {"name": r.assistant_name, "phone": r.assistant_phone},
+            "vehicle": {"plate": r.vehicle_plate, "capacity": r.vehicle_capacity},
+            "fare_info": r.fare_info,
+            "image": r.image_src,
+            "map_embed_src": r.map_embed_src,
+            "updated_at": r.updated_at.isoformat(),
+        }
+        if include_stops:
+            obj["stops"] = [
+                {
+                    "id": s.id,
+                    "name": s.name,
+                    "landmark": s.landmark,
+                    "time_morning": s.time_text_morning,
+                    "time_evening": s.time_text_evening,
+                    "lat": float(s.lat) if s.lat is not None else None,
+                    "lng": float(s.lng) if s.lng is not None else None,
+                    "order": s.order,
+                }
+                for s in r.stops.filter(is_active=True).order_by("order", "id")
+            ]
+        items.append(obj)
+
+    return JsonResponse({"items": items})
+
+
+@require_GET
+def bus_route_detail_json(request, pk: int):
+    """
+    Public detail for a single route (always includes stops).
+    """
+    from django.shortcuts import get_object_or_404
+    r = get_object_or_404(BusRoute.objects.prefetch_related("stops"), pk=pk, is_active=True)
+
+    return JsonResponse({
+        "id": r.id,
+        "name": r.name,
+        "code": r.code,
+        "is_active": r.is_active,
+        "start_point": r.start_point,
+        "end_point": r.end_point,
+        "operating_days": r.operating_days_text,
+        "driver": {"name": r.driver_name, "phone": r.driver_phone},
+        "assistant": {"name": r.assistant_name, "phone": r.assistant_phone},
+        "vehicle": {"plate": r.vehicle_plate, "capacity": r.vehicle_capacity},
+        "fare_info": r.fare_info,
+        "image": r.image_src,
+        "map_embed_src": r.map_embed_src,
+        "notes": r.notes,
+        "updated_at": r.updated_at.isoformat(),
+        "stops": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "landmark": s.landmark,
+                "time_morning": s.time_text_morning,
+                "time_evening": s.time_text_evening,
+                "lat": float(s.lat) if s.lat is not None else None,
+                "lng": float(s.lng) if s.lng is not None else None,
+                "order": s.order,
+            }
+            for s in r.stops.filter(is_active=True).order_by("order", "id")
+        ],
+    })
+
+
+
+def bus_routes_page(request):
+    """
+    Public list of active routes with simple search.
+    GET: q=
+    """
+    q = (request.GET.get("q") or "").strip()
+    qs = BusRoute.objects.filter(is_active=True).order_by("order", "name")
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) | Q(code__icontains=q) |
+            Q(driver_name__icontains=q) | Q(driver_phone__icontains=q) |
+            Q(assistant_name__icontains=q) | Q(assistant_phone__icontains=q) |
+            Q(start_point__icontains=q) | Q(end_point__icontains=q)
+        )
+
+    page = Paginator(qs, 12).get_page(request.GET.get("page") or 1)
+    return render(request, "bus/routes_list.html", {
+        "page": page,
+        "routes": page.object_list,
+        "q": q,
+    })
+
+
+def bus_route_detail_page(request, pk: int):
+    """
+    Public detail page for a single route (shows stops + optional map).
+    """
+    r = get_object_or_404(
+        BusRoute.objects.prefetch_related("stops"),
+        pk=pk, is_active=True
+    )
+    stops = r.stops.filter(is_active=True).order_by("order", "id")
+    return render(request, "bus/route_detail.html", {"r": r, "stops": stops})
