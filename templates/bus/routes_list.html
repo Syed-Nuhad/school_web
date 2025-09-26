@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}School Bus Routes{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-title{font-weight:700;letter-spacing:.2px}
+  @media (min-width:768px){.page-title{font-size:1.9rem}}
+  @media (min-width:1200px){.page-title{font-size:2.1rem}}
+
+  .route-card{
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 .35rem 1.25rem rgba(0,0,0,.06);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    border-radius:.6rem; overflow:hidden; background:#fff;
+  }
+  .route-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 1.25rem 2.25rem rgba(0,0,0,.14);
+    border-color:rgba(0,0,0,.10);
+  }
+  .route-media img{display:block;width:100%;height:auto}
+  .meta small{color:#6c757d}
+  .badge-soft-primary{color:#0d6efd;background:rgba(13,110,253,.10);border:1px solid rgba(13,110,253,.18)}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-4 py-md-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <h1 class="fw-normal mb-0">School Bus Routes</h1>
+
+    <form method="get" class="d-flex gap-2">
+      <input class="form-control form-control-sm" type="search" name="q" placeholder="Search route, code, driver..."
+             value="{{ q|default:'' }}">
+      {% if q %}
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'content:bus_routes_page' %}">Reset</a>
+      {% endif %}
+      <button class="btn btn-primary btn-sm" type="submit">Search</button>
+    </form>
+  </div>
+
+  {% if routes %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3 g-lg-4">
+      {% for r in routes %}
+        <div class="col">
+          <div class="card route-card h-100">
+            <a href="{% url 'content:bus_route_detail_page' r.id %}" class="text-decoration-none text-reset d-block">
+              <div class="route-media">
+                {% if r.image_src %}
+                  <img src="{{ r.image_src }}" alt="{{ r.name }}">
+                {% else %}
+                  <div class="w-100 d-flex align-items-center justify-content-center bg-light text-muted" style="min-height:160px">
+                    No image
+                  </div>
+                {% endif %}
+              </div>
+            </a>
+
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge rounded-pill badge-soft-primary">{{ r.code|default:"Route" }}</span>
+                {% if r.vehicle_capacity %}
+                  <small class="text-muted">Capacity: {{ r.vehicle_capacity }}</small>
+                {% endif %}
+              </div>
+
+              <h2 class="fs-6 fw-semibold mb-1">{{ r.name }}</h2>
+              <div class="meta small">
+                {% if r.start_point or r.end_point %}
+                  <div><small>{{ r.start_point|default:"" }}{% if r.start_point and r.end_point %} → {% endif %}{{ r.end_point|default:"" }}</small></div>
+                {% endif %}
+                {% if r.operating_days_text %}
+                  <div><small>{{ r.operating_days_text }}</small></div>
+                {% endif %}
+                {% if r.driver_name or r.driver_phone %}
+                  <div><small>Driver: {{ r.driver_name|default:"—" }}{% if r.driver_phone %} ({{ r.driver_phone }}){% endif %}</small></div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="card-footer bg-white border-0 pt-0">
+              <a class="btn btn-sm btn-primary" href="{% url 'content:bus_route_detail_page' r.id %}">View route</a>
+              {% if r.image_src %}
+                <a class="btn btn-sm btn-outline-secondary" href="{{ r.image_src }}" download>Download image</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page and page.paginator.num_pages > 1 %}
+      <nav class="mt-4" aria-label="Bus routes pages">
+        <ul class="pagination justify-content-center">
+          {% if page.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">← Prev</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+          {% if page.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}">Next →</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info mb-0">No routes available.</div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Bus Route — {{ r.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-title{font-weight:700;letter-spacing:.2px}
+  @media (min-width:768px){.page-title{font-size:1.6rem}}
+  @media (min-width:1200px){.page-title{font-size:1.9rem}}
+
+  .route-hero img{display:block;width:100%;height:auto}
+  .stop-card{border:1px solid rgba(0,0,0,.06);border-radius:.5rem;padding:.75rem .9rem}
+  .badge-soft-primary{color:#0d6efd;background:rgba(13,110,253,.10);border:1px solid rgba(13,110,253,.18)}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-4 py-md-5">
+  <div class="mb-3">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'content:bus_routes_page' %}">← All routes</a>
+  </div>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div>
+      <h1 class="fw-normal mb-1">
+        {{ r.name }}
+        {% if r.code %}<span class="badge rounded-pill badge-soft-primary ms-2">{{ r.code }}</span>{% endif %}
+      </h1>
+      <div class="text-muted small">
+        {% if r.start_point or r.end_point %}
+          <strong>Route:</strong> {{ r.start_point|default:"" }}{% if r.start_point and r.end_point %} → {% endif %}{{ r.end_point|default:"" }}
+          <span class="mx-2">|</span>
+        {% endif %}
+        {% if r.operating_days_text %}
+          <strong>Days:</strong> {{ r.operating_days_text }}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      {% if r.image_src %}<a class="btn btn-primary btn-sm" href="{{ r.image_src }}" download>Download image</a>{% endif %}
+    </div>
+  </div>
+
+  {% if r.image_src %}
+    <div class="card border-0 shadow-sm route-hero mb-3">
+      <img src="{{ r.image_src }}" alt="{{ r.name }}">
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <div class="col-12 col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="fs-6 fw-semibold mb-3">Stops</h2>
+
+          {% if stops %}
+            <div class="vstack gap-2">
+              {% for s in stops %}
+                <div class="stop-card">
+                  <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <div>
+                      <div class="fw-semibold">{{ s.name }}</div>
+                      {% if s.landmark %}<div class="text-muted small">{{ s.landmark }}</div>{% endif %}
+                    </div>
+                    <div class="text-end">
+                      {% if s.time_text_morning %}<div class="small"><strong>AM:</strong> {{ s.time_text_morning }}</div>{% endif %}
+                      {% if s.time_text_evening %}<div class="small"><strong>PM:</strong> {{ s.time_text_evening }}</div>{% endif %}
+                      {% if s.lat and s.lng %}
+                        <div class="small"><a target="_blank" rel="noopener" href="https://maps.google.com/?q={{ s.lat }},{{ s.lng }}">Open in Maps</a></div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-muted">No stops configured.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-5">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="fs-6 fw-semibold mb-3">Contact & Vehicle</h2>
+          <div class="small">
+            <div><strong>Driver:</strong> {{ r.driver_name|default:"—" }}{% if r.driver_phone %} ({{ r.driver_phone }}){% endif %}</div>
+            {% if r.assistant_name or r.assistant_phone %}
+              <div><strong>Assistant:</strong> {{ r.assistant_name|default:"—" }}{% if r.assistant_phone %} ({{ r.assistant_phone }}){% endif %}</div>
+            {% endif %}
+            {% if r.vehicle_plate or r.vehicle_capacity %}
+              <div><strong>Vehicle:</strong> {{ r.vehicle_plate|default:"—" }}{% if r.vehicle_capacity %} — Capacity {{ r.vehicle_capacity }}{% endif %}</div>
+            {% endif %}
+            {% if r.fare_info %}
+              <div class="mt-2"><strong>Fare:</strong> {{ r.fare_info }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if r.map_embed_src %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <h2 class="fs-6 fw-semibold mb-3">Route Map</h2>
+            <div class="ratio ratio-4x3">
+              <iframe src="{{ r.map_embed_src }}" style="border:0;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if r.notes %}
+    <div class="card border-0 shadow-sm mt-3">
+      <div class="card-body">
+        <h2 class="fs-6 fw-semibold mb-2">Notes</h2>
+        <div>{{ r.notes|linebreaksbr }}</div>
+      </div>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

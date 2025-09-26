@@ -1762,3 +1762,83 @@ class ExamRoutine(models.Model):
         except Exception:
             pass
         return self.routine_image_url or ""
+
+
+
+
+
+class BusRoute(models.Model):
+    """A school bus route (morning/evening handled by times on stops or notes)."""
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    name = models.CharField(max_length=120)
+    code = models.CharField(max_length=32, blank=True, help_text="Optional short code, e.g. R1")
+
+    start_point = models.CharField(max_length=200, blank=True)
+    end_point   = models.CharField(max_length=200, blank=True)
+
+    # Human-friendly text like "Mon–Fri" or "All days"
+    operating_days_text = models.CharField(max_length=120, blank=True)
+
+    # Contact / vehicle (keep it simple, per-route)
+    driver_name   = models.CharField(max_length=120, blank=True)
+    driver_phone  = models.CharField(max_length=50, blank=True)
+    assistant_name  = models.CharField(max_length=120, blank=True)
+    assistant_phone = models.CharField(max_length=50, blank=True)
+    vehicle_plate = models.CharField(max_length=50, blank=True)
+    vehicle_capacity = models.PositiveIntegerField(default=0, blank=True)
+
+    # Optional media / map
+    route_image      = models.ImageField(upload_to="bus/routes/%Y/%m/", blank=True, null=True)
+    route_image_url  = models.URLField(blank=True)
+    map_embed_src    = models.TextField(blank=True, help_text="Google Maps embed URL (optional)")
+    fare_info        = models.CharField(max_length=200, blank=True)
+    notes            = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="bus_routes_created"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("order", "name")
+
+    def __str__(self):
+        return self.name or f"Route #{self.pk}"
+
+    @property
+    def image_src(self) -> str:
+        # mirror pattern used in your other models
+        try:
+            if self.route_image and self.route_image.url:
+                return self.route_image.url
+        except Exception:
+            pass
+        return self.route_image_url or ""
+
+
+class BusStop(models.Model):
+    """A stop on a route, with optional time string and geo."""
+    route = models.ForeignKey(BusRoute, on_delete=models.CASCADE, related_name="stops")
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    name = models.CharField(max_length=200)
+    landmark = models.CharField(max_length=200, blank=True)
+
+    # keep times as free text to avoid timezone hassles (e.g. "07:25 AM")
+    time_text_morning = models.CharField(max_length=20, blank=True)
+    time_text_evening = models.CharField(max_length=20, blank=True)
+
+    # optional geo (decimal degrees)
+    lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    class Meta:
+        ordering = ("route", "order", "id")
+
+    def __str__(self):
+        return f"{self.route.name}: {self.name}"
