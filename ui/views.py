@@ -639,3 +639,54 @@ def exam_routine_detail_json(request, pk: int):
         "is_active": r.is_active,
         "updated_at": r.updated_at.isoformat(),
     })
+
+
+
+@require_GET
+def exam_routines_page(request):
+    """
+    Grid of routines with simple filters (class / term / year).
+    """
+    qs = (ExamRoutine.objects
+          .filter(is_active=True)
+          .select_related("school_class", "term")
+          .order_by("-exam_start_date", "-id"))
+
+    class_id = request.GET.get("class_id") or ""
+    term_id  = request.GET.get("term_id") or ""
+    year     = request.GET.get("year") or ""
+
+    if class_id:
+        qs = qs.filter(school_class_id=class_id)
+    if term_id:
+        qs = qs.filter(term_id=term_id)
+    if year:
+        qs = qs.filter(term__year=year)
+
+    page = Paginator(qs, 12).get_page(request.GET.get("page") or 1)
+
+    classes = AcademicClass.objects.order_by("-year", "name", "section").values("id", "name", "section", "year")
+    terms   = ExamTerm.objects.order_by("-year", "name").values("id", "name", "year")
+    years   = list(ExamTerm.objects.order_by("-year").values_list("year", flat=True).distinct())
+
+    ctx = {
+        "page": page,
+        "routines": page.object_list,
+        "classes": classes,
+        "terms": terms,
+        "years": years,
+        "filters": {"class_id": class_id, "term_id": term_id, "year": year},
+    }
+    return render(request, "exams/routines_list.html", ctx)
+
+
+@require_GET
+def exam_routine_detail_page(request, pk: int):
+    """
+    Big view of one routine (image + metadata).
+    """
+    r = get_object_or_404(
+        ExamRoutine.objects.select_related("school_class", "term").filter(is_active=True),
+        pk=pk,
+    )
+    return render(request, "exams/routine_detail.html", {"r": r})

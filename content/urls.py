@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.urls import path
 
-from ui.views import contact_submit, attendance_class_overview_json, exam_routine_detail_json, exam_routines_json
+from ui.views import contact_submit, attendance_class_overview_json, exam_routine_detail_json, exam_routines_json, \
+    exam_routines_page, exam_routine_detail_page
 from . import views
 from .view_addmissions import AdmissionApplyView, AdmissionSuccessView, AdmissionCheckoutView, payment_create, \
     payment_mark_paid
@@ -51,6 +52,8 @@ urlpatterns = [
     # Exam routines (JSON backend)
     path("api/exam-routines/", exam_routines_json, name="exam_routines_json"),
     path("api/exam-routines/<int:pk>/", exam_routine_detail_json, name="exam_routine_detail_json"),
+    path("exams/routines/<int:pk>/", exam_routine_detail_page, name="exam_routine_detail_page"),
+    path("exam-routines/", exam_routines_page, name="exam_routines_page"),
 
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

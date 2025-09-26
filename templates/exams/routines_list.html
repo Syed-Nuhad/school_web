@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Routines{% endblock %}
+
+{% block content %}
+<section class="container-xxl py-4 py-md-5">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h5 mb-0">Exam Routines</h1>
+
+    <!-- Filters -->
+    <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+      <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All Classes</option>
+        {% for c in classes %}
+          <option value="{{ c.id }}" {% if filters.class_id|default:''|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
+            {{ c.name }}{% if c.section %}-{{ c.section }}{% endif %} ({{ c.year }})
+          </option>
+        {% endfor %}
+      </select>
+
+      <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All Terms</option>
+        {% for t in terms %}
+          <option value="{{ t.id }}" {% if filters.term_id|default:''|stringformat:'s' == t.id|stringformat:'s' %}selected{% endif %}>
+            {{ t.name }} ({{ t.year }})
+          </option>
+        {% endfor %}
+      </select>
+
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Any Year</option>
+        {% for y in years %}
+          <option value="{{ y }}" {% if filters.year|default:''|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>
+            {{ y }}
+          </option>
+        {% endfor %}
+      </select>
+
+      {% if filters.class_id or filters.term_id or filters.year %}
+        <a class="btn btn-link btn-sm" href="{% url 'exam_routines_page' %}">Reset</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if routines %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3 g-lg-4">
+      {% for r in routines %}
+        <div class="col">
+          <div class="card h-100 border-0 shadow-sm">
+            <a href="{% url 'exam_routine_detail_page' r.id %}" class="text-decoration-none text-reset">
+              <!-- Image area via Bootstrap Ratio -->
+              <div class="ratio ratio-4x3 bg-light rounded-top">
+                {% if r.image_src %}
+                  <img src="{{ r.image_src }}" alt="{{ r.title|default:'Exam routine' }}"
+                       class="w-100 h-100" style="object-fit:contain;">
+                {% else %}
+                  <div class="d-flex align-items-center justify-content-center text-muted">
+                    No image
+                  </div>
+                {% endif %}
+              </div>
+            </a>
+
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge rounded-pill text-bg-primary">{{ r.term.name }} {{ r.term.year }}</span>
+                <small class="text-muted">
+                  {% if r.exam_end_date and r.exam_end_date != r.exam_start_date %}
+                    {{ r.exam_start_date }} → {{ r.exam_end_date }}
+                  {% else %}
+                    {{ r.exam_start_date }}
+                  {% endif %}
+                </small>
+              </div>
+
+              <h2 class="fs-6 fw-semibold mb-1">
+                {{ r.title|default:r.school_class.name }}
+                {% if r.school_class.section %} – {{ r.school_class.section }}{% endif %}
+                <span class="text-muted fw-normal">({{ r.school_class.year }})</span>
+              </h2>
+
+              {% if r.notes %}
+                <p class="text-muted small mb-0">{{ r.notes|truncatechars:120 }}</p>
+              {% endif %}
+            </div>
+
+            <div class="card-footer bg-white border-0 pt-0">
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-primary" href="{% url 'exam_routine_detail_page' r.id %}">View</a>
+                {% if r.image_src %}
+                  <a class="btn btn-sm btn-outline-secondary" href="{{ r.image_src }}" download>Download</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if page and page.paginator.num_pages > 1 %}
+      <nav class="mt-4" aria-label="Exam routine pages">
+        <ul class="pagination justify-content-center">
+          {% if page.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page.previous_page_number }}{% if filters.class_id %}&class_id={{ filters.class_id }}{% endif %}{% if filters.term_id %}&term_id={{ filters.term_id }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}">← Prev</a>
+            </li>
+          {% endif %}
+          <li class="page-item disabled"><span class="page-link">Page {{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+          {% if page.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page.next_page_number }}{% if filters.class_id %}&class_id={{ filters.class_id }}{% endif %}{% if filters.term_id %}&term_id={{ filters.term_id }}{% endif %}{% if filters.year %}&year={{ filters.year }}{% endif %}">Next →</a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-info mb-0">No exam routines available.</div>
+  {% endif %}
+</section>
+{% endblock %}

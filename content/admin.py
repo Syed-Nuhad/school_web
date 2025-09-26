@@ -29,35 +29,30 @@ from .models import (
     ClassResultSubjectAvg,
     ClassResultSummary,
     ClassTopper,
-    # Attendance
-    AttendanceSession, ExamRoutine,
+    # Attendance + Exams
+    AttendanceSession,
+    ExamRoutine,
 )
 
 # -------------------------------------------------------------------
-# Access helpers (single source of truth)
+# Access helpers
 # -------------------------------------------------------------------
-def is_student_user(user):
-    return user.groups.filter(name__iexact="Student").exists()
+def is_student_user(user): return user.groups.filter(name__iexact="Student").exists()
 
 def can_access_admin(user):
-    """Allow any authenticated staff user into admin *except* members of 'Student'."""
     return user.is_authenticated and user.is_staff and not is_student_user(user)
 
 def can_delete_admin(user):
-    """Keep destructive delete to superusers or 'Admin' group."""
     return user.is_superuser or user.groups.filter(name__iexact="Admin").exists()
 
 # -------------------------------------------------------------------
 # Small utilities
 # -------------------------------------------------------------------
 def _img_url(obj):
-    """Return an image URL from either ImageField `image` or text field `image_url`."""
     url = ""
     if hasattr(obj, "image") and getattr(obj, "image"):
-        try:
-            url = obj.image.url
-        except Exception:
-            url = ""
+        try: url = obj.image.url
+        except Exception: url = ""
     if not url and hasattr(obj, "image_url"):
         url = obj.image_url or ""
     return url
@@ -72,7 +67,6 @@ def _img_preview(file_field, height=70):
     return "—"
 
 def _thumb(obj, size=60):
-    """Show thumbnail if available; else image; else —"""
     try:
         url = ""
         if getattr(obj, "thumbnail", None) and obj.thumbnail:
@@ -86,31 +80,15 @@ def _thumb(obj, size=60):
     return "—"
 
 # -------------------------------------------------------------------
-# Base mixin: unifies permissions + auto-ownership
+# Base mixin
 # -------------------------------------------------------------------
 class OwnableAdminMixin(admin.ModelAdmin):
-    """
-    - Grants view/add/change to any staff user not in 'Student'.
-    - Keeps delete restricted (superuser or 'Admin' group).
-    - Auto-sets created_by/posted_by/published_at if those fields exist.
-    """
-    # unified permissions
-    def has_module_permission(self, request):
-        return can_access_admin(request.user)
+    def has_module_permission(self, request): return can_access_admin(request.user)
+    def has_view_permission(self, request, obj=None): return can_access_admin(request.user)
+    def has_add_permission(self, request): return can_access_admin(request.user)
+    def has_change_permission(self, request, obj=None): return can_access_admin(request.user)
+    def has_delete_permission(self, request, obj=None): return can_delete_admin(request.user)
 
-    def has_view_permission(self, request, obj=None):
-        return can_access_admin(request.user)
-
-    def has_add_permission(self, request):
-        return can_access_admin(request.user)
-
-    def has_change_permission(self, request, obj=None):
-        return can_access_admin(request.user)
-
-    def has_delete_permission(self, request, obj=None):
-        return can_delete_admin(request.user)
-
-    # auto-ownership & published_at (if present)
     def save_model(self, request, obj, form, change):
         if hasattr(obj, "created_by") and not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
@@ -122,7 +100,7 @@ class OwnableAdminMixin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 # -------------------------------------------------------------------
-# Banner admin
+# Banner
 # -------------------------------------------------------------------
 @admin.register(Banner)
 class BannerAdmin(OwnableAdminMixin):
@@ -134,8 +112,9 @@ class BannerAdmin(OwnableAdminMixin):
 
     fieldsets = (
         (None, {
-            "fields": ("title", "subtitle", "image", "image_url", "button_text", "button_link", "order", "is_active"),
-            "description": "Tip: If both <b>Image</b> and <b>Image URL</b> are set, the uploaded image is used."
+            "fields": ("title", "subtitle", "image", "image_url",
+                       "button_text", "button_link", "order", "is_active"),
+            "description": "Tip: If both Image and Image URL are set, the uploaded image is used."
         }),
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
         ("Preview", {"fields": ("preview",)}),
@@ -152,7 +131,7 @@ class BannerAdmin(OwnableAdminMixin):
     preview.short_description = "Preview"
 
 # -------------------------------------------------------------------
-# Notice admin
+# Notice
 # -------------------------------------------------------------------
 @admin.register(Notice)
 class NoticeAdmin(OwnableAdminMixin):
@@ -165,8 +144,9 @@ class NoticeAdmin(OwnableAdminMixin):
 
     fieldsets = (
         (None, {
-            "fields": ("title", "subtitle", "image", "image_url", "link_url", "published_at", "is_active"),
-            "description": "‘Read more’ uses <b>Link URL</b> if provided; otherwise the internal detail page."
+            "fields": ("title", "subtitle", "image", "image_url",
+                       "link_url", "published_at", "is_active"),
+            "description": "‘Read more’ uses Link URL if provided; else the internal page."
         }),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
         ("Preview", {"fields": ("preview",)}),
@@ -183,7 +163,7 @@ class NoticeAdmin(OwnableAdminMixin):
     preview.short_description = "Preview"
 
 # -------------------------------------------------------------------
-# TimelineEvent admin
+# TimelineEvent
 # -------------------------------------------------------------------
 @admin.register(TimelineEvent)
 class TimelineEventAdmin(OwnableAdminMixin):
@@ -196,10 +176,8 @@ class TimelineEventAdmin(OwnableAdminMixin):
     readonly_fields = ("created_by", "created_at", "updated_at")
 
     fieldsets = (
-        (None, {
-            "fields": ("title", "description", "date", "order", "is_active"),
-            "description": "Sorted by <b>Date</b>, then <b>Order</b> (lower first)."
-        }),
+        (None, {"fields": ("title", "description", "date", "order", "is_active"),
+                "description": "Sorted by Date, then Order (lower first)."}),
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
@@ -209,7 +187,7 @@ class TimelineEventAdmin(OwnableAdminMixin):
         super().save_model(request, obj, form, change)
 
 # -------------------------------------------------------------------
-# GalleryItem admin
+# GalleryItem
 # -------------------------------------------------------------------
 @admin.register(GalleryItem)
 class GalleryItemAdmin(OwnableAdminMixin):
@@ -220,14 +198,10 @@ class GalleryItemAdmin(OwnableAdminMixin):
     date_hierarchy = "taken_at"
 
     fieldsets = (
-        (None, {
-            "fields": ("is_active", "order", "title", "place", "taken_at", "kind"),
-            "description": "Use local date/time; format: <b>YYYY-MM-DD HH:MM</b> (24-hour).",
-        }),
-        ("Media", {
-            "fields": ("image", "youtube_embed_url", "thumbnail"),
-            "description": "For images, upload <b>Image</b>. For YouTube, paste an <b>embed</b> or <b>watch</b> URL. Optional <b>Thumbnail</b> overrides the auto preview.",
-        }),
+        (None, {"fields": ("is_active", "order", "title", "place", "taken_at", "kind"),
+                "description": "Use local date/time; format YYYY-MM-DD HH:MM (24-hour)."}),
+        ("Media", {"fields": ("image", "youtube_embed_url", "thumbnail"),
+                   "description": "Image → upload; YouTube → paste embed/watch URL; optional custom thumbnail."}),
     )
 
     def thumb(self, obj):
@@ -236,7 +210,7 @@ class GalleryItemAdmin(OwnableAdminMixin):
     thumb.short_description = "Thumb"
 
 # -------------------------------------------------------------------
-# AboutSection admin
+# AboutSection
 # -------------------------------------------------------------------
 @admin.register(AboutSection)
 class AboutSectionAdmin(OwnableAdminMixin):
@@ -250,14 +224,10 @@ class AboutSectionAdmin(OwnableAdminMixin):
         ("Visibility & Order", {"fields": ("is_active", "order")}),
         ("Text Content", {"fields": ("title", "college_name", "body", "bullets")}),
         ("Fading Images (up to 4)", {
-            "fields": (
-                ("image_1", "image_1_alt", "preview_1"),
-                ("image_2", "image_2_alt", "preview_2"),
-                ("image_3", "image_3_alt", "preview_3"),
-                ("image_4", "image_4_alt", "preview_4"),
-            ),
-            "description": "Upload 1–4 images for the fade stack. Add alt text for accessibility."
-        }),
+            "fields": (("image_1", "image_1_alt", "preview_1"),
+                       ("image_2", "image_2_alt", "preview_2"),
+                       ("image_3", "image_3_alt", "preview_3"),
+                       ("image_4", "image_4_alt", "preview_4"))}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
@@ -271,7 +241,7 @@ class AboutSectionAdmin(OwnableAdminMixin):
     preview_4.short_description = "Preview #4"
 
 # -------------------------------------------------------------------
-# AcademicCalendarItem admin
+# AcademicCalendarItem
 # -------------------------------------------------------------------
 @admin.register(AcademicCalendarItem)
 class AcademicCalendarItemAdmin(OwnableAdminMixin):
@@ -281,18 +251,8 @@ class AcademicCalendarItemAdmin(OwnableAdminMixin):
     ordering      = ("order", "-updated_at")
     readonly_fields = ("created_by", "created_at", "updated_at")
 
-    fields = (
-        "is_active",
-        "order",
-        "title",
-        "date_text",
-        "description",
-        "icon_class",
-        "tone",
-        "created_by",
-        "created_at",
-        "updated_at",
-    )
+    fields = ("is_active", "order", "title", "date_text", "description",
+              "icon_class", "tone", "created_by", "created_at", "updated_at")
 
     def save_model(self, request, obj, form, change):
         if not getattr(obj, "created_by_id", None):
@@ -300,7 +260,7 @@ class AcademicCalendarItemAdmin(OwnableAdminMixin):
         return super().save_model(request, obj, form, change)
 
 # -------------------------------------------------------------------
-# Course admin
+# Course
 # -------------------------------------------------------------------
 @admin.register(Course)
 class CourseAdmin(OwnableAdminMixin):
@@ -320,16 +280,14 @@ class CourseAdmin(OwnableAdminMixin):
         ("Basic Info", {"fields": ("title", "category", "duration", "shift", "eligibility")}),
         ("Media", {"fields": ("image", "syllabus_file", "preview")}),
         ("Details", {"fields": ("description",)}),
-        ("Fees (BDT)", {"fields": ("admission_fee","first_month_tuition","exam_fee","bus_fee","hostel_fee","marksheet_fee","monthly_fee")}),
+        ("Fees (BDT)", {"fields": ("admission_fee","first_month_tuition","exam_fee",
+                                   "bus_fee","hostel_fee","marksheet_fee","monthly_fee")}),
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
-    # --- helpers for BDT formatting in list_display ---
     def _bdt(self, v):
-        try:
-            return f"৳ {float(v):,.2f}"
-        except Exception:
-            return "—"
+        try: return f"৳ {float(v):,.2f}"
+        except Exception: return "—"
 
     def admission_fee_bdt(self, obj):       return self._bdt(obj.admission_fee)
     def first_month_tuition_bdt(self, obj): return self._bdt(obj.first_month_tuition)
@@ -364,7 +322,7 @@ class CourseAdmin(OwnableAdminMixin):
     preview.short_description = "Preview"
 
 # -------------------------------------------------------------------
-# AdmissionApplication admin
+# AdmissionApplication
 # -------------------------------------------------------------------
 @admin.register(AdmissionApplication)
 class AdmissionApplicationAdmin(OwnableAdminMixin):
@@ -384,7 +342,7 @@ class AdmissionApplicationAdmin(OwnableAdminMixin):
     )
 
 # -------------------------------------------------------------------
-# FunctionHighlight admin
+# FunctionHighlight
 # -------------------------------------------------------------------
 @admin.register(FunctionHighlight)
 class FunctionHighlightAdmin(OwnableAdminMixin):
@@ -394,16 +352,14 @@ class FunctionHighlightAdmin(OwnableAdminMixin):
     list_editable = ("order", "is_active")
 
 # -------------------------------------------------------------------
-# CollegeFestival admin (with inline media)
+# CollegeFestival (+ inline media)
 # -------------------------------------------------------------------
 class FestivalMediaInline(admin.TabularInline):
     model = FestivalMedia
     extra = 1
     fields = ("is_active", "order", "kind", "image", "youtube_url", "thumbnail", "caption", "preview")
     readonly_fields = ("preview",)
-
-    def preview(self, obj):
-        return _thumb(obj)
+    def preview(self, obj): return _thumb(obj)
     preview.short_description = "Preview"
 
 @admin.register(CollegeFestival)
@@ -414,15 +370,14 @@ class CollegeFestivalAdmin(OwnableAdminMixin):
     ordering      = ("order", "-updated_at")
     inlines       = [FestivalMediaInline]
     prepopulated_fields = {"slug": ("title",)}
-
     fieldsets = (
         ("Details", {"fields": ("is_active","order","title","slug","place","date_text","time_text","description")}),
         ("Hero Media", {"fields": ("hero_image","hero_video","hero_youtube_url"),
-                        "description": "Provide either a hero image, a video file, or a YouTube URL."}),
+                        "description": "Provide a hero image, a video file, or a YouTube URL."}),
     )
 
 # -------------------------------------------------------------------
-# Member admin
+# Member
 # -------------------------------------------------------------------
 @admin.register(Member)
 class MemberAdmin(OwnableAdminMixin):
@@ -435,7 +390,7 @@ class MemberAdmin(OwnableAdminMixin):
     fieldsets = (
         (None, {"fields": ("is_active","order","role","name","post","section","bio")}),
         ("Image", {"fields": ("photo","photo_url","preview"),
-                   "description": "Upload <b>photo</b> or provide a publicly accessible <b>photo URL</b>."}),
+                   "description": "Upload photo or provide a direct photo URL."}),
         ("Audit", {"fields": ("created_by","created_at","updated_at")}),
     )
 
@@ -455,15 +410,11 @@ class MemberAdmin(OwnableAdminMixin):
     preview.short_description = "Preview"
 
 # -------------------------------------------------------------------
-# ContactInfo admin
+# ContactInfo
 # -------------------------------------------------------------------
 @admin.register(ContactInfo)
 class ContactInfoAdmin(OwnableAdminMixin):
-    """
-    Fields present: is_active, address, phone, email, hours, map_embed_src
-    """
-    save_on_top = True  # keep a submit row at the top; Django also renders the bottom row
-
+    save_on_top = True
     list_display  = ("is_active", "address_short", "phone", "email")
     list_filter   = ("is_active",)
     search_fields = ("address", "phone", "email", "hours")
@@ -472,13 +423,10 @@ class ContactInfoAdmin(OwnableAdminMixin):
     fieldsets = (
         ("Visibility", {"fields": ("is_active",)}),
         ("Details", {"fields": ("address", "phone", "email", "hours")}),
-        ("Map", {
-            "fields": ("map_embed_src", "preview_map"),
-            "description": "Paste a Google Maps embed URL (the long one that starts with https://www.google.com/maps/embed?...).",
-        }),
+        ("Map", {"fields": ("map_embed_src", "preview_map"),
+                 "description": "Paste a Google Maps embed URL (starts with https://www.google.com/maps/embed?...)."}),
     )
 
-    # Force all the standard action buttons to show
     def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
         extra_context = extra_context or {}
         extra_context.update({
@@ -489,11 +437,9 @@ class ContactInfoAdmin(OwnableAdminMixin):
         })
         return super().changeform_view(request, object_id, form_url, extra_context)
 
-    # Let any staff user delete ContactInfo (override mixin’s stricter rule)
     def has_delete_permission(self, request, obj=None):
         return request.user.is_staff
 
-    # Superuser can always edit; others follow mixin rules
     def has_change_permission(self, request, obj=None):
         if request.user.is_superuser:
             return True
@@ -506,27 +452,22 @@ class ContactInfoAdmin(OwnableAdminMixin):
 
     def preview_map(self, obj):
         src = getattr(obj, "map_embed_src", "") or ""
-        if not src:
-            return "—"
-        return format_html(
-            '<iframe src="{}" width="100%" height="200" style="border:0;" allowfullscreen loading="lazy"></iframe>',
-            src
-        )
+        if not src: return "—"
+        return format_html('<iframe src="{}" width="100%" height="200" style="border:0;" allowfullscreen loading="lazy"></iframe>', src)
     preview_map.short_description = "Map Preview"
 
 # -------------------------------------------------------------------
-# ContactMessage admin
+# ContactMessage
 # -------------------------------------------------------------------
 @admin.register(ContactMessage)
 class ContactMessageAdmin(OwnableAdminMixin):
-    """Minimal, avoids non-existent fields like `is_resolved`."""
     list_display  = ("id", "name", "email", "subject")
     list_filter   = ()
     search_fields = ("name", "email", "subject", "message")
     readonly_fields = ("name", "email", "subject", "message")
 
 # -------------------------------------------------------------------
-# FooterSettings admin
+# FooterSettings
 # -------------------------------------------------------------------
 @admin.register(FooterSettings)
 class FooterSettingsAdmin(OwnableAdminMixin):
@@ -539,32 +480,21 @@ class FooterSettingsAdmin(OwnableAdminMixin):
         ("Visibility & Title", {"fields": ("is_active", "title")}),
         ("Contact", {"fields": ("address", "phone", "email")}),
         ("Quick Links", {
-            "fields": (
-                "link_home_enabled",
-                ("link_admission_label", "link_admission_url"),
-                ("link_results_label", "link_results_url"),
-                ("link_events_label", "link_events_anchor"),
-            ),
-            "description": "Leave a URL blank to hide that quick link."
-        }),
-        ("Social Links", {
-            "fields": ("facebook_url", "whatsapp_url", "twitter_url", "email_linkto"),
-            "description": "If Email Link is blank, footer uses the Contact email."
-        }),
-        ("Branding", {
-            "fields": ("logo", "logo_url", "preview_logo"),
-            "description": "Upload a logo or provide a direct URL. Uploaded image takes precedence."
-        }),
+            "fields": ("link_home_enabled",
+                       ("link_admission_label", "link_admission_url"),
+                       ("link_results_label", "link_results_url"),
+                       ("link_events_label", "link_events_anchor"))}),
+        ("Social Links", {"fields": ("facebook_url", "whatsapp_url", "twitter_url", "email_linkto")}),
+        ("Branding", {"fields": ("logo", "logo_url", "preview_logo"),
+                      "description": "Upload a logo or provide a direct URL. Uploaded image wins."}),
         ("Credits", {"fields": ("copyright_name", "developer_name", "developer_url")}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
     def preview_logo(self, obj):
-        if not obj:
-            return "—"
+        if not obj: return "—"
         src = obj.logo_src
-        if not src:
-            return "—"
+        if not src: return "—"
         return format_html('<img src="{}" style="height:40px;">', src)
     preview_logo.short_description = "Logo Preview"
 
@@ -574,7 +504,7 @@ class FooterSettingsAdmin(OwnableAdminMixin):
         return super().save_model(request, obj, form, change)
 
 # -------------------------------------------------------------------
-# GalleryPost admin
+# GalleryPost
 # -------------------------------------------------------------------
 @admin.register(GalleryPost)
 class GalleryPostAdmin(OwnableAdminMixin):
@@ -585,7 +515,7 @@ class GalleryPostAdmin(OwnableAdminMixin):
     fieldsets = (
         (None, {"fields": ("is_active", "order", "title", "kind")}),
         ("Media", {"fields": ("image", "video", "youtube_url"),
-                   "description": "Upload an image for Image type; MP4 for Video; or paste a YouTube link."}),
+                   "description": "Upload image for Image; MP4 for Video; or paste a YouTube link."}),
         ("Meta", {"fields": ("created_by",)}),
     )
     readonly_fields = ("created_by",)
@@ -596,16 +526,17 @@ class GalleryPostAdmin(OwnableAdminMixin):
         super().save_model(request, obj, form, change)
 
 # ===================================================================
-# ATTENDANCE — single, corrected registration (no duplicates)
+# ATTENDANCE
 # ===================================================================
 
 @admin.register(AcademicClass)
 class AcademicClassAdmin(OwnableAdminMixin):
     list_display  = ("name", "section", "year")
-    search_fields = ("name", "section", "year")
+    list_filter   = ("year",)
+    search_fields = ("name", "section")   # required for autocomplete
     ordering      = ("-year", "name", "section")
 
-# Unregister any previous AttendanceSession admin to avoid duplicates
+# If AttendanceSession got registered earlier in dev, ensure a clean state
 try:
     admin.site.unregister(AttendanceSession)
 except NotRegistered:
@@ -619,7 +550,7 @@ class AttendanceSessionAdmin(OwnableAdminMixin):
         "attendance_rate_pct", "created_by", "created_at",
     )
     list_filter   = ("school_class", "date")
-    search_fields = ("school_class__name", "notes")
+    search_fields = ("school_class__name",)
     date_hierarchy = "date"
     autocomplete_fields = ("school_class",)
 
@@ -627,11 +558,20 @@ class AttendanceSessionAdmin(OwnableAdminMixin):
         "school_class", "date",
         ("present_count", "absent_count"),
         ("late_count", "excused_count"),
-        "notes",
     )
 
+    @admin.display(description="Rate %")
+    def attendance_rate_pct(self, obj):
+        p = int(obj.present_count or 0)
+        a = int(obj.absent_count or 0)
+        l = int(obj.late_count or 0)
+        e = int(obj.excused_count or 0)
+        total = p + a + l + e
+        return round(100.0 * (p + e) / total, 1) if total else 0.0
 
-
+# ===================================================================
+# EXAM ROUTINES
+# ===================================================================
 
 @admin.register(ExamRoutine)
 class ExamRoutineAdmin(OwnableAdminMixin):
@@ -644,10 +584,8 @@ class ExamRoutineAdmin(OwnableAdminMixin):
         ("Visibility", {"fields": ("is_active",)}),
         ("Who / When", {"fields": ("school_class", "term", ("exam_start_date", "exam_end_date"))}),
         ("Title & Notes", {"fields": ("title", "notes")}),
-        ("Media", {
-            "fields": ("routine_image", "routine_image_url", "preview"),
-            "description": "Upload the routine image or paste a direct image URL. Uploaded image takes precedence."
-        }),
+        ("Media", {"fields": ("routine_image", "routine_image_url", "preview"),
+                   "description": "Upload the routine image or paste a direct image URL. Uploaded image wins."}),
         ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
     )
 
@@ -677,3 +615,10 @@ class ExamRoutineAdmin(OwnableAdminMixin):
         src = obj.image_src
         return format_html('<img src="{}" style="max-height:260px;max-width:100%;border-radius:8px;">', src) if src else "—"
     preview.short_description = "Preview"
+
+@admin.register(ExamTerm)
+class ExamTermAdmin(OwnableAdminMixin):
+    list_display  = ("name", "year")
+    list_filter   = ("year",)
+    search_fields = ("name",)   # required for autocomplete
+    ordering      = ("-year", "name")
