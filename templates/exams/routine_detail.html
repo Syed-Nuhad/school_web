@@ -1,59 +1,75 @@
 {% extends "base.html" %}
 
-{% block title %}Exam Routine — {{ r.school_class.name }}{% if r.school_class.section %} – {{ r.school_class.section }}{% endif %}{% endblock %}
+{% block title %}Exam Routine — {{ routine.school_class.name }}{% if routine.school_class.section %} – {{ routine.school_class.section }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Card with light border and soft shadow; image sits flush with no letterboxing */
+  .routine-card{
+    border:1px solid rgba(0,0,0,.08);
+    box-shadow:0 .35rem 1.25rem rgba(0,0,0,.06);
+    border-radius:.6rem;
+    overflow:hidden;
+    background:#fff;
+  }
+  .routine-img{
+    display:block;     /* remove inline gap */
+    width:100%;        /* responsive */
+    height:auto;       /* no crop / natural aspect */
+  }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="container-xxl py-4 py-md-5">
   <div class="mb-3">
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'exam_routines_page' %}">← Back to all</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'content:exam_routines_page' %}">← Back to all</a>
   </div>
 
   <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
     <div>
       <h1 class="h5 mb-1">
-        {{ r.title|default:r.school_class.name }}
-        {% if r.school_class.section %} – {{ r.school_class.section }}{% endif %}
-        <span class="text-muted fw-normal">({{ r.school_class.year }})</span>
+        {{ routine.title|default:routine.school_class.name }}
+        {% if routine.school_class.section %} – {{ routine.school_class.section }}{% endif %}
+        <span class="text-muted fw-normal">({{ routine.school_class.year }})</span>
       </h1>
       <div class="text-muted small">
-        Term: <strong>{{ r.term.name }} {{ r.term.year }}</strong>
+        Term: <strong>{{ routine.term.name }} {{ routine.term.year }}</strong>
         <span class="ms-2">|</span>
         Dates:
         <strong>
-          {% if r.exam_end_date and r.exam_end_date != r.exam_start_date %}
-            {{ r.exam_start_date }} → {{ r.exam_end_date }}
+          {% if routine.exam_end_date and routine.exam_end_date != routine.exam_start_date %}
+            {{ routine.exam_start_date }} → {{ routine.exam_end_date }}
           {% else %}
-            {{ r.exam_start_date }}
+            {{ routine.exam_start_date }}
           {% endif %}
         </strong>
       </div>
     </div>
 
     <div class="d-flex gap-2">
-      {% if r.image_src %}
-        <a class="btn btn-primary btn-sm" href="{{ r.image_src }}" download>Download</a>
+      {% if routine.image_src %}
+        <a class="btn btn-primary btn-sm" href="{{ routine.image_src }}" download>Download</a>
       {% endif %}
     </div>
   </div>
 
-  {% if r.notes %}
+  {% if routine.notes %}
     <div class="card border-0 shadow-sm mb-3">
       <div class="card-body">
         <div class="small text-muted mb-1">Notes</div>
-        <div>{{ r.notes|linebreaksbr }}</div>
+        <div>{{ routine.notes|linebreaksbr }}</div>
       </div>
     </div>
   {% endif %}
 
-  <!-- Large image in ratio box -->
-  <div class="card border-0 shadow-sm">
-    <div class="ratio ratio-4x3 bg-light">
-      {% if r.image_src %}
-        <img src="{{ r.image_src }}" alt="{{ r.title|default:'Exam routine' }}" class="w-100 h-100" style="object-fit:contain;">
-      {% else %}
-        <div class="d-flex align-items-center justify-content-center text-muted">No image available</div>
-      {% endif %}
-    </div>
+  <!-- Large responsive image, no top whitespace, no crop -->
+  <div class="card routine-card">
+    {% if routine.image_src %}
+      <img src="{{ routine.image_src }}" alt="{{ routine.title|default:'Exam routine' }}" class="routine-img">
+    {% else %}
+      <div class="p-5 text-center text-muted">No image available</div>
+    {% endif %}
   </div>
 </section>
 {% endblock %}

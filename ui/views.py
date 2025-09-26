@@ -690,3 +690,16 @@ def exam_routine_detail_page(request, pk: int):
         pk=pk,
     )
     return render(request, "exams/routine_detail.html", {"r": r})
+
+
+
+
+def exam_routine_detail(request, pk: int):
+    """
+    Public detail page for a single routine.
+    """
+    routine = get_object_or_404(
+        ExamRoutine.objects.select_related("school_class", "term").filter(is_active=True),
+        pk=pk,
+    )
+    return render(request, "exams/routine_detail.html", {"routine": routine})

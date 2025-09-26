@@ -22,7 +22,7 @@
         </li>
 
         <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
-        <li class="nav-item"><a class="nav-link" href="#academics">Courses</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}#academics">Courses</a></li>
 
         <!-- Cultural -->
         <li class="nav-item dropdown">
@@ -31,7 +31,7 @@
             Cultural
           </a>
           <ul class="dropdown-menu" aria-labelledby="culturalDropdown">
-            <li><a class="dropdown-item" href="#college-functions">Events</a></li>
+            <li><a class="dropdown-item" href="{% url 'home' %}#college-functions">Events</a></li>
             <li><a class="dropdown-item" href="{% url 'gallery' %}">Gallery</a></li>
           </ul>
         </li>
@@ -43,7 +43,7 @@
             Student Corner
           </a>
           <ul class="dropdown-menu" aria-labelledby="studentDropdown">
-            <li><a class="dropdown-item" href="#academics" target="" rel="noopener">Online Admission Form</a></li>
+            <li><a class="dropdown-item" href="{% url 'home' %}#academics" target="" rel="noopener">Online Admission Form</a></li>
             <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Student ID Card</a></li>
             {% if default_class_id %}
               <li>
@@ -66,7 +66,7 @@
             Exam Corner
           </a>
           <ul class="dropdown-menu" aria-labelledby="examDropdown">
-            <li><a class="dropdown-item" href="{% url 'exam_routines_page' %}">Exam Routines</a></li>
+            <li><a class="dropdown-item" href="{% url 'content:exam_routines_page' %}">Exam Routines</a></li>
             <li><a class="dropdown-item" href="{% url 'index' %}" rel="noopener">Class-wise Result Overview</a></li>
             <li><a class="dropdown-item" href="#" target="_blank" rel="noopener">Mark Sheet</a></li>
           </ul>

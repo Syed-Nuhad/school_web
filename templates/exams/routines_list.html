@@ -2,42 +2,96 @@
 
 {% block title %}Exam Routines{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* Title */
+  .page-title{font-weight:700;letter-spacing:.2px;margin-bottom:0}
+  @media (min-width:768px){.page-title{font-size:2rem}}
+  @media (min-width:1200px){.page-title{font-size:2.2rem}}
+
+  /* Filters layout */
+  .filters .form-select{min-width:12rem}
+  @media (max-width:575.98px){.filters .form-select{min-width:100%}}
+
+  /* Card with light border + big soft hover on the CARD */
+  .routine-card{
+    position:relative;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:.6rem;
+    background:#fff;
+    box-shadow:0 .35rem 1.25rem rgba(0,0,0,.06);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    overflow:hidden; /* image sits perfectly flush */
+  }
+  .routine-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 1.25rem 2.25rem rgba(0,0,0,.16);
+    border-color:rgba(0,0,0,.12);
+  }
+
+  /* Make entire card clickable without changing structure */
+  .routine-card .stretched-link{position:static} /* keep default but ensure it works across the whole card */
+
+  /* Media: no crop, no top whitespace, fully responsive */
+  .routine-media img{
+    display:block;      /* removes inline image gap that can look like whitespace */
+    width:100%;
+    height:auto;        /* keeps natural aspect ratio (no crop) */
+    vertical-align:middle;
+  }
+
+  /* Subtle image emphasis when card is hovered (still no crop) */
+  .routine-card:hover .routine-media img{filter:saturate(1.04)}
+
+  /* Soft primary badge */
+  .badge-soft-primary{
+    color:#0d6efd;background:rgba(13,110,253,.10);border:1px solid rgba(13,110,253,.18)
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <section class="container-xxl py-4 py-md-5">
-  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h5 mb-0">Exam Routines</h1>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+    <h1 class="page-title">Exam Routines</h1>
 
     <!-- Filters -->
-    <form method="get" class="d-flex flex-wrap align-items-center gap-2">
-      <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">All Classes</option>
-        {% for c in classes %}
-          <option value="{{ c.id }}" {% if filters.class_id|default:''|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
-            {{ c.name }}{% if c.section %}-{{ c.section }}{% endif %} ({{ c.year }})
-          </option>
-        {% endfor %}
-      </select>
-
-      <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">All Terms</option>
-        {% for t in terms %}
-          <option value="{{ t.id }}" {% if filters.term_id|default:''|stringformat:'s' == t.id|stringformat:'s' %}selected{% endif %}>
-            {{ t.name }} ({{ t.year }})
-          </option>
-        {% endfor %}
-      </select>
-
-      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">Any Year</option>
-        {% for y in years %}
-          <option value="{{ y }}" {% if filters.year|default:''|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>
-            {{ y }}
-          </option>
-        {% endfor %}
-      </select>
+    <form method="get" class="filters row row-cols-1 row-cols-sm-auto g-2 align-items-center">
+      <div class="col">
+        <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Classes</option>
+          {% for c in classes %}
+            <option value="{{ c.id }}" {% if filters.class_id|default:''|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
+              {{ c.name }}{% if c.section %}-{{ c.section }}{% endif %} ({{ c.year }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select name="term_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">All Terms</option>
+          {% for t in terms %}
+            <option value="{{ t.id }}" {% if filters.term_id|default:''|stringformat:'s' == t.id|stringformat:'s' %}selected{% endif %}>
+              {{ t.name }} ({{ t.year }})
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Any Year</option>
+          {% for y in years %}
+            <option value="{{ y }}" {% if filters.year|default:''|stringformat:'s' == y|stringformat:'s' %}selected{% endif %}>
+              {{ y }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
 
       {% if filters.class_id or filters.term_id or filters.year %}
-        <a class="btn btn-link btn-sm" href="{% url 'exam_routines_page' %}">Reset</a>
+        <div class="col">
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'content:exam_routines_page' %}">Reset</a>
+        </div>
       {% endif %}
     </form>
   </div>
@@ -46,24 +100,20 @@
     <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3 g-lg-4">
       {% for r in routines %}
         <div class="col">
-          <div class="card h-100 border-0 shadow-sm">
-            <a href="{% url 'exam_routine_detail_page' r.id %}" class="text-decoration-none text-reset">
-              <!-- Image area via Bootstrap Ratio -->
-              <div class="ratio ratio-4x3 bg-light rounded-top">
-                {% if r.image_src %}
-                  <img src="{{ r.image_src }}" alt="{{ r.title|default:'Exam routine' }}"
-                       class="w-100 h-100" style="object-fit:contain;">
-                {% else %}
-                  <div class="d-flex align-items-center justify-content-center text-muted">
-                    No image
-                  </div>
-                {% endif %}
-              </div>
-            </a>
+          <div class="card routine-card h-100">
+            <div class="routine-media">
+              {% if r.image_src %}
+                <img src="{{ r.image_src }}" alt="{{ r.title|default:'Exam routine' }}">
+              {% else %}
+                <div class="w-100 d-flex align-items-center justify-content-center bg-light text-muted" style="min-height:160px">
+                  No image
+                </div>
+              {% endif %}
+            </div>
 
             <div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="badge rounded-pill text-bg-primary">{{ r.term.name }} {{ r.term.year }}</span>
+                <span class="badge rounded-pill badge-soft-primary">{{ r.term.name }} {{ r.term.year }}</span>
                 <small class="text-muted">
                   {% if r.exam_end_date and r.exam_end_date != r.exam_start_date %}
                     {{ r.exam_start_date }} → {{ r.exam_end_date }}
@@ -82,14 +132,14 @@
               {% if r.notes %}
                 <p class="text-muted small mb-0">{{ r.notes|truncatechars:120 }}</p>
               {% endif %}
+
+              <!-- make the whole card clickable -->
+              <a href="{% url 'content:exam_routine_detail' r.id %}" class="stretched-link" aria-label="View routine"></a>
             </div>
 
             <div class="card-footer bg-white border-0 pt-0">
               <div class="d-flex gap-2">
-                <a class="btn btn-sm btn-primary" href="{% url 'exam_routine_detail_page' r.id %}">View</a>
-                {% if r.image_src %}
-                  <a class="btn btn-sm btn-outline-secondary" href="{{ r.image_src }}" download>Download</a>
-                {% endif %}
+                <a class="btn btn-sm btn-primary" href="{% url 'content:exam_routine_detail' r.id %}">View</a>
               </div>
             </div>
           </div>
