@@ -10,18 +10,21 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.mail import EmailMessage, send_mail
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q, Prefetch, Count, Case, When, IntegerField
-from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
+from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest, Http404
 from django.shortcuts import get_object_or_404, render, redirect
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.dateparse import parse_date
+from django.utils.html import strip_tags
 from django.views.decorators.http import require_http_methods, require_GET
+from content.models import StudentMarksheet, StudentMarksheetItem
 
 from content.forms import ContactForm
 from content.models import (
     Banner, Notice, TimelineEvent, GalleryItem, AboutSection,
     AcademicCalendarItem, Course, FunctionHighlight, CollegeFestival, ContactInfo, FooterSettings, GalleryPost,
     ClassResultSummary, ClassTopper, ExamTerm, AcademicClass, ClassResultSubjectAvg, AttendanceSession, Member,
-    ExamRoutine, BusRoute
+    ExamRoutine, BusRoute, StudentMarksheet
 )
 
 # -------------------------------------------------------------------
@@ -888,3 +891,77 @@ def bus_route_detail_page(request, pk: int):
     )
     stops = r.stops.filter(is_active=True).order_by("order", "id")
     return render(request, "bus/route_detail.html", {"r": r, "stops": stops})
+
+
+# ------- SEARCH PAGE -------
+
+
+def marksheet_search(request):
+    q = (request.GET.get("q") or "").strip()
+    results = []
+    if q:
+        results = (StudentMarksheet.objects
+                   .filter(is_published=True)
+                   .filter(Q(student_full_name__icontains=q) | Q(roll_number__icontains=q))
+                   .select_related("school_class","term")
+                   .order_by("-updated_at")[:100])
+    return render(request, "results/marksheet_search.html", {"q": q, "results": results})
+
+def marksheet_detail(request, pk: int):
+    ms = get_object_or_404(StudentMarksheet.objects.select_related("school_class","term"), pk=pk, is_published=True)
+    items = ms.items.select_related("subject").order_by("order","id")
+    return render(request, "results/marksheet_detail.html", {"ms": ms, "items": items})
+
+
+
+# ------- PDF (HTML → PDF) -------
+
+@require_GET
+def marksheet_pdf(request, pk: int):
+    """
+    Generate a PDF from the HTML using WeasyPrint if available.
+    Fallback: return a print-optimized HTML with correct headers if WeasyPrint isn't installed.
+    """
+    ms = (
+        StudentMarksheet.objects
+        .filter(is_published=True, pk=pk)
+        .select_related("school_class", "term")
+        .prefetch_related(
+            Prefetch(
+                "items",
+                queryset=StudentMarksheetItem.objects.select_related("subject").order_by("order", "id"),
+            )
+        )
+        .first()
+    )
+    if not ms:
+        raise Http404("Marksheet not found")
+
+    html = render_to_string("results/marksheet_pdf.html", {"ms": ms})
+
+    # Try WeasyPrint
+    try:
+        from weasyprint import HTML, CSS
+        pdf = HTML(string=html, base_url=request.build_absolute_uri("/")).write_pdf(
+            stylesheets=[CSS(string="""
+                @page { size: A4; margin: 14mm 12mm; }
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; }
+                th { background: #f6f8fa; }
+                h1,h2,h3 { margin: 0 0 6px 0; }
+                .muted { color: #6c757d; }
+                .sigline { height: 40px; border-bottom: 1px dashed #999; }
+                .foot { margin-top: 16px; display: flex; justify-content: space-between; gap: 16px; }
+            """)]
+        )
+        resp = HttpResponse(pdf, content_type="application/pdf")
+        safe_name = strip_tags(f"{ms.student_full_name}_{ms.school_class}_{ms.term}").replace(" ", "_")
+        resp["Content-Disposition"] = f'inline; filename="{safe_name}.pdf"'
+        return resp
+    except Exception:
+        # Fallback: deliver the HTML (browser can print to PDF)
+        return HttpResponse(html)
+
+
+
