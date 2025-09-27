@@ -3,14 +3,14 @@ from django.urls import path
 
 from ui.views import contact_submit, attendance_class_overview_json, exam_routine_detail_json, exam_routines_json, \
     exam_routines_page, exam_routine_detail_page, exam_routine_detail, bus_routes_json, bus_route_detail_json, \
-    bus_route_detail_page, bus_routes_page
+    bus_route_detail_page, bus_routes_page, marksheet_pdf, marksheet_search, marksheet_detail
 from . import views
 from .view_addmissions import AdmissionApplyView, AdmissionSuccessView, AdmissionCheckoutView, payment_create, \
     payment_mark_paid
 from .views import AdmissionReceiptView, AdmissionReviewView, AdmissionConfirmView, create_payment_order, \
     mark_payment_paid
 from django.conf.urls.static import static
-
+from ui.views import marksheet_pdf
 
 app_name = "content"
 
@@ -63,5 +63,10 @@ urlpatterns = [
     path("bus/routes/<int:pk>/", bus_route_detail_json, name="bus_route_detail_json"),
     path("bus/", bus_routes_page, name="bus_routes_page"),
     path("bus/<int:pk>/", bus_route_detail_page, name="bus_route_detail_page"),
+
+    path("results/marksheets/", marksheet_search, name="marksheet_search"),
+    path("results/marksheets/<int:pk>/", marksheet_detail, name="marksheet_detail"),
+    path("results/marksheets/<int:pk>/pdf/", marksheet_pdf, name="marksheet_pdf"),
+
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

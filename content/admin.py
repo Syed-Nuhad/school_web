@@ -1,6 +1,9 @@
 # content/admin.py
+from django import forms
 from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
+from django.http import JsonResponse
+from django.urls import path
 from django.utils.html import format_html
 from django.conf import settings
 
@@ -31,7 +34,7 @@ from .models import (
     ClassTopper,
     # Attendance + Exams
     AttendanceSession,
-    ExamRoutine, BusRoute, BusStop,
+    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet,
 )
 
 # -------------------------------------------------------------------
@@ -674,3 +677,196 @@ class BusRouteAdmin(OwnableAdminMixin):
             pass
         return "—"
     preview.short_description = "Preview"
+
+
+
+
+
+
+
+
+
+
+
+
+class StudentMarksheetItemInline(admin.TabularInline):
+    model = StudentMarksheetItem
+    extra = 0
+    fields = ("subject", "max_marks", "marks_obtained", "grade_letter", "remark", "order")
+    autocomplete_fields = ("subject",)
+
+    def _selected_class_id(self, request, obj):
+        """
+        Resolve class id for the current add/edit:
+        - If editing an existing marksheet (obj), use its class.
+        - Else on POST use the posted value.
+        - Else on GET support ?school_class=<id> so we can preload without JS.
+        """
+        if obj is not None and getattr(obj, "school_class_id", None):
+            return obj.school_class_id
+        cid = request.POST.get("school_class") or request.GET.get("school_class")
+        try:
+            return int(cid) if cid else None
+        except (TypeError, ValueError):
+            return None
+
+
+
+    def get_formset(self, request, obj=None, **kwargs):
+        """
+        Preload one inline row per Subject of the selected class.
+        Works on:
+          • First GET if URL has ?school_class=<id>
+          • First POST after you pick class and click 'Save' (no JS)
+        """
+        FormSet = super().get_formset(request, obj, **kwargs)
+        selected_class_id = self._selected_class_id(request, obj)
+
+        class PreloadFormSet(FormSet):
+            def __init__(self, *a, **kw):
+                super().__init__(*a, **kw)
+
+                # Only when adding a NEW marksheet (obj is None)
+                if obj is not None:
+                    return
+
+                if not selected_class_id:
+                    return
+
+                subjects = (Subject.objects
+                            .filter(school_class_id=selected_class_id, is_active=True)
+                            .order_by("order", "name", "id"))
+                initial = []
+                order = 1
+                for s in subjects:
+                    initial.append({
+                        "subject": s.id,
+                        "max_marks": 100,
+                        "marks_obtained": 0,
+                        "order": order,
+                    })
+                    order += 1
+
+                # Seed the formset
+                self.initial = initial
+                # Ensure enough empty forms to show all rows
+                total = self.total_form_count()
+                needed = len(initial)
+                if needed > total:
+                    self.extra += (needed - total)
+
+        return PreloadFormSet
+
+
+class StudentMarksheetAdminForm(forms.ModelForm):
+
+    inlines = [StudentMarksheetItemInline]
+    class Meta:
+        model = StudentMarksheet
+        fields = "__all__"
+
+
+    def get_urls(self):
+        urls = super().get_urls()
+        extra = [
+            path(
+                "subjects-for-class/<int:class_id>/",
+                self.admin_site.admin_view(self.subjects_for_class),
+                name="content_subjects_for_class",
+            ),
+        ]
+        return extra + urls
+
+    def subjects_for_class(self, request, class_id: int):
+        from .models import Subject
+        qs = (Subject.objects
+              .filter(school_class_id=class_id, is_active=True)
+              .order_by("order", "name", "id")
+              .values("id", "name"))
+        return JsonResponse({"results": list(qs)})
+    def clean(self):
+        cleaned = super().clean()
+        return cleaned
+
+
+# -------- Subject admin (no assumptions about field names) --------
+@admin.register(Subject)
+class SubjectAdmin(OwnableAdminMixin):
+    list_display  = ("name", "school_class", "order", "is_active")
+    list_filter   = ("school_class", "is_active")
+    search_fields = ("name", "school_class__name", "school_class__section")
+    autocomplete_fields = ("school_class",)
+    ordering = ("school_class", "order", "name")
+    @admin.display(description="Class")
+    def _subject_class(self, obj):
+        return getattr(obj, "academic_class", None) or getattr(obj, "school_class", None) or "—"
+
+
+# --- list_filter helper for StudentMarksheetItem by subject's class ---
+class SubjectClassFilter(admin.SimpleListFilter):
+    title = "Class"
+    parameter_name = "class_id"
+
+    def lookups(self, request, model_admin):
+        classes = AcademicClass.objects.order_by("-year", "name", "section") \
+            .values_list("id", "name", "section", "year")
+        return [
+            (str(cid), f"{name}{('-' + section) if section else ''} ({year})")
+            for cid, name, section, year in classes
+        ]
+
+    def queryset(self, request, queryset):
+        # If your Subject FK isn't 'academic_class', change it here.
+        if self.value():
+            return queryset.filter(subject__academic_class_id=self.value())
+        return queryset
+
+
+@admin.register(StudentMarksheet)
+class StudentMarksheetAdmin(OwnableAdminMixin):
+    form = StudentMarksheetAdminForm
+    inlines = [StudentMarksheetItemInline]
+
+    list_display  = ("student_full_name", "roll_number", "school_class", "section", "term",
+                     "total_marks", "total_grade", "updated_at")
+    list_filter   = ("school_class", "term", "section", "is_published")
+    search_fields = ("student_full_name", "roll_number")
+    autocomplete_fields = ("school_class", "term")
+    readonly_fields = ("created_by", "created_at", "updated_at")
+
+    fieldsets = (
+        ("Student & Context", {
+            "fields": ("student_full_name", ("roll_number","section"), "school_class", "term")
+        }),
+        ("Notes", {"fields": ("notes",)}),
+        ("Totals (auto)", {"fields": ("total_marks", "total_grade")}),
+        ("Visibility", {"fields": ("is_published",)}),
+        ("Audit", {"fields": ("created_by", "created_at", "updated_at")}),
+    )
+
+    class Media:
+        css = {"all": []}
+        js  = []
+
+    def save_model(self, request, obj, form, change):
+        if not getattr(obj, "created_by_id", None):
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+        obj.recalc_totals()
+        obj.save(update_fields=["total_marks", "total_grade", "updated_at"])
+
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        # Allow /admin/content/studentmarksheet/add/?school_class=<id>
+        cid = request.GET.get("school_class")
+        if cid and str(cid).isdigit():
+            initial["school_class"] = int(cid)
+        return initial
+
+@admin.register(StudentMarksheetItem)
+class StudentMarksheetItemAdmin(OwnableAdminMixin):
+    list_display  = ("marksheet", "subject", "marks_obtained", "max_marks", "grade_letter", "order")
+    list_filter   = (SubjectClassFilter,)  # safe custom filter
+    search_fields = ("marksheet__student_full_name",)  # avoid guessing subject field names
+    autocomplete_fields = ("marksheet", "subject")
+

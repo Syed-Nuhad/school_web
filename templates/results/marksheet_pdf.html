@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Marksheet — {{ ms.student_full_name }}</title>
+  <style>
+    @page { size: A4; margin: 14mm 12mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif; font-size: 12px; }
+    h1,h2,h3 { margin: 0 0 6px 0; }
+    .muted { color: #6c757d; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; }
+    th { background: #f6f8fa; text-align: left; }
+    .right { text-align: right; }
+    .center { text-align: center; }
+    .sigwrap { margin-top: 20px; display: flex; justify-content: space-between; gap: 24px; }
+    .sig { flex: 1; }
+    .sig .line { height: 40px; border-bottom: 1px dashed #999; }
+    .sig .label { margin-top: 4px; color: #6c757d; font-size: 12px; }
+    .note { background: #eef6ff; border: 1px solid #d9e9ff; padding: 8px 10px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h2>Student Marksheet</h2>
+
+  <div>
+    <strong>{{ ms.student_full_name }}</strong> &nbsp;|&nbsp;
+    Roll: <strong>{{ ms.roll_number }}</strong> &nbsp;|&nbsp;
+    Class: <strong>{{ ms.school_class }}</strong> &nbsp;|&nbsp;
+    Section: <strong>{{ ms.section|default:"—" }}</strong> &nbsp;|&nbsp;
+    Term: <strong>{{ ms.term }}</strong>
+  </div>
+
+  {% if ms.notes %}
+    <div class="note">{{ ms.notes|linebreaksbr }}</div>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th class="right">Max</th>
+        <th class="right">Marks</th>
+        <th class="center">Grade</th>
+        <th>Remark</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in ms.items.all %}
+        <tr>
+          <td>{{ item.subject }}</td>
+          <td class="right">{{ item.max_marks }}</td>
+          <td class="right">{{ item.marks_obtained }}</td>
+          <td class="center">{{ item.grade_letter|default:"" }}</td>
+          <td>{{ item.remark|default:"" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No subjects added.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th>Total</th>
+        <th></th>
+        <th class="right">{{ ms.total_marks }}</th>
+        <th class="center">{{ ms.total_grade|default:"" }}</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="sigwrap">
+    <div class="sig">
+      <div class="line"></div>
+      <div class="label">Class Teacher’s Signature</div>
+    </div>
+    <div class="sig">
+      <div class="line"></div>
+      <div class="label">Principal’s Signature</div>
+    </div>
+  </div>
+</body>
+</html>

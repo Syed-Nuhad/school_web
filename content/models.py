@@ -3,6 +3,7 @@ from decimal import Decimal
 from urllib.parse import urlparse, parse_qs, unquote
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -1440,22 +1441,31 @@ class AcademicClass(models.Model):
 
 
 class Subject(models.Model):
-    code = models.CharField(
-        max_length=20,
-        unique=True,
-        help_text='Short code for the subject, e.g. "ENG", "MATH". Must be unique.'
+    """
+    A subject belongs to a specific AcademicClass (grade).
+    e.g., Class 10 → Physics, Chemistry, Math…
+    """
+    school_class = models.ForeignKey(
+        "content.AcademicClass",
+        on_delete=models.PROTECT,
+        related_name="subjects",
+        null=True, blank=True,            # <-- TEMP: make optional for the first migration
     )
-    title = models.CharField(
+    name = models.CharField(
         max_length=120,
-        help_text='Full subject title as shown to users, e.g. "English", "Mathematics".'
+        blank=True, default="",           # <-- TEMP: allow blank with default for the first migration
     )
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ("code",)
+        unique_together = [("school_class", "name")]
+        ordering = ("school_class", "order", "name")
 
     def __str__(self):
-        return f"{self.code} — {self.title}"
-
+        sec = f" – {self.school_class.section}" if (self.school_class and self.school_class.section) else ""
+        sc = f"{self.school_class.name}{sec} {self.school_class.year}" if self.school_class else "Unassigned"
+        return f"{self.name or '—'} ({sc})"
 
 class ExamTerm(models.Model):
     name = models.CharField(
@@ -1570,10 +1580,10 @@ class ClassResultSubjectAvg(models.Model):
 
     class Meta:
         unique_together = ("summary", "subject")
-        ordering = ("subject__code",)
+        ordering = ("subject__name",)
 
     def __str__(self):
-        return f"{self.summary} — {self.subject.code}"
+        return f"{self.summary} — {self.subject.name}"
 
     @property
     def avg_pct(self) -> float:
@@ -1842,3 +1852,106 @@ class BusStop(models.Model):
 
     def __str__(self):
         return f"{self.route.name}: {self.name}"
+
+
+
+
+
+
+
+
+
+
+class StudentMarksheet(models.Model):
+    """
+    One marksheet per student per class + term.
+    Subjects come from Subject objects linked to the same AcademicClass.
+    """
+    school_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT, related_name="marksheets")
+    term         = models.ForeignKey(ExamTerm, on_delete=models.PROTECT, related_name="marksheets")
+
+    student_full_name = models.CharField(max_length=200)
+    roll_number       = models.CharField(max_length=50, blank=True, default="")
+    section           = models.CharField(max_length=50, blank=True, default="")
+
+    notes             = models.TextField(blank=True, default="")
+
+    total_marks       = models.DecimalField(max_digits=7, decimal_places=2, default=0)   # sum of subject marks
+    total_grade       = models.CharField(max_length=10, blank=True, default="")          # e.g., A+/A/B...
+
+    is_published      = models.BooleanField(default=True)
+
+    created_by        = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    created_at        = models.DateTimeField(auto_now_add=True)
+    updated_at        = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("school_class", "term", "student_full_name", "roll_number")]
+        ordering = ("-updated_at", "student_full_name")
+
+    def __str__(self):
+        base = self.student_full_name or "Student"
+        return f"{base} — {self.school_class} — {self.term}"
+
+    def recalc_totals(self):
+        items = list(self.items.all())
+        total = sum((i.marks_obtained or 0) for i in items)
+        self.total_marks = total
+        # Simple grade ladder; customize as needed
+        self.total_grade = _grade_from_percent(self.percent())
+        return total
+
+    def max_marks_total(self):
+        vals = [i.max_marks for i in self.items.all() if i.max_marks]
+        return sum(vals) if vals else 0
+
+    def percent(self):
+        max_total = self.max_marks_total()
+        if not max_total:
+            return 0
+        return round((float(self.total_marks) * 100.0) / float(max_total), 2)
+
+
+def _grade_from_percent(pct: float) -> str:
+    try:
+        pct = float(pct)
+    except Exception:
+        return ""
+    # Adjust cutoffs to your policy
+    if pct >= 80: return "A+"
+    if pct >= 70: return "A"
+    if pct >= 60: return "A-"
+    if pct >= 50: return "B"
+    if pct >= 40: return "C"
+    if pct >= 33: return "D"
+    return "F"
+
+
+class StudentMarksheetItem(models.Model):
+    """
+    Per-subject row for a marksheet.
+    Subject belongs to the same AcademicClass as the parent marksheet.
+    """
+    marksheet     = models.ForeignKey(StudentMarksheet, on_delete=models.CASCADE, related_name="items")
+    subject       = models.ForeignKey(Subject, on_delete=models.PROTECT, related_name="marksheet_items")
+
+    max_marks     = models.DecimalField(max_digits=6, decimal_places=2, default=100)   # configurable per subject
+    marks_obtained= models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    grade_letter  = models.CharField(max_length=5, blank=True, default="")
+    remark        = models.CharField(max_length=200, blank=True, default="")
+
+    order         = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = [("marksheet", "subject")]
+        ordering = ("order", "id")
+
+    def __str__(self):
+        return f"{self.subject} — {self.marks_obtained}/{self.max_marks}"
+
+    def clean(self):
+        # Sanity: subject must belong to same class as parent
+        if self.subject and self.marksheet and self.subject.school_class_id != self.marksheet.school_class_id:
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Subject must belong to the same class as the marksheet.")
