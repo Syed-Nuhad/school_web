@@ -1445,16 +1445,8 @@ class Subject(models.Model):
     A subject belongs to a specific AcademicClass (grade).
     e.g., Class 10 → Physics, Chemistry, Math…
     """
-    school_class = models.ForeignKey(
-        "content.AcademicClass",
-        on_delete=models.PROTECT,
-        related_name="subjects",
-        null=True, blank=True,            # <-- TEMP: make optional for the first migration
-    )
-    name = models.CharField(
-        max_length=120,
-        blank=True, default="",           # <-- TEMP: allow blank with default for the first migration
-    )
+    school_class = models.ForeignKey("content.AcademicClass", on_delete=models.PROTECT, related_name="subjects", null=True, blank=True,)
+    name = models.CharField(max_length=120)
     order = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
 
@@ -1955,3 +1947,15 @@ class StudentMarksheetItem(models.Model):
         if self.subject and self.marksheet and self.subject.school_class_id != self.marksheet.school_class_id:
             from django.core.exceptions import ValidationError
             raise ValidationError("Subject must belong to the same class as the marksheet.")
+
+
+
+# content/models.py  (BOTTOM of file)
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver([post_save, post_delete], sender=StudentMarksheetItem)
+def _recalc_parent_totals(sender, instance, **kwargs):
+    ms = instance.marksheet
+    ms.recalc_totals()
+    ms.save(update_fields=["total_marks", "total_grade", "updated_at"])
