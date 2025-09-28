@@ -1,27 +1,37 @@
-# Create your models here.
 from decimal import Decimal
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
+def current_year():
+    return timezone.now().year
+
+
 # -----------------------------
 # Core catalog
 # -----------------------------
 class Grade(models.Model):
-    name = models.CharField(max_length=80)          # e.g. "Class 10" or "Grade 11"
-    section = models.CharField(max_length=20, blank=True)  # e.g. "A", "Science"
-    year = models.PositiveIntegerField(default=timezone.now().year)
+    """
+    e.g. name='Class 10', section='A', year=2025
+    """
+    name = models.CharField(max_length=80)
+    section = models.CharField(max_length=20, blank=True)
+    year = models.PositiveIntegerField(default=current_year)
 
     class Meta:
-        unique_together = ("name", "section", "year")
+        unique_together = (("name", "section", "year"),)
         ordering = ("-year", "name", "section")
 
     def __str__(self):
-        return f"{self.name}{' - ' + self.section if self.section else ''} ({self.year})"
+        sec = f" - {self.section}" if self.section else ""
+        return f"{self.name}{sec} ({self.year})"
 
 
 class GradeSubject(models.Model):
+    """
+    A subject that belongs to a Grade, e.g. (Class 10) → Math, English...
+    """
     grade = models.ForeignKey(Grade, on_delete=models.PROTECT, related_name="subjects")
     name = models.CharField(max_length=120)
     order = models.PositiveIntegerField(default=0)
@@ -32,15 +42,18 @@ class GradeSubject(models.Model):
         ordering = ("grade", "order", "name")
 
     def __str__(self):
-        return f"{self.name} — {self.grade}"
+        return self.name
 
 
 class Term(models.Model):
-    name = models.CharField(max_length=80)          # e.g. "Midterm", "Final"
-    year = models.PositiveIntegerField(default=timezone.now().year)
+    """
+    e.g. name='First Term', year=2025
+    """
+    name = models.CharField(max_length=80)
+    year = models.PositiveIntegerField(default=current_year)
 
     class Meta:
-        unique_together = ("name", "year")
+        unique_together = (("name", "year"),)
         ordering = ("-year", "name")
 
     def __str__(self):
@@ -51,15 +64,15 @@ class Term(models.Model):
 # Marksheet + rows
 # -----------------------------
 def _letter_and_gpa(percent: float) -> tuple[str, Decimal]:
-    """Simple Bangladesh-style scale (adjust if you need)."""
+    """Bangladesh-style scale (adjust if you need)."""
     p = float(percent or 0)
-    if p >= 80:  return "A+", Decimal("5.0")
-    if p >= 70:  return "A",  Decimal("4.0")
-    if p >= 60:  return "A-", Decimal("3.5")
-    if p >= 50:  return "B",  Decimal("3.0")
-    if p >= 40:  return "C",  Decimal("2.0")
-    if p >= 33:  return "D",  Decimal("1.0")
-    return "F", Decimal("0.0")
+    if p >= 80:  return "A+", Decimal("5.00")
+    if p >= 70:  return "A",  Decimal("4.00")
+    if p >= 60:  return "A-", Decimal("3.50")
+    if p >= 50:  return "B",  Decimal("3.00")
+    if p >= 40:  return "C",  Decimal("2.00")
+    if p >= 33:  return "D",  Decimal("1.00")
+    return "F", Decimal("0.00")
 
 
 class Marksheet(models.Model):
@@ -71,15 +84,15 @@ class Marksheet(models.Model):
     section      = models.CharField(max_length=50, blank=True, default="")
     notes        = models.TextField(blank=True, default="")
 
-    # Auto-computed fields:
+    # Auto-computed fields
     total_obtained = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
     total_out_of   = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal("0.00"))
     percent        = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))
     grade_letter   = models.CharField(max_length=4, blank=True, default="")
     gpa            = models.DecimalField(max_digits=3, decimal_places=2, default=Decimal("0.00"))
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
     is_published = models.BooleanField(default=True)
 
     class Meta:
@@ -105,6 +118,9 @@ class Marksheet(models.Model):
 
 
 class MarkRow(models.Model):
+    """
+    One row per subject on the marksheet.
+    """
     marksheet = models.ForeignKey(Marksheet, on_delete=models.CASCADE, related_name="rows")
     subject   = models.ForeignKey(GradeSubject, on_delete=models.PROTECT, related_name="rows")
 
@@ -120,7 +136,19 @@ class MarkRow(models.Model):
         ordering = ("order", "id")
 
     def __str__(self):
-        return f"{self.subject} — {self.marks_obtained}/{self.max_marks}"
+        return self.subject.name if self.subject_id else "Row"
+
+    def save(self, *args, **kwargs):
+        # compute letter from this row's percentage
+        try:
+            maxm = float(self.max_marks or 0)
+            got = float(self.marks_obtained or 0)
+            pct = (got / maxm * 100.0) if maxm > 0 else 0.0
+        except Exception:
+            pct = 0.0
+        letter, _gpa = _letter_and_gpa(pct)
+        self.grade_letter = letter
+        super().save(*args, **kwargs)
 
     def clean(self):
         if self.subject_id and self.marksheet_id:
@@ -138,4 +166,6 @@ from django.dispatch import receiver
 def _recalc_parent(sender, instance, **kwargs):
     ms = instance.marksheet
     ms.recalc_totals()
-    ms.save(update_fields=["total_obtained", "total_out_of", "percent", "grade_letter", "gpa", "updated_at"])
+    ms.save(update_fields=[
+        "total_obtained", "total_out_of", "percent", "grade_letter", "gpa", "updated_at"
+    ])
