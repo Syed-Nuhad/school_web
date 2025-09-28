@@ -1,4 +1,4 @@
-  
+const $ = (id) => document.getElementById(id);
 
 // ⭐ END Initialize AOS ==============================================================================
 
@@ -195,16 +195,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 
-// ⭐⭐⭐⭐⭐================ Start CONTACT SECTION STYLES
 
-
-
-document.getElementById('contact-form').addEventListener('submit', function(e){
-  e.preventDefault();
-  alert("Thank you! Your message will be sent once backend is connected.");
-});
-
-// ⭐ End CONTACT SECTION STYLES ====================================================================================
 
   // ⭐⭐⭐⭐⭐===================== Start About Section Image Fade-in animation and cycling images  
 
@@ -867,24 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// counter for class wise result
-document.addEventListener("DOMContentLoaded", () => {
-  const counters = document.querySelectorAll(".count-number");
 
-  counters.forEach(counter => {
-    const target = +counter.closest("svg").querySelector(".circle-progress").dataset.value;
-    let current = 0;
-    const step = Math.ceil(target / 50); // adjust speed
-
-    const update = () => {
-      current += step;
-      if (current > target) current = target;
-      counter.textContent = current;
-      if (current < target) requestAnimationFrame(update);
-    };
-    update();
-  });
-});
 
 // END==================================================
 
@@ -936,51 +910,6 @@ function fillID() {
   }
 }
 
-// ✅ Print Only the ID Card in Proper Size
-function printIDCard() {
-  let card = document.getElementById("idCard").outerHTML;
-
-  let win = window.open("", "_blank");
-  win.document.write(`
-    <html>
-      <head>
-        <title>Student ID Card</title>
-        <style>
-          @page {
-            size: 86mm 54mm; /* ✅ Standard ID Card Size */
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          .id-card {
-            width: 86mm;
-            height: 54mm;
-            border: 1px solid #333;
-            padding: 5px;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-          }
-          .id-card img.photo {
-            width: 32mm;
-            height: 38mm;
-            object-fit: cover;
-          }
-        </style>
-      </head>
-      <body>
-        ${card}
-      </body>
-    </html>
-  `);
-  win.document.close();
-  win.print();
-  win.close();
-}
 
 function printIDCard() {
   window.print();
@@ -1443,168 +1372,238 @@ document.addEventListener('click', function (e) {
 });
 
 
-// --- tiny helpers ---
-const $ = (id) => document.getElementById(id);
-const setStatus = (type, msg) => {
-  const el = $('payment-status'); if (!el) return;
-  el.className = `alert alert-${type} py-2 mt-3 mb-0`;
-  el.textContent = msg;
-};
-// ✅ single backslash in the regex literal
-const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
 
-// --- bKash click ---
-$('bkash-btn')?.addEventListener('click', async () => {
-  try {
-    setStatus('secondary','Starting bKash…');
-    const r = await fetch('/pay/bkash/init/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCSRF() },
-      body: JSON.stringify({ amount: 1500 })
-    });
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Init failed');
-    location.href = j.bkash_url; // go to hosted checkout
-  } catch (e) {
-    setStatus('danger', e.message || 'Could not start bKash.');
+(function () {
+  const modalEl = document.getElementById('functionImageModal');
+  if (!modalEl) return;
+
+  const img   = document.getElementById('fimImg');
+  const title = document.getElementById('fimTitle');
+  const dl    = document.getElementById('fimDownload');
+  const vp    = document.getElementById('fimViewport');
+
+  const btnIn  = document.getElementById('fimZoomIn');
+  const btnOut = document.getElementById('fimZoomOut');
+
+  // state
+  let base = 1;     // fit-to-screen baseline
+  let scale = 1;    // current scale
+  let pos = { x: 0, y: 0 };
+  let dragging = false;
+  let dragStart = { x: 0, y: 0 };
+
+  function apply() {
+    img.style.transform = `translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
   }
-});
 
-  // --- helpers ---
-  const $ = (id) => document.getElementById(id);
-  const setStatus = (type, msg) => {
-    const el = $('payment-status'); if (!el) return;
-    el.className = `alert alert-${type} py-2 mt-3 mb-0`; el.textContent = msg;
-  };
-  const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
-  const unlock = () => {
-    $('submit-btn')?.removeAttribute('disabled');
-    $('print-btn')?.removeAttribute('disabled');
-    setStatus('success','Payment confirmed ✅');
-  };
+  function fitToScreen() {
+    if (!vp || !img.naturalWidth || !img.naturalHeight) return;
+    const vw = vp.clientWidth || 1;
+    const vh = vp.clientHeight || 1;
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
 
-  // --- bKash click (points at your backend) ---
-  $('bkash-btn')?.addEventListener('click', async () => {
-    try{
-      setStatus('secondary','Starting bKash…');
-      const r = await fetch('/pay/bkash/init/', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
-        body: JSON.stringify({ amount: 1500 })
-      });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || 'Init failed');
-      location.href = j.bkash_url; // redirect to hosted checkout
-    }catch(e){ setStatus('danger', e.message || 'Could not start bKash.'); }
+    base  = Math.min(vw / nw, vh / nh);
+    scale = base;
+    pos   = { x: 0, y: 0 };
+    apply();
+  }
+
+  function zoomAt(clientX, clientY, factor) {
+    const before = scale;
+    const next   = Math.min(base * 8, Math.max(base * 0.5, scale * factor));
+
+    const rect = vp.getBoundingClientRect();
+    const cx   = clientX - rect.left;
+    const cy   = clientY - rect.top;
+
+    // keep pointer position stable
+    pos.x = cx - ((cx - pos.x) * (next / before));
+    pos.y = cy - ((cy - pos.y) * (next / before));
+
+    scale = next;
+    apply();
+  }
+
+  // Bootstrap: set image when opening via data-* button
+  modalEl.addEventListener('show.bs.modal', (ev) => {
+    const btn   = ev.relatedTarget;             // <button data-img="..." data-title="...">
+    const src   = btn?.getAttribute('data-img') || '';
+    const text  = btn?.getAttribute('data-title') || 'Full View';
+
+    title.textContent = text;
+    dl.href = src;
+    try { dl.download = src.split('/').pop().split('?')[0] || 'image'; } catch(e){}
+
+    img.src = src;
+    img.alt = text;
   });
 
-  // --- PayPal WORKING DEMO (exact style you provided) ---
-  // Renders immediately with client-id=test. Uses demo endpoints below.
-  paypal.Buttons({
-    // Call your server to set up the transaction (DEMO endpoints)
-    createOrder: function(data, actions) {
-      return fetch('/demo/checkout/api/paypal/order/create/', {
-        method: 'post'
-      }).then(function(res) {
-        return res.json();
-      }).then(function(orderData) {
-        return orderData.id;
-      });
-    },
+  // When shown, fit to screen
+  modalEl.addEventListener('shown.bs.modal', () => {
+    // wait a tick for dimensions
+    setTimeout(fitToScreen, 30);
+  });
 
-    // Call your server to finalize the transaction (DEMO endpoints)
-    onApprove: function(data, actions) {
-      return fetch('/demo/checkout/api/paypal/order/' + data.orderID + '/capture/', {
-        method: 'post'
-      }).then(function(res) {
-        return res.json();
-      }).then(function(orderData) {
-        // If there’s a recoverable decline
-        var errorDetail = Array.isArray(orderData.details) && orderData.details[0];
-        if (errorDetail && errorDetail.issue === 'INSTRUMENT_DECLINED') {
-          return actions.restart();
-        }
-        if (errorDetail) {
-          var msg = 'Sorry, your transaction could not be processed.';
-          if (errorDetail.description) msg += '\n\n' + errorDetail.description;
-          if (orderData.debug_id) msg += ' (' + orderData.debug_id + ')';
-          return alert(msg);
-        }
+  // Clear when closed
+  modalEl.addEventListener('hidden.bs.modal', () => {
+    img.src = '';
+    img.alt = '';
+    title.textContent = 'Full View';
+    scale = base = 1;
+    pos = { x: 0, y: 0 };
+  });
 
-        // Successful capture!
-        console.log('Capture result', orderData);
-        unlock();
-      });
-    }
-  }).render('#paypal-button-container');
+  // Zoom buttons (+ / -)
+  btnIn.addEventListener('click',  () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1.2));
+  btnOut.addEventListener('click', () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1/1.2));
 
-  // If returning from a provider with ?paid=1
-  (function(){
-    const q = new URLSearchParams(location.search);
-    if (q.get('paid') === '1') unlock();
-  })();
+  // Mouse wheel zoom (like WA)
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1/1.12);
+  }, { passive: false });
 
+  // Drag to pan
+  img.addEventListener('mousedown', (e) => {
+    dragging = true;
+    dragStart = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    img.classList.add('fim-dragging');
+  });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+    img.classList.remove('fim-dragging');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    pos.x = e.clientX - dragStart.x;
+    pos.y = e.clientY - dragStart.y;
+    apply();
+  });
 
+  // Double-click to toggle zoom (fit <-> 2x)
+  vp.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    const target = (scale > base * 1.05) ? (base / scale) : (2 / scale);
+    zoomAt(e.clientX, e.clientY, target);
+  });
 
+  // Handle image load (cache case)
+  img.addEventListener('load', fitToScreen);
 
-  (function () {
-    // Add bootstrap classes to inputs/selects/textareas that lack them
-    const addIfMissing = (el, cls) => { if (el && !el.classList.contains(cls)) el.classList.add(cls); };
-    document.addEventListener('DOMContentLoaded', function () {
-      // inputs (text/email/tel/number/date)
-      document.querySelectorAll('input').forEach(i => {
-        const t = i.type;
-        if (['text','email','tel','number','date','password','search'].includes(t)) addIfMissing(i,'form-control');
-        if (t === 'file') addIfMissing(i,'form-control'); // file inputs styled by browser
-        if (t === 'checkbox' || t === 'radio') {
-          // keep bootstrap form-check-input
-          addIfMissing(i,'form-check-input');
-          // and ensure parent has form-check class (if not, wrap could be adjusted in template)
-        }
-      });
-      document.querySelectorAll('textarea').forEach(t => addIfMissing(t,'form-control'));
-      document.querySelectorAll('select').forEach(s => addIfMissing(s,'form-select'));
+  // Refit on resize
+  window.addEventListener('resize', () => {
+    if (modalEl.classList.contains('show')) fitToScreen();
+  });
+})();
 
-      // Simple demo: enable submit when any payment option clicked (replace with real payment callback)
-      const bkashBtn = document.getElementById('bkash-btn');
-      const submitBtn = document.getElementById('submit-btn');
-      const printBtn = document.getElementById('print-btn');
-      if (bkashBtn) bkashBtn.addEventListener('click', () => {
-        document.getElementById('payment-status').className = 'alert alert-success py-2 mt-3 mb-0';
-        document.getElementById('payment-status').textContent = 'bKash selected (demo). Click submit to finish.';
-        submitBtn.disabled = false;
-        printBtn.disabled = false;
-      });
+(function () {
+  // --- Hero MP4 video via Bootstrap modal ---
+  document.addEventListener('click', function (e) {
+    var playBtn = e.target.closest('.js-play-hero');
+    if (!playBtn) return;
+    e.preventDefault();
+    var src = playBtn.getAttribute('data-video');
+    var modalEl = document.getElementById('festVideoModal');
+    var videoEl = document.getElementById('festVideoPlayer');
+    if (!modalEl || !videoEl || !src) return;
+    var modal = (window.bootstrap && new bootstrap.Modal(modalEl)) || null;
+    videoEl.src = src;
+    modal && modal.show();
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    }, { once: true });
+  });
 
-      // checkboxes: visually toggle fee rows (demo behavior, implement real calc)
-      document.getElementById('optBus')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-bus]').textContent = e.target.checked ? '৳ 500' : '৳ 0';
-        // update total (simple parse)
-        updateTotal();
-      });
-      document.getElementById('optHostel')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-hostel]').textContent = e.target.checked ? '৳ 1500' : '৳ 0';
-        updateTotal();
-      });
-      document.getElementById('optMarksheet')?.addEventListener('change', (e) => {
-        document.querySelector('[data-fee-marksheet]').textContent = e.target.checked ? '৳ 200' : '৳ 0';
-        updateTotal();
-      });
+  // --- lightGallery (images + YouTube) ---
+  if (typeof window.lightGallery !== 'function') return;
+  var plugins = [];
+  if (window.lgZoom) plugins.push(window.lgZoom);
+  if (window.lgDownload) plugins.push(window.lgDownload);
+  if (window.lgVideo) plugins.push(window.lgVideo);
 
-      function parseAmount(text) {
-        return Number(String(text).replace(/[^\d.-]/g,'') || 0);
+  // Collect dynamic items for a given festival by scanning anchors with data-fest
+  function collectDynamicEl(festId) {
+    var anchors = document.querySelectorAll('.js-open-lg[data-fest="' + festId + '"]');
+    // We’ll build by index to preserve order
+    var dict = {};
+    anchors.forEach(function (a) {
+      var idx  = parseInt(a.getAttribute('data-index') || '0', 10) || 0;
+      var kind = a.getAttribute('data-kind') || 'image';
+      var src  = a.getAttribute('data-src') || '';
+      if (!src) return;
+
+      if (kind === 'youtube') {
+        dict[idx] = {
+          // lg-video expects 'src' as YouTube URL; it handles iframe
+          src: src,
+          thumb: (a.querySelector('img')?.src) || '',
+          subHtml: '',
+          video: { source: [{ src: src, type: 'youtube' }], attributes: { preload: 'none' } }
+        };
+      } else { // image
+        var thumb = (a.querySelector('img')?.src) || src;
+        dict[idx] = { src: src, thumb: thumb, subHtml: '' };
       }
-      function updateTotal() {
-        const admission = parseAmount(document.querySelector('[data-fee-admission]').textContent);
-        const tuition = parseAmount(document.querySelector('[data-fee-tuition]').textContent);
-        const exam = parseAmount(document.querySelector('[data-fee-exam]').textContent);
-        const bus = parseAmount(document.querySelector('[data-fee-bus]').textContent);
-        const hostel = parseAmount(document.querySelector('[data-fee-hostel]').textContent);
-        const marksheet = parseAmount(document.querySelector('[data-fee-marksheet]').textContent);
-        const total = admission + tuition + exam + bus + hostel + marksheet;
-        document.querySelector('[data-fee-total]').textContent = '৳ ' + total;
-      }
-      // initial total calc
-      updateTotal();
     });
-  })();
+
+    // Compact into array
+    var max = Math.max(-1, ...Object.keys(dict).map(Number));
+    var arr = [];
+    for (var i = 0; i <= max; i++) if (dict[i]) arr.push(dict[i]);
+    return arr;
+  }
+
+  // Single holder, reuse instance
+  var holder = document.createElement('div');
+  document.body.appendChild(holder);
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.js-open-lg');
+    if (!btn) return;
+    e.preventDefault();
+
+    var festId = btn.getAttribute('data-fest');
+    var startIndex = parseInt(btn.getAttribute('data-index') || '0', 10) || 0;
+    if (!festId) return;
+
+    // Build the dataset
+    var dynamicEl = collectDynamicEl(festId);
+    if (!dynamicEl.length) return;
+
+    // Destroy old instance if any
+    if (holder.__lgInstance) {
+      try { holder.__lgInstance.destroy(true); } catch (_){}
+      holder.__lgInstance = null;
+    }
+
+    var lg = window.lightGallery(holder, {
+      dynamic: true,
+      dynamicEl: dynamicEl,
+      licenseKey: '0000-0000-000-0000',
+      plugins: plugins,
+      download: true,
+      zoom: true,
+      actualSize: true,
+      mousewheel: true,
+      counter: false,
+      closable: true,
+      hideBarsDelay: 2000,
+      selector: null,
+      speed: 300,
+      backdropDuration: 200,
+      thumbWidth: 80,
+      // Keep UI minimal like WhatsApp (close + zoom + download)
+      controls: true,
+      // Disable extra captions/toolbars
+      appendSubHtmlTo: '.lg-item',
+      slideDelay: 0,
+      autoplayFirstVideo: false,
+      videoMaxSize: '1280-720',
+    });
+    holder.__lgInstance = lg;
+    lg.openGallery(Math.max(0, Math.min(startIndex, dynamicEl.length - 1)));
+  });
+})();

@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.humanize",
     "widget_tweaks",
-    "reportcards",
+    'reportcards.apps.ReportcardsConfig',
     "ui",
     "accounts",
     "content",
