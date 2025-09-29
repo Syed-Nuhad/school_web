@@ -3,86 +3,117 @@
 
 {% block extra_head %}
 <style>
-  /* YouTube-like search */
-  .yt-search-wrap{max-width:720px;margin-inline:auto}
-  .yt-search{display:flex;align-items:stretch;gap:0}
+  .yt-search-wrap{max-width:880px;margin-inline:auto}
+  .yt-search{display:flex;gap:0}
   .yt-input{
-    flex:1;height:44px;
-    border:1px solid #d0d7de;border-right:0;
-    border-radius:22px 0 0 22px;
-    padding:0 .95rem;outline:0;box-shadow:none;background:#fff;
+    flex:1;height:44px;border:1px solid #d0d7de;border-right:0;
+    border-radius:22px 0 0 22px;padding:0 .95rem;background:#fff;outline:0
   }
   .yt-input:focus{border-color:#0d6efd;box-shadow:0 0 0 .2rem rgba(13,110,253,.15)}
   .yt-btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
-    height:44px;min-width:64px;padding:0 16px;
-    border:1px solid #0d6efd;border-left:0;
-    border-radius:0 22px 22px 0;
-    background:#0d6efd;color:#fff;
-    transition:filter .15s ease, transform .05s ease;
+    display:inline-flex;align-items:center;gap:.5rem;height:44px;padding:0 16px;
+    border:1px solid #0d6efd;border-left:0;border-radius:0 22px 22px 0;
+    background:#0d6efd;color:#fff
   }
-  .yt-btn:hover{filter:brightness(0.95)}
-  .yt-btn:active{transform:translateY(1px)}
+  .filters{max-width:880px;margin:.75rem auto 0}
+  .filters .form-select,.filters .form-control{height:40px}
   .yt-reset{margin-left:.75rem;align-self:center;font-size:.95rem}
 </style>
 {% endblock %}
 
 {% block content %}
 <section class="container-xxl py-4 py-md-5">
-  <h1 class="h4 mb-4 text-center">Find Student Marksheet</h1>
+  <h1 class="h4 mb-3 text-center">Find Student Marksheet</h1>
 
-  <!-- Centered, YouTube-style search -->
-  <div class="yt-search-wrap mb-4">
+  <!-- Search by student name -->
+  <div class="yt-search-wrap">
     <form method="get" class="yt-search" role="search" aria-label="Find marksheet">
       <input
         class="yt-input"
         type="text"
         name="q"
         value="{{ q|default:'' }}"
-        placeholder="Search by student full name or roll…"
+        placeholder="Search by student full name…"
         autofocus
       />
       <button class="yt-btn" type="submit">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-             viewBox="0 0 16 16" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
           <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.868-3.834zM12 6.5a5.5 5.5 0 1 1-11 .001A5.5 5.5 0 0 1 12 6.5z"/>
         </svg>
         <span>Search</span>
       </button>
-      {% if q %}
-        <a class="yt-reset btn btn-link p-0" href="{% url 'content:marksheet_search' %}">Reset</a>
+      {% if q or grade_id or section or roll %}
+        <a class="yt-reset btn btn-link p-0" href="{% url 'reportcards:marksheet_search' %}">Reset</a>
       {% endif %}
     </form>
   </div>
 
-  {% if q and not results %}
-    <div class="alert alert-warning text-center">No results for <strong>{{ q }}</strong>.</div>
+  <!-- Filters: class/grade, section, roll -->
+  <form method="get" class="filters row g-2 align-items-center">
+    <div class="col-12 col-md-6">
+      <label class="form-label small mb-1">Class</label>
+      <select class="form-select" name="grade">
+        <option value="">Any class</option>
+        {% for g in grades %}
+          {# Grade.__str__ already renders like "Class 11 - A (2025)" #}
+          <option value="{{ g.id }}" {% if grade_id|default:'' == g.id|stringformat:"s" %}selected{% endif %}>
+            {{ g }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1">Section</label>
+      <input class="form-control" type="text" name="section" value="{{ section|default:'' }}" placeholder="e.g. A">
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1">Roll</label>
+      <input class="form-control" type="text" name="roll" value="{{ roll|default:'' }}" placeholder="e.g. 123">
+    </div>
+    <div class="col-12">
+      <button class="btn btn-outline-primary mt-2" type="submit">Apply filters</button>
+    </div>
+
+    {# keep name query if user used the big search bar #}
+    {% if q %}
+      <input type="hidden" name="q" value="{{ q }}">
+    {% endif %}
+  </form>
+
+  {% if q or grade_id or section or roll %}
+    <p class="text-center text-muted small mt-3">
+      Showing {{ results|length }} result{{ results|length|pluralize }}
+    </p>
+  {% endif %}
+
+  {% if (q or grade_id or section or roll) and not results %}
+    <div class="alert alert-warning text-center mt-3">No matching marksheets.</div>
   {% endif %}
 
   {% if results %}
-    <!-- Left-aligned cards -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3 justify-content-start">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xxl-4 g-3 mt-2">
       {% for ms in results %}
         <div class="col">
           <div class="card h-100 border-0 shadow-sm">
             <div class="card-body">
-              <h2 class="h6 mb-1">{{ ms.student_full_name }}</h2>
+              <h2 class="h6 mb-1">{{ ms.student_name }}</h2>
               <div class="text-muted small mb-2">
                 Roll: <strong>{{ ms.roll_number }}</strong>
                 <span class="mx-1">•</span>
-                Class: <strong>{{ ms.school_class }}</strong>
+                Class: <strong>{{ ms.grade }}</strong>
                 <span class="mx-1">•</span>
                 Term: <strong>{{ ms.term }}</strong>
               </div>
               <div>
-                <span class="badge text-bg-light">Total: {{ ms.total_marks }}</span>
-                {% if ms.total_grade %}
-                  <span class="badge text-bg-primary ms-1">Grade: {{ ms.total_grade }}</span>
+                <span class="badge text-bg-light">Total: {{ ms.total_obtained }}</span>
+                <span class="badge text-bg-light ms-1">Out of: {{ ms.total_out_of }}</span>
+                {% if ms.grade_letter %}
+                  <span class="badge text-bg-primary ms-1">Grade: {{ ms.grade_letter }}</span>
                 {% endif %}
               </div>
             </div>
             <div class="card-footer bg-white border-0 pt-0">
-              <a class="btn btn-sm btn-primary" href="{% url 'content:marksheet_detail' ms.id %}">Open</a>
+              <a class="btn btn-sm btn-primary" href="{% url 'reportcards:marksheet_detail' ms.id %}">Open</a>
             </div>
           </div>
         </div>
