@@ -1,4 +1,3 @@
-# reportcards/admin.py
 from django import forms
 from django.contrib import admin, messages
 from django.db.models import Max
@@ -7,9 +6,7 @@ from django.urls import reverse
 
 from .models import Grade, GradeSubject, Term, Marksheet, MarkRow
 
-# ------------------------------------------------------------
-# Base admin (reuse OwnableAdminMixin if available)
-# ------------------------------------------------------------
+# ---------- Base admin ----------
 try:
     from content.admin import OwnableAdminMixin as BaseAdmin
 except Exception:
@@ -19,6 +16,11 @@ except Exception:
         def has_add_permission(self, request): return request.user.is_staff
         def has_change_permission(self, request, obj=None): return request.user.is_staff
         def has_delete_permission(self, request, obj=None): return request.user.is_superuser
+
+# Allow staff to delete (overrides either fallback or OwnableAdminMixin)
+class StaffDeleteAdmin(BaseAdmin):
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_staff
 
 
 # ============================================================
@@ -31,9 +33,8 @@ class GradeSubjectInline(admin.TabularInline):
     ordering = ("order", "name")
     can_delete = True
     show_change_link = False
-    extra = 12  # default 12 blanks
+    extra = 12
 
-    # Optional: override blanks via ?rows=NN
     def get_extra(self, request, obj=None, **kwargs):
         q = request.GET.get("rows")
         if q:
@@ -54,14 +55,14 @@ class GradeBulkSubjectsForm(forms.ModelForm):
         }),
         help_text="Paste multiple subjects — one per line. Duplicates (case-insensitive) are ignored.",
     )
-
     class Meta:
         model = Grade
         fields = "__all__"
 
 
 @admin.register(Grade)
-class GradeAdmin(BaseAdmin):
+class GradeAdmin(StaffDeleteAdmin):
+    actions = ["delete_selected"]
     form = GradeBulkSubjectsForm
     list_display  = ("name", "section", "year")
     list_filter   = ("year",)
@@ -75,15 +76,11 @@ class GradeAdmin(BaseAdmin):
     )
 
     def save_model(self, request, obj, form, change):
-        super().save_model(request, obj, form, change)  # ensure obj.id
+        super().save_model(request, obj, form, change)
         raw = (form.cleaned_data.get("bulk_subjects") or "").strip()
         if not raw:
             return
-
-        existing = {
-            s.lower()
-            for s in GradeSubject.objects.filter(grade=obj).values_list("name", flat=True)
-        }
+        existing = {s.lower() for s in GradeSubject.objects.filter(grade=obj).values_list("name", flat=True)}
         last_order = GradeSubject.objects.filter(grade=obj).aggregate(Max("order"))["order__max"] or 0
 
         to_create = []
@@ -100,7 +97,8 @@ class GradeAdmin(BaseAdmin):
 
 
 @admin.register(GradeSubject)
-class GradeSubjectAdmin(BaseAdmin):
+class GradeSubjectAdmin(StaffDeleteAdmin):
+    actions = ["delete_selected"]
     list_display  = ("name", "grade", "is_active", "order")
     list_filter   = ("grade", "is_active")
     search_fields = ("name", "grade__name", "grade__section")
@@ -112,7 +110,8 @@ class GradeSubjectAdmin(BaseAdmin):
 # TERM
 # ============================================================
 @admin.register(Term)
-class TermAdmin(BaseAdmin):
+class TermAdmin(StaffDeleteAdmin):
+    actions = ["delete_selected"]
     list_display  = ("name", "year")
     list_filter   = ("year",)
     search_fields = ("name",)
@@ -125,26 +124,10 @@ class TermAdmin(BaseAdmin):
 class MarkRowInline(admin.TabularInline):
     model = MarkRow
     extra = 0
-    # Hide "remark"; show grade_letter read-only
     fields = ("subject", "max_marks", "marks_obtained", "grade_letter", "order")
     readonly_fields = ("grade_letter",)
     autocomplete_fields = ("subject",)
     ordering = ("order", "id")
-
-    # Limit subject choices to the selected grade
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "subject":
-            # On add: grade may be in POST/GET; on change: use obj.grade_id (admin passes obj via form construction)
-            gid = request.POST.get("grade") or request.GET.get("grade")
-            try:
-                gid = int(gid) if gid else None
-            except Exception:
-                gid = None
-            if gid:
-                kwargs["queryset"] = GradeSubject.objects.filter(
-                    grade_id=gid, is_active=True
-                ).order_by("order", "name", "id")
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def has_add_permission(self, request, obj=None): return request.user.is_staff
     def has_change_permission(self, request, obj=None): return request.user.is_staff
@@ -186,10 +169,10 @@ def reseed_rows(modeladmin, request, queryset):
 
 
 @admin.register(Marksheet)
-class MarksheetAdmin(BaseAdmin):
+class MarksheetAdmin(StaffDeleteAdmin):
+    actions = [reseed_rows, "delete_selected"]
     form = MarksheetAdminForm
     inlines = [MarkRowInline]
-    actions = [reseed_rows]
 
     list_display  = (
         "student_name", "roll_number", "grade", "term",
@@ -214,7 +197,6 @@ class MarksheetAdmin(BaseAdmin):
         creating = not change
         super().save_model(request, obj, form, change)
 
-        # Seed rows on first save (or if none exist)
         if creating or obj.rows.count() == 0:
             subjects = (GradeSubject.objects
                         .filter(grade=obj.grade, is_active=True)
@@ -236,7 +218,6 @@ class MarksheetAdmin(BaseAdmin):
         obj.recalc_totals()
         obj.save(update_fields=["total_obtained", "total_out_of", "percent", "gpa", "grade_letter", "updated_at"])
 
-    # After "Save" on ADD, go to CHANGE so freshly-seeded rows are visible
     def response_add(self, request, obj, post_url_continue=None):
         if "_addanother" in request.POST:
             return super().response_add(request, obj, post_url_continue)
@@ -245,7 +226,8 @@ class MarksheetAdmin(BaseAdmin):
 
 
 @admin.register(MarkRow)
-class MarkRowAdmin(BaseAdmin):
+class MarkRowAdmin(StaffDeleteAdmin):
+    actions = ["delete_selected"]
     list_display  = ("marksheet", "subject", "marks_obtained", "max_marks", "grade_letter", "order")
     list_filter   = ("subject__grade",)
     search_fields = ("marksheet__student_name", "subject__name")

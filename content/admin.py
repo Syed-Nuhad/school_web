@@ -34,7 +34,7 @@ from .models import (
     ClassTopper,
     # Attendance + Exams
     AttendanceSession,
-    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet,
+    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding,
 )
 
 # -------------------------------------------------------------------
@@ -101,6 +101,35 @@ class OwnableAdminMixin(admin.ModelAdmin):
             from django.utils import timezone
             obj.published_at = timezone.now()
         super().save_model(request, obj, form, change)
+
+
+
+@admin.register(SiteBranding)
+class SiteBrandingAdmin(OwnableAdminMixin):
+    list_display = ("site_name", "is_active", "logo_preview", "updated_at")
+    list_filter  = ("is_active",)
+    search_fields = ("site_name",)
+    readonly_fields = ("logo_preview", "favicon_preview", "updated_at", "created_at")
+    fieldsets = (
+        (None, {"fields": ("is_active", "site_name")}),
+        ("Logo", {"fields": ("logo", "logo_url", "logo_alt", "logo_preview")}),
+        ("Favicon (optional)", {"fields": ("favicon", "favicon_url", "favicon_preview")}),
+        ("Audit", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def logo_preview(self, obj):
+        if obj.logo_src:
+            return format_html('<img src="{}" style="max-height:60px;">', obj.logo_src)
+        return "—"
+    logo_preview.short_description = "Logo preview"
+
+    def favicon_preview(self, obj):
+        if obj.favicon_src:
+            return format_html('<img src="{}" style="height:24px;width:24px;">', obj.favicon_src)
+        return "—"
+    favicon_preview.short_description = "Favicon preview"
+
+
 
 # -------------------------------------------------------------------
 # Banner
