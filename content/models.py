@@ -16,6 +16,64 @@ import re
 User = settings.AUTH_USER_MODEL
 
 
+
+def branding_upload_to(instance, filename):
+    dt = timezone.now()
+    return f"branding/{dt:%Y/%m}/{filename}"
+
+class SiteBranding(models.Model):
+    """
+    Global site branding you can reuse anywhere (logo, favicon, site name).
+    Create one active record; the latest active is used by templates.
+    """
+    is_active = models.BooleanField(default=True, help_text="The latest active record is used site-wide.")
+
+    site_name = models.CharField(
+        max_length=160,
+        blank=True,
+        help_text="Optional site title/brand text (fallback if logo missing)."
+    )
+
+    # Logo: either upload a file or paste a URL (file wins)
+    logo = models.ImageField(upload_to=branding_upload_to, blank=True, null=True)
+    logo_url = models.URLField(blank=True)
+
+    # Favicon (optional)
+    favicon = models.ImageField(upload_to=branding_upload_to, blank=True, null=True)
+    favicon_url = models.URLField(blank=True)
+
+    # Alt text (accessibility)
+    logo_alt = models.CharField(max_length=200, blank=True, default="Site logo")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        ordering = ("-updated_at", "-id")
+        verbose_name = "Site Branding"
+        verbose_name_plural = "Site Branding"
+
+    def __str__(self):
+        return self.site_name or f"Branding #{self.pk}"
+
+    @property
+    def logo_src(self) -> str:
+        try:
+            if self.logo and self.logo.url:
+                return self.logo.url
+        except Exception:
+            pass
+        return self.logo_url or ""
+
+    @property
+    def favicon_src(self) -> str:
+        try:
+            if self.favicon and self.favicon.url:
+                return self.favicon.url
+        except Exception:
+            pass
+        return self.favicon_url or ""
+
 def banner_upload_to(instance, filename):
     return f"banners/{timezone.now():%Y/%m}/{filename}"
 

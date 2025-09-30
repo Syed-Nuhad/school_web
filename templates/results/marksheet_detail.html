@@ -1,94 +1,178 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block title %}Marksheet — {{ ms.student_name }}{% endblock %}
 
 {% block extra_head %}
 <style>
-  .kv {display:grid;grid-template-columns:160px 1fr;gap:.25rem .75rem}
-  .kv div{padding:.15rem 0}
-  .badge-soft{background:#f6f8fa;border:1px solid #e5e7eb}
-  .t td,.t th{vertical-align:middle}
-  .t th{background:#f6f8fa}
-  .text-end{text-align:right}
+  /* container that html2pdf will capture */
+  .pdf-surface{background:#fff;padding:16px;border:1px solid #cfd6df;border-radius:8px}
+
+  /* your table styles (unchanged) */
+  table.msheet{width:100%;border-collapse:collapse}
+  .msheet th,.msheet td{border:1px solid #cfd6df;padding:12px 14px;font-size:16px;line-height:1.25;color:#111827}
+  .msheet .top-head th{background:#eaf0ff;font-weight:700}
+  .msheet tbody tr:nth-child(odd) td{background:#f9fbff}
+  .msheet tfoot th,.msheet tfoot td{font-weight:700;background:#eef3fb}
+
+  .right{text-align:right}
+  .center{text-align:center}
+  .col-name{width:260px}
+  .col-max{width:140px}
+  .col-obt{width:160px}
+  .col-grade{width:100px}
+
+  .subject-head{background:#eaf0ff;font-weight:700;text-align:center;vertical-align:middle;width:140px}
+
+  .sign-wrap{display:flex;gap:24px;margin-top:20px}
+  .sign-box{flex:1}
+  .sign-line{height:42px;border-bottom:2px solid #222;margin-bottom:6px}
+  .sign-label{font-size:.9rem;color:#6c757d;text-align:center}
+
+  tr{page-break-inside:avoid}
+  @media print{ .no-print{display:none !important} }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- STAMP: marksheet_detail v10 -->
 <section class="container-xxl py-4 py-md-5">
-  <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-    <h1 class="h4 mb-0">Marksheet</h1>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-secondary btn-sm" href="{% url 'reportcards:marksheet_pdf' ms.id %}">
-        Download PDF
-      </a>
-      <a class="btn btn-outline-secondary btn-sm" href="javascript:print()">Print</a>
-    </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+
+    <button
+      id="btn-download-pdf"
+      class="btn btn-primary no-print"
+      type="button"
+      data-filename="Marksheet-{{ ms.student_name|slugify }}-{{ ms.grade.name|slugify }}-{{ ms.term.name|default:ms.term|slugify }}.pdf">
+      Download PDF
+    </button>
   </div>
 
-  <div class="row g-3 mb-3">
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="kv">
-            <div class="text-muted">Student</div><div><strong>{{ ms.student_name }}</strong></div>
-            <div class="text-muted">Roll</div><div>{{ ms.roll_number|default:"—" }}</div>
-            <div class="text-muted">Section</div><div>{{ ms.section|default:"—" }}</div>
-            <div class="text-muted">Class</div><div>{{ ms.grade }}</div>
-            <div class="text-muted">Term</div><div>{{ ms.term }}</div>
+  <div id="pdf-area" class="pdf-surface">
+
+    {# ---------- Centered branding (inline styles only) ---------- #}
+    {% if BRAND.logo_src or BRAND.site_name %}
+      <!-- Table wrapper is the most reliable way to center with html2canvas -->
+      <table style="width:100%;border-collapse:collapse;margin:0 0 14px 0;">
+        <tr>
+          <td style="padding:0;text-align:center;vertical-align:middle;">
+            {% if BRAND.logo_src %}
+              <img
+                src="{{ BRAND.logo_src }}"
+                alt="{% firstof BRAND.logo_alt BRAND.site_name 'Logo' %}"
+                crossorigin="anonymous"
+                style="display:block !important;margin:0 auto 6px auto !important;max-height:64px;max-width:240px;object-fit:contain;"
+              >
+            {% endif %}
+            {% if BRAND.site_name %}
+              <div style="font-size:20px;font-weight:700;color:#111827;line-height:1.1;">
+                {{ BRAND.site_name }}
+              </div>
+            {% endif %}
+            <div style="font-size:12px;color:#6b7280;letter-spacing:.02em;">Marksheet</div>
+          </td>
+        </tr>
+      </table>
+    {% endif %}
+    {# ------------------------------------------------------------ #}
+
+    <table style="width:100%; border-collapse:collapse; margin:0 0 12px 0;">
+      <tr>
+        <td style="padding:0; text-align:center; color:#6c757d; font-size:.95rem;">
+          <div><strong style="color:#111827;">Name:</strong> {{ ms.student_name }}</div>
+          <div>
+            <strong style="color:#111827;">Roll:</strong> {{ ms.roll_number|default:"—" }}
+            &nbsp;•&nbsp; <strong style="color:#111827;">Class:</strong> {{ ms.grade.name }}{% if ms.grade.section %} ({{ ms.grade.section }}){% endif %}
+            &nbsp;•&nbsp; <strong style="color:#111827;">Year:</strong> {{ ms.grade.year }}
+            &nbsp;•&nbsp; <strong style="color:#111827;">Term:</strong> {{ ms.term }}
           </div>
-          {% if ms.notes %}
-            <div class="mt-2 small text-muted">{{ ms.notes }}</div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+        </td>
+      </tr>
+    </table>
+    <table class="msheet">
+      <tbody>
+        <tr class="top-head">
+          <th class="col-name">Subject</th>
+          <th class="text-start col-max">Total Marks</th>
+          <th class="text-start col-obt">Marks Obtained</th>
+          <th class="center col-grade">Grade</th>
+        </tr>
 
-    <div class="col-12 col-lg-6">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body d-flex flex-wrap gap-2">
-          <span class="badge badge-soft">Total: <strong>{{ ms.total_obtained }}</strong></span>
-          <span class="badge badge-soft">Out of: <strong>{{ ms.total_out_of }}</strong></span>
-          <span class="badge badge-soft">Percent: <strong>{{ ms.percent }}%</strong></span>
-          {% if ms.grade_letter %}
-            <span class="badge text-bg-primary">Grade: {{ ms.grade_letter }}</span>
-          {% endif %}
-          {% if ms.gpa %}
-            <span class="badge text-bg-secondary">GPA: {{ ms.gpa }}</span>
-          {% endif %}
-        </div>
+        {% for row in items %}
+          <tr>
+            <td class="text-start col-name">{{ row.subject.name }}</td>
+            <td class="text-start col-max">{{ row.max_marks }}</td>
+            <td class="text-start col-obt">{{ row.marks_obtained }}</td>
+            <td class="center col-grade">{{ row.grade_letter }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="center" style="color:#6c757d">No subjects.</td></tr>
+        {% endfor %}
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          <td class="text-start">{{ ms.total_out_of }}</td>
+          <td class="text-start">{{ ms.total_obtained }}</td>
+          <td class="center">{{ ms.grade_letter }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    {% if ms.notes %}
+      <div style="margin-top:12px;">
+        <div style="color:#6c757d;font-size:.9rem;">Notes</div>
+        <div>{{ ms.notes|linebreaksbr }}</div>
+      </div>
+    {% endif %}
+
+    <div class="sign-wrap">
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <div class="sign-label">Class teacher Signature</div>
+      </div>
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <div class="sign-label">Principal Signature</div>
       </div>
     </div>
   </div>
-
-  <div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table t mb-0">
-          <thead>
-            <tr>
-              <th>Subject</th>
-              <th class="text-end">Max marks</th>
-              <th class="text-end">Marks obtained</th>
-              <th class="text-end">%</th>
-              <th class="">Grade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in rows %}
-              <tr>
-                <td>{{ r.subject.name }}</td>
-                <td class="text-end">{{ r.max_marks }}</td>
-                <td class="text-end">{{ r.marks_obtained }}</td>
-                <td class="text-end">{{ r.percent }}</td>
-                <td>{{ r.grade_letter }}</td>
-              </tr>
-            {% empty %}
-              <tr><td colspan="5" class="text-center text-muted py-4">No rows.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
 </section>
+{% endblock %}
+
+{% block extra_body %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js" defer></script>
+<script>
+  window.addEventListener('load', function () {
+    const btn  = document.getElementById('btn-download-pdf');
+    const area = document.getElementById('pdf-area');
+    if (!btn || !area || typeof html2pdf === 'undefined') return;
+
+    // Ensure the logo finishes loading before capture
+    async function ensureImagesLoaded(root) {
+      const imgs = Array.from(root.querySelectorAll('img'));
+      await Promise.all(imgs.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(res => img.addEventListener('load', res, { once: true }));
+      }));
+    }
+
+    btn.addEventListener('click', async function () {
+      await ensureImagesLoaded(area);
+
+      const filename = btn.dataset.filename || 'marksheet.pdf';
+      html2pdf().set({
+        margin: 10,
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }).from(area).save();
+    });
+  });
+</script>
 {% endblock %}
