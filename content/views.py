@@ -1,6 +1,11 @@
 # content/views.py
+import csv
+
 from django.contrib import messages
 from django.core.mail import send_mail
+from django.db.models import Sum, F
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView, CreateView
@@ -14,10 +19,11 @@ from django.utils.dateparse import parse_datetime, parse_date
 from django.utils import timezone
 
 from .decorators import teacher_or_admin_required
-from .models import Banner, Notice, TimelineEvent, Course, AdmissionApplication
+from .models import Banner, Notice, TimelineEvent, Course, AdmissionApplication, Income, Expense, TuitionInvoice, \
+    IncomeCategory
 import json, uuid, requests
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect, HttpResponse
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 from django.urls import reverse
 
@@ -530,3 +536,295 @@ def mark_payment_paid(request, pk: int):
     app.mark_paid(provider, txn_id)
     send_payment_success_email(app)
     return JsonResponse({"status": "ok"})
+
+
+
+
+
+def finance_dashboard(request):
+    total_income = Income.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_expense = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+    balance = total_income - total_expense
+
+    context = {
+        'total_income': total_income,
+        'total_expense': total_expense,
+        'balance': balance,
+        'incomes': Income.objects.order_by('-date')[:10],
+        'expenses': Expense.objects.order_by('-date')[:10],
+    }
+    return render(request, "finance/dashboard.html", context)
+
+
+def finance_totals(request):
+    """
+    GET ?from=YYYY-MM-DD&to=YYYY-MM-DD
+    Returns { total_income, total_expense, balance }
+    Defaults: this month.
+    """
+    today = timezone.localdate()
+    d_from = parse_date(request.GET.get("from") or str(today.replace(day=1)))
+    d_to   = parse_date(request.GET.get("to")   or str(today))
+
+    inc = Income.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    exp = Expense.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    return JsonResponse({
+        "from": str(d_from),
+        "to": str(d_to),
+        "total_income": float(inc),
+        "total_expense": float(exp),
+        "balance": float(inc - exp),
+    })
+# ===== END: finance views (API-ish) =====
+
+
+# =========================== START: Admission -> Income (Category-based) ===========================
+def _income_cat(code, fallback_name):
+    cat, _ = IncomeCategory.objects.get_or_create(code=code, defaults={"name": fallback_name, "is_fixed": True})
+    return cat
+
+@receiver(post_save, sender=AdmissionApplication)  # <-- keep your sender class name
+def _post_income_when_admission_paid(sender, instance, created, **kwargs):
+    if instance.payment_status != "paid":
+        return
+    if not instance.payment_txn_id:
+        pass  # still ok, we'll mark n/a in description
+
+    # prevent duplicates (simple check by TXN tag)
+    tag = f"TXN:{instance.payment_txn_id}" if instance.payment_txn_id else None
+    if tag and Income.objects.filter(description__icontains=tag).exists():
+        return
+
+    rows = []
+    # build lines based on chosen toggles & snapshotted fees
+    if getattr(instance, "add_admission", False) and (instance.fee_admission or 0) > 0:
+        rows.append(("admission", instance.fee_admission, "Admission fee"))
+    if getattr(instance, "add_tuition", False) and (instance.fee_tuition or 0) > 0:
+        rows.append(("tuition", instance.fee_tuition, "First month tuition"))
+    if getattr(instance, "add_bus", False) and (instance.fee_bus or 0) > 0:
+        rows.append(("bus", instance.fee_bus, "Bus service"))
+    if getattr(instance, "add_exam", False) and (instance.fee_exam or 0) > 0:
+        rows.append(("donation", instance.fee_exam, "Exam fee"))  # or make a dedicated 'exam' category if you want
+
+    paid_date = instance.paid_at.date() if instance.paid_at else timezone.localdate()
+    for code, amount, label in rows:
+        Income.objects.create(
+            category=_income_cat(code, label),
+            amount=amount,
+            date=paid_date,
+            description=f"{label} — {instance.full_name} | {tag or 'TXN:n/a'}",
+            content_object=instance,
+        )
+# =========================== END: Admission -> Income (Category-based) ===========================
+
+
+
+
+def finance_totals(request):
+    """
+    GET ?from=YYYY-MM-DD&to=YYYY-MM-DD
+    Returns total income, expense, balance.
+    """
+    today = timezone.localdate()
+    d_from = parse_date(request.GET.get("from") or str(today.replace(day=1)))
+    d_to   = parse_date(request.GET.get("to")   or str(today))
+
+    inc = Income.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    exp = Expense.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+
+    return JsonResponse({
+        "from": str(d_from), "to": str(d_to),
+        "total_income": float(inc),
+        "total_expense": float(exp),
+        "balance": float(inc - exp),
+    })
+
+
+def finance_overview(request):
+    """
+    Admin-style printable overview:
+      - totals in a date range
+      - income/expense by category
+      - outstanding tuition list (current month or all)
+    """
+    today = timezone.localdate()
+    d_from = parse_date(request.GET.get("from") or str(today.replace(day=1)))
+    d_to   = parse_date(request.GET.get("to")   or str(today))
+
+    # Totals
+    total_income = Income.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    total_expense = Expense.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    balance = (total_income or 0) - (total_expense or 0)
+
+    # Breakdowns
+    income_by_cat = (
+        Income.objects.filter(date__range=[d_from, d_to])
+        .values(name=F("category__name"))
+        .annotate(total=Sum("amount"))
+        .order_by("-total")
+    )
+    expense_by_cat = (
+        Expense.objects.filter(date__range=[d_from, d_to])
+        .values(name=F("category__name"))
+        .annotate(total=Sum("amount"))
+        .order_by("-total")
+    )
+
+    # Outstanding tuition: current month (or use all: remove month/year filter)
+    year = int(request.GET.get("year") or today.year)
+    month = int(request.GET.get("month") or today.month)
+    outstanding_qs = TuitionInvoice.objects.filter(period_year=year, period_month=month).exclude(tuition_amount=F("paid_amount"))
+    # OR: outstanding_qs = TuitionInvoice.objects.filter(paid_amount__lt=F("tuition_amount"))
+
+    context = {
+        "d_from": d_from, "d_to": d_to,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "balance": balance,
+        "income_by_cat": list(income_by_cat),
+        "expense_by_cat": list(expense_by_cat),
+        "outstanding": outstanding_qs.select_related("student"),
+        "year": year, "month": month,
+        "title": "Finance Overview",
+        "print_mode": request.GET.get("print") == "1",
+    }
+    return render(request, "admin/finance/overview.html", context)
+# =========================== END: Finance Views ===========================
+
+
+
+
+
+def build_finance_context(request):
+    today = timezone.localdate()
+    d_from = parse_date(request.GET.get("from") or str(today.replace(day=1)))
+    d_to   = parse_date(request.GET.get("to")   or str(today))
+    year   = int(request.GET.get("year") or today.year)
+    month  = int(request.GET.get("month") or today.month)
+
+    total_income  = Income.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    total_expense = Expense.objects.filter(date__range=[d_from, d_to]).aggregate(s=Sum("amount"))["s"] or 0
+    balance = total_income - total_expense
+
+    income_by_cat = (
+        Income.objects.filter(date__range=[d_from, d_to])
+        .values(name=F("category__name"))
+        .annotate(total=Sum("amount")).order_by("-total")
+    )
+    expense_by_cat = (
+        Expense.objects.filter(date__range=[d_from, d_to])
+        .values(name=F("category__name"))
+        .annotate(total=Sum("amount")).order_by("-total")
+    )
+    outstanding = (
+        TuitionInvoice.objects.filter(period_year=year, period_month=month)
+        .exclude(paid_amount=F("tuition_amount"))
+        .select_related("student")
+    )
+
+    return {
+        "d_from": d_from, "d_to": d_to,
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "balance": balance,
+        "income_by_cat": list(income_by_cat),
+        "expense_by_cat": list(expense_by_cat),
+        "outstanding": outstanding,
+        "year": year, "month": month,
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+def finance_export_csv(request):
+    """
+    GET ?type=income|expense|outstanding&from=YYYY-MM-DD&to=YYYY-MM-DD&year=YYYY&month=MM
+    """
+    kind = (request.GET.get("type") or "income").lower()
+    today = timezone.localdate()
+    d_from = parse_date(request.GET.get("from") or str(today.replace(day=1)))
+    d_to   = parse_date(request.GET.get("to")   or str(today))
+    year   = int(request.GET.get("year") or today.year)
+    month  = int(request.GET.get("month") or today.month)
+
+    if kind not in ("income", "expense", "outstanding"):
+        kind = "income"
+
+    filename = f"finance_{kind}.csv"
+    resp = HttpResponse(content_type="text/csv")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    w = csv.writer(resp)
+
+    if kind == "income":
+        w.writerow(["Date", "Category", "Amount", "Description"])
+        for r in Income.objects.filter(date__range=[d_from, d_to]).select_related("category").order_by("date","id"):
+            w.writerow([r.date, r.category.name if r.category_id else "", r.amount, r.description])
+    elif kind == "expense":
+        w.writerow(["Date", "Category", "Amount", "Vendor", "Description"])
+        for r in Expense.objects.filter(date__range=[d_from, d_to]).select_related("category").order_by("date","id"):
+            w.writerow([r.date, r.category.name if r.category_id else "", r.amount, r.vendor, r.description])
+    else:  # outstanding
+        w.writerow(["Student", "Year", "Month", "Tuition", "Paid", "Balance", "Due Date"])
+        qs = TuitionInvoice.objects.filter(period_year=year, period_month=month) \
+                                   .exclude(paid_amount=F("tuition_amount")) \
+                                   .select_related("student").order_by("student_id")
+        for inv in qs:
+            w.writerow([str(inv.student), inv.period_year, inv.period_month,
+                        inv.tuition_amount, inv.paid_amount, inv.balance, inv.due_date or ""])
+    return resp
+# ===== END: finance_export_csv =====
+
+
+
+def build_student_lookup_context(request):
+    classes = AcademicClass.objects.order_by("-year", "name")
+    roll = (request.GET.get("roll") or "").strip()
+    class_id = (request.GET.get("class") or "").strip()
+    section = (request.GET.get("section") or "").strip()
+
+    ctx = {"classes": classes, "roll": roll, "class_id": class_id, "section": section, "result": None, "error": ""}
+
+    if roll and class_id:
+        try:
+            profile = StudentProfile.objects.select_related("user", "school_class").get(
+                school_class_id=int(class_id),
+                section=section,
+                roll_number=int(roll),
+            )
+        except StudentProfile.DoesNotExist:
+            ctx["error"] = "No student found for that Class/Section/Roll."
+            return ctx
+
+        # Tuition summary
+        invoices = TuitionInvoice.objects.filter(student=profile.user)
+        months_paid = invoices.filter(paid_amount__gte=F("tuition_amount")).count()
+        months_due  = invoices.filter(paid_amount__lt=F("tuition_amount")).count()
+        total_due   = invoices.aggregate(s=Sum(F("tuition_amount") - F("paid_amount")))["s"] or 0
+        total_paid  = invoices.aggregate(s=Sum("paid_amount"))["s"] or 0
+
+        # Other fees attributed to the student (thanks to Income.student FK)
+        exam_cat = IncomeCategory.objects.filter(code="exam").first()
+        bus_cat  = IncomeCategory.objects.filter(code="bus").first()
+        exam_total = Income.objects.filter(student=profile.user, category=exam_cat).aggregate(s=Sum("amount"))["s"] or 0
+        bus_total  = Income.objects.filter(student=profile.user, category=bus_cat).aggregate(s=Sum("amount"))["s"] or 0
+
+        ctx["result"] = {
+            "profile": profile,
+            "months_paid": months_paid,
+            "months_due": months_due,
+            "total_paid": total_paid,
+            "total_due": total_due,
+            "exam_total": exam_total,
+            "bus_total": bus_total,
+            "recent_invoices": invoices.order_by("-period_year", "-period_month")[:12],
+        }
+    return ctx

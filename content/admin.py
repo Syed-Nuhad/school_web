@@ -2,7 +2,9 @@
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
+from django.db.models import Sum
 from django.http import JsonResponse
+from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils.html import format_html
 from django.conf import settings
@@ -34,8 +36,17 @@ from .models import (
     ClassTopper,
     # Attendance + Exams
     AttendanceSession,
-    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding,
+    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding, Expense, Income,
+    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile,
 )
+from .views import finance_overview, build_finance_context
+
+
+
+
+
+
+
 
 # -------------------------------------------------------------------
 # Access helpers
@@ -815,3 +826,110 @@ class StudentMarksheetItemAdmin(OwnableAdminMixin):
     raw_id_fields = ("marksheet",)
 
 
+
+
+@admin.register(IncomeCategory)
+class IncomeCategoryAdmin(OwnableAdminMixin):
+    list_display = ("name", "code", "is_fixed", "is_active")
+    list_filter  = ("is_fixed", "is_active")
+    search_fields = ("name", "code")
+
+
+@admin.register(ExpenseCategory)
+class ExpenseCategoryAdmin(OwnableAdminMixin):
+    list_display = ("name", "code", "is_fixed", "is_active")
+    list_filter  = ("is_fixed", "is_active")
+    search_fields = ("name", "code")
+
+
+@admin.register(Income)
+class IncomeAdmin(OwnableAdminMixin):
+    list_display = ("date", "category", "amount", "description")
+    list_filter  = ("category", "date")
+    search_fields = ("description", "category__name")
+    date_hierarchy = "date"
+
+    # Inline total in changelist
+    def changelist_view(self, request, extra_context=None):
+        qs = self.get_queryset(request)
+        total = qs.aggregate(total=Sum("amount"))["total"] or 0
+        extra_context = extra_context or {}
+        extra_context["inline_total"] = total
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(Expense)
+class ExpenseAdmin(OwnableAdminMixin):
+    list_display = ("date", "category", "amount", "vendor", "description")
+    list_filter  = ("category", "date")
+    search_fields = ("description", "vendor")
+    date_hierarchy = "date"
+
+
+class TuitionPaymentInline(admin.TabularInline):
+    model = TuitionPayment
+    extra = 0
+    fields = ("amount", "provider", "txn_id", "paid_on")
+    readonly_fields = ()
+    show_change_link = True
+
+
+@admin.register(TuitionInvoice)
+class TuitionInvoiceAdmin(OwnableAdminMixin):
+    list_display = ("student", "period_year", "period_month", "tuition_amount", "paid_amount", "balance", "due_date")
+    list_filter  = ("period_year", "period_month")
+    search_fields = ("student__email", "student__username")
+    inlines = [TuitionPaymentInline]
+
+    actions = ["print_outstanding"]
+
+    def print_outstanding(self, request, queryset):
+        """
+        Opens the printable Outstanding Tuition view with only selected invoices
+        (when none selected, we print all outstanding for current month).
+        """
+        ids = list(queryset.values_list("id", flat=True))
+        request.session["finance_outstanding_ids"] = ids
+        self.message_user(request, "Opening printable outstanding list…")
+        from django.urls import reverse
+        return TemplateResponse(request, "admin/finance/overview.html", {
+            "trigger_only_outstanding": True,  # the view will compute outstanding anyway
+        })
+    print_outstanding.short_description = "Open printable Outstanding Tuition list"
+
+
+# ---- Admin-level Finance Overview page (URL under admin/finance/overview) ----
+class FinanceAdminSiteMixin(OwnableAdminMixin):
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path("overview/", self.admin_site.admin_view(self.finance_overview_view), name="finance-overview"),
+        ]
+        return custom + urls
+
+    def finance_overview_view(self, request):
+        """
+        Uses the same template as our view; admin wrapper only.
+        """
+        context = {"title": "Finance Overview"}
+        return TemplateResponse(request, "admin/finance/overview.html", context)
+
+# Attach mixin to a harmless model so the URL mounts under admin.
+# (Alternative is AdminSite-level get_urls; keeping it simple here.)
+# Register only if not already registered; you can also attach this to IncomeAdmin if you prefer.
+# =========================== END: Finance Admin ===========================
+
+
+def finance_overview_admin(request):
+    ctx = admin.site.each_context(request)            # admin chrome (nav/sidebar)
+    ctx.update(build_finance_context(request))        # your finance data
+    ctx.setdefault("title", "Finance Overview")
+    return TemplateResponse(request, "admin/finance/overview.html", ctx)
+
+
+@admin.register(StudentProfile)
+class StudentProfileAdmin(OwnableAdminMixin):
+    list_display = ("user", "school_class", "section", "roll_number", "joined_on")
+    list_filter = ("school_class__year", "school_class__name", "section")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "user__email", "roll_number")
+    ordering = ("school_class", "section", "roll_number")

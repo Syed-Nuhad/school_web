@@ -1,0 +1,90 @@
+{% extends "admin/base_site.html" %}
+{% load i18n humanize %}
+
+{% block title %}Student Lookup{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> &rsaquo; Student Lookup
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content" class="flex">
+  <h1>Student Lookup</h1>
+
+  <div class="module aligned d-print-none">
+    <form method="get" class="form-row" style="gap:.5rem;">
+      <label>Class:
+        <select name="class">
+          <option value="">-- Select --</option>
+          {% for c in classes %}
+            <option value="{{ c.id }}" {% if class_id|add:'' == c.id|add:'' %}selected{% endif %}>
+              {{ c.name }}{% if c.section %} – {{ c.section }}{% endif %} ({{ c.year }})
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Section: <input type="text" name="section" value="{{ section }}" size="8"></label>
+      <label>Roll: <input type="number" name="roll" value="{{ roll }}" style="width:100px"></label>
+      <input type="submit" value="Search" class="default">
+    </form>
+  </div>
+
+  {% if error %}
+    <p><em style="color:#b71c1c">{{ error }}</em></p>
+  {% endif %}
+
+  {% if result %}
+    <div class="module">
+      <h2>Student</h2>
+      <table class="listing">
+        <tbody>
+          <tr><th>Name</th><td>{{ result.profile.user.get_full_name|default:result.profile.user }}</td></tr>
+          <tr><th>Class</th><td>{{ result.profile.school_class }}</td></tr>
+          <tr><th>Section</th><td>{{ result.profile.section|default:"—" }}</td></tr>
+          <tr><th>Roll</th><td>{{ result.profile.roll_number }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h2>Fees Summary</h2>
+      <table class="listing">
+        <tbody>
+          <tr><th>Months Paid</th><td>{{ result.months_paid }}</td></tr>
+          <tr><th>Months Due</th><td>{{ result.months_due }}</td></tr>
+          <tr><th>Exam Fee (total)</th><td>{{ result.exam_total|floatformat:2|intcomma }}</td></tr>
+          <tr><th>Bus Fee (total)</th><td>{{ result.bus_total|floatformat:2|intcomma }}</td></tr>
+          <tr><th>Total Paid</th><td>{{ result.total_paid|floatformat:2|intcomma }}</td></tr>
+          <tr><th>Total Due</th><td><strong{% if result.total_due > 0 %} style="color:#b71c1c"{% endif %}>{{ result.total_due|floatformat:2|intcomma }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h2>Recent Tuition Invoices (12)</h2>
+      <table class="listing">
+        <thead>
+          <tr>
+            <th>Period</th><th class="right">Tuition</th><th class="right">Paid</th><th class="right">Balance</th><th>Due Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in result.recent_invoices %}
+            <tr>
+              <td>{{ inv.period_year }}-{{ inv.period_month|stringformat:"02d" }}</td>
+              <td class="right">{{ inv.tuition_amount|floatformat:2|intcomma }}</td>
+              <td class="right">{{ inv.paid_amount|floatformat:2|intcomma }}</td>
+              <td class="right"{% if inv.balance > 0 %} style="color:#b71c1c"{% endif %}>{{ inv.balance|floatformat:2|intcomma }}</td>
+              <td>{{ inv.due_date|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><em>No invoices.</em></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

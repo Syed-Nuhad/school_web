@@ -1,0 +1,141 @@
+{% extends "admin/base_site.html" %}
+{% load i18n humanize %}
+
+{% block title %}Finance Overview{% endblock %}
+
+{% block extrastyle %}
+<style>
+  :root { --gap: 12px; --hair: #e5e7eb; }
+  .finance-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 var(--gap);}
+  .finance-toolbar label{display:inline-flex;gap:6px;align-items:center}
+  .btn{display:inline-block;padding:6px 10px;border:1px solid var(--hair);border-radius:6px;background:#fff;cursor:pointer;text-decoration:none}
+  .btn.default{background:#1f2937;color:#fff;border-color:#1f2937}
+  .btn:focus{outline:2px solid #11182733}
+  .export-row{display:flex;gap:8px;margin:6px 0 var(--gap)}
+  .muted{color:#6b7280}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--gap);margin:var(--gap) 0}
+  .stat{background:#fff;border:1px solid var(--hair);border-radius:10px;padding:12px}
+  .stat .label{font-size:12px;color:#6b7280;margin-bottom:4px}
+  .stat .value{font-size:22px;font-weight:700}
+  .stat.negative .value{color:#b91c1c}
+  .stat.positive .value{color:#065f46}
+  .section{margin-top:22px}
+  .table{width:100%;border-collapse:collapse}
+  .table thead th{position:sticky;top:0;background:#f9fafb;border-bottom:1px solid var(--hair)}
+  .table th,.table td{padding:8px 10px;border-top:1px solid var(--hair);text-align:left}
+  .t-right{text-align:right}
+  .w-80{width:80px}
+  .nowrap{white-space:nowrap}
+  .module h2{margin:0 0 6px}
+  @media print{
+    .finance-toolbar,.export-row{display:none!important}
+    .stat{border:none;padding:0}
+    .table thead th{background:#fff}
+  }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans "Home" %}</a> &rsaquo; Finance Overview
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content" class="flex">
+  <h1>Finance Overview</h1>
+
+  <!-- Filters -->
+  <form method="get" class="finance-toolbar">
+    <label>From <input class="w-80" type="date" name="from" value="{{ d_from }}"></label>
+    <label>To <input class="w-80" type="date" name="to" value="{{ d_to }}"></label>
+    <label>Year <input class="w-80" type="number" min="2000" name="year" value="{{ year }}"></label>
+    <label>Month <input class="w-80" type="number" min="1" max="12" name="month" value="{{ month }}"></label>
+    <button type="submit" class="btn default">Apply</button>
+    <a class="btn" href="?from={{ d_from }}&to={{ d_to }}&year={{ year }}&month={{ month }}&print=1" target="_blank">Open Print</a>
+    <a class="btn" href="javascript:window.print()">Print</a>
+  </form>
+
+  <!-- Range -->
+  <div class="muted">Range: <strong>{{ d_from }}</strong> → <strong>{{ d_to }}</strong></div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Total Income</div>
+      <div class="value">{{ total_income|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Total Expense</div>
+      <div class="value">{{ total_expense|floatformat:2|intcomma }}</div>
+    </div>
+    <div class="stat {% if balance < 0 %}negative{% else %}positive{% endif %}">
+      <div class="label">Balance</div>
+      <div class="value">{{ balance|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+
+  <!-- Export buttons (stay beneath stats) -->
+  <div class="export-row">
+    <a class="btn" href="{% url 'finance-export' %}?type=income&from={{ d_from }}&to={{ d_to }}&year={{ year }}&month={{ month }}" target="_blank">Export Income CSV</a>
+    <a class="btn" href="{% url 'finance-export' %}?type=expense&from={{ d_from }}&to={{ d_to }}&year={{ year }}&month={{ month }}" target="_blank">Export Expense CSV</a>
+    <a class="btn" href="{% url 'finance-export' %}?type=outstanding&year={{ year }}&month={{ month }}" target="_blank">Export Outstanding CSV</a>
+  </div>
+
+  <!-- Income by Category -->
+  <div class="module section">
+    <h2>Income by Category</h2>
+    <table class="table">
+      <thead><tr><th>Category</th><th class="t-right">Total</th></tr></thead>
+      <tbody>
+      {% for row in income_by_cat %}
+        <tr><td>{{ row.name }}</td><td class="t-right nowrap">{{ row.total|floatformat:2|intcomma }}</td></tr>
+      {% empty %}
+        <tr><td colspan="2" class="muted">No income in range.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Expense by Category -->
+  <div class="module section">
+    <h2>Expense by Category</h2>
+    <table class="table">
+      <thead><tr><th>Category</th><th class="t-right">Total</th></tr></thead>
+      <tbody>
+      {% for row in expense_by_cat %}
+        <tr><td>{{ row.name }}</td><td class="t-right nowrap">{{ row.total|floatformat:2|intcomma }}</td></tr>
+      {% empty %}
+        <tr><td colspan="2" class="muted">No expense in range.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Outstanding Tuition -->
+  <div class="module section">
+    <h2>Outstanding Monthly Tuition — {{ year }}-{{ month|stringformat:"02d" }}</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Student</th><th class="t-right">Tuition</th><th class="t-right">Paid</th>
+          <th class="t-right">Balance</th><th>Due Date</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for inv in outstanding %}
+        <tr>
+          <td>{{ inv.student }}</td>
+          <td class="t-right nowrap">{{ inv.tuition_amount|floatformat:2|intcomma }}</td>
+          <td class="t-right nowrap">{{ inv.paid_amount|floatformat:2|intcomma }}</td>
+          <td class="t-right nowrap" {% if inv.balance > 0 %}style="color:#b91c1c"{% endif %}>{{ inv.balance|floatformat:2|intcomma }}</td>
+          <td class="nowrap">{{ inv.due_date|default:"—" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="muted">No outstanding invoices for this month.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

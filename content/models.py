@@ -4,6 +4,8 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
@@ -11,7 +13,8 @@ from django.db.models import F, Q
 from django.urls import reverse
 from django.utils import timezone
 import re
-
+from django.db.models.signals import post_save, post_delete, post_migrate
+from django.dispatch import receiver
 
 User = settings.AUTH_USER_MODEL
 
@@ -2009,11 +2012,366 @@ class StudentMarksheetItem(models.Model):
 
 
 # content/models.py  (BOTTOM of file)
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
+
 
 @receiver([post_save, post_delete], sender=StudentMarksheetItem)
 def _recalc_parent_totals(sender, instance, **kwargs):
     ms = instance.marksheet
     ms.recalc_totals()
     ms.save(update_fields=["total_marks", "total_grade", "updated_at"])
+
+
+
+
+
+# ---------- Categories ----------
+class IncomeCategory(models.Model):
+    # e.g., admission, tuition, bus, donation, etc.
+    code = models.SlugField(max_length=50, unique=True)   # stable programmatic key: 'admission', 'tuition'
+    name = models.CharField(max_length=120)               # human label: 'Admission Fee'
+    is_fixed = models.BooleanField(default=False)         # your built-ins are marked fixed
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ExpenseCategory(models.Model):
+    # e.g., salary, fuel, bus_repair, equipment_purchase, etc.
+    code = models.SlugField(max_length=50, unique=True)
+    name = models.CharField(max_length=120)
+    is_fixed = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+# ---------- Ledger ----------
+class Income(models.Model):
+    category = models.ForeignKey(
+        "IncomeCategory",
+        on_delete=models.PROTECT,
+        related_name="incomes",
+        null=True, blank=True
+    )
+    student = models.ForeignKey(          # NEW
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="incomes",
+        help_text="If this income is for a specific student (tuition, exam, bus, etc.)"
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateField(default=timezone.localdate)
+    description = models.TextField(blank=True)
+
+    # Optional link back to the originating object (Admission, TuitionInvoice, etc.)
+    content_type = models.ForeignKey(ContentType, null=True, blank=True, on_delete=models.SET_NULL)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        cat = self.category.name if self.category_id else "Uncategorized"
+        return f"{cat} — {self.amount} on {self.date}"
+
+
+class Expense(models.Model):
+    category = models.ForeignKey(ExpenseCategory, on_delete=models.PROTECT, related_name="expenses")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateField(default=timezone.localdate)
+    description = models.TextField(blank=True)
+    vendor = models.CharField(max_length=160, blank=True)
+    attachment = models.FileField(upload_to="finance/receipts/", blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-date", "-id"]
+
+    def __str__(self):
+        return f"{self.category.name} — {self.amount} on {self.date}"
+
+
+# ---------- Tuition invoices ----------
+class TuitionInvoice(models.Model):
+    """
+    One invoice per student per month (or custom period) for monthly tuition.
+    """
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tuition_invoices")
+    # Period granularity: store month/year or a specific due_date
+    period_year = models.PositiveIntegerField()
+    period_month = models.PositiveIntegerField()  # 1-12
+    due_date = models.DateField(blank=True, null=True)
+
+    tuition_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("student", "period_year", "period_month")
+        ordering = ["-period_year", "-period_month", "-id"]
+
+    @property
+    def balance(self):
+        return max(self.tuition_amount - self.paid_amount, 0)
+
+    @property
+    def is_paid(self):
+        return self.balance <= 0
+
+    def post_income_line(self, payment, category_code="tuition"):
+        """
+        Create an Income line whenever we receive a tuition payment.
+        """
+        cat, _ = IncomeCategory.objects.get_or_create(code=category_code, defaults={
+            "name": "Tuition Fee", "is_fixed": True, "is_active": True
+        })
+        Income.objects.create(
+            category=cat,
+            amount=payment.amount,
+            student=self.student,
+            date=payment.paid_on or timezone.localdate(),
+            description=f"Tuition payment — {self.student} — {self.period_year}-{self.period_month:02d} — TXN:{payment.txn_id or 'n/a'}",
+            content_object=self,
+        )
+
+
+class TuitionPayment(models.Model):
+    invoice = models.ForeignKey(TuitionInvoice, on_delete=models.CASCADE, related_name="payments")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    provider = models.CharField(max_length=60, blank=True)   # e.g., Cash, bKash, Nagad, Card, PayPal
+    txn_id = models.CharField(max_length=120, blank=True)
+    paid_on = models.DateField(default=timezone.localdate)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-paid_on", "-id"]
+
+    def __str__(self):
+        return f"{self.amount} on {self.paid_on} ({self.provider})"
+
+
+# ---------- Signals: keep invoice totals + create Income on payment ----------
+@receiver(post_save, sender=TuitionPayment)
+def _update_invoice_and_post_income(sender, instance: "TuitionPayment", created, **kwargs):
+    if not created:
+        return
+    inv = instance.invoice
+    # increment paid
+    inv.paid_amount = (inv.paid_amount or 0) + instance.amount
+    inv.save(update_fields=["paid_amount"])
+    # ledger income
+    inv.post_income_line(instance, category_code="tuition")
+
+
+# ---------- Seed built-in categories after migrate ----------
+@receiver(post_migrate)
+def _seed_finance_categories(sender, **kwargs):
+    """
+    Ensures your fixed categories always exist, but keeps things flexible:
+    you can add more categories later from Admin anytime.
+    """
+    if sender.name != __name__.rsplit(".", 1)[0]:  # only when this app migrated
+        return
+
+    income_defaults = [
+        ("admission", "Admission Fee"),
+        ("tuition", "Monthly Tuition"),
+        ("bus", "Bus Service"),
+        ("donation", "Donation/Other"),
+    ]
+    expense_defaults = [
+        ("salary", "Salary"),
+        ("fuel", "Fuel/Oil Purchase"),
+        ("bus_repair", "Bus Repair"),
+        ("bus_purchase", "Bus Purchase"),
+        ("equip_purchase", "Equipment Purchase"),
+        ("equip_repair", "Equipment Repair"),
+        ("misc", "Miscellaneous"),
+    ]
+    for code, name in income_defaults:
+        IncomeCategory.objects.get_or_create(code=code, defaults={"name": name, "is_fixed": True, "is_active": True})
+    for code, name in expense_defaults:
+        ExpenseCategory.objects.get_or_create(code=code, defaults={"name": name, "is_fixed": True, "is_active": True})
+# =========================== END: Finance Models (Content App) ===========================
+
+
+
+
+
+
+def _admission_income_line_items(app):
+    """
+    Build (source, amount, description) tuples from a paid AdmissionApplication.
+    Uses the fee snapshot & selection flags on the application.
+    """
+    rows = []
+    # Base rows
+    if app.add_admission and app.fee_admission > 0:
+        rows.append(("admission", app.fee_admission, "Admission fee"))
+    if app.add_tuition and app.fee_tuition > 0:
+        rows.append(("tuition", app.fee_tuition, "First month tuition"))
+    if app.add_exam and app.fee_exam > 0:
+        rows.append(("exam", app.fee_exam, "Exam fee"))
+    # Add-ons
+    if app.add_bus and app.fee_bus > 0:
+        rows.append(("bus", app.fee_bus, "Transport/Bus"))
+    if app.add_hostel and app.fee_hostel > 0:
+        rows.append(("hostel", app.fee_hostel, "Hostel"))
+    if app.add_marksheet and app.fee_marksheet > 0:
+        rows.append(("marksheet", app.fee_marksheet, "Marksheet/Certificate"))
+    return rows
+
+def _admission_has_income_already(app) -> bool:
+    """
+    Defensive check: if any Income exists with this txn_id in description,
+    we’ll treat it as already posted. Prevents duplicates on re-save.
+    """
+    from .models import Income
+    if not (app.payment_txn_id or "").strip():
+        return False
+    token = f"TXN:{app.payment_txn_id}"
+    return Income.objects.filter(description__icontains=token).exists()
+
+@receiver(post_save, sender=AdmissionApplication)
+def _post_income_when_paid(sender, instance: AdmissionApplication, created, **kwargs):
+    # Only act when status is paid
+    if instance.payment_status != "paid":
+        return
+    # Prevent duplicate posting
+    if _admission_has_income_already(instance):
+        return
+
+    # ---------- (1) Ensure student account + profile with AUTO ROLL ----------
+    user = None
+    if instance.email:
+        user = UserModel.objects.filter(email__iexact=instance.email).first()
+    if not user:
+        # create a minimal user (adjust fields to your auth policy)
+        base = (instance.full_name or "student").split()[0].lower()
+        uname = f"{base}{int(timezone.now().timestamp())}"
+        user = UserModel.objects.create_user(
+            username=uname,
+            email=instance.email or "",
+            first_name=(instance.full_name.split()[0] if instance.full_name else "")
+        )
+
+    # Create StudentProfile only if you added the fields to AdmissionApplication
+    # (enroll_class, enroll_section, generated_roll) and the StudentProfile model exists.
+    profile = getattr(user, "student_profile", None)
+    if hasattr(instance, "enroll_class") and instance.enroll_class and not profile:
+        roll = getattr(instance, "generated_roll", None) or StudentProfile.next_roll(
+            instance.enroll_class,
+            getattr(instance, "enroll_section", "") or ""
+        )
+        profile = StudentProfile.objects.create(
+            user=user,
+            school_class=instance.enroll_class,
+            section=(getattr(instance, "enroll_section", "") or ""),
+            roll_number=roll,
+        )
+        if not getattr(instance, "generated_roll", None) and hasattr(instance, "generated_roll"):
+            instance.generated_roll = roll
+            instance.save(update_fields=["generated_roll"])
+
+    # ---------- (2) Post income rows (admission/tuition/exam/bus/hostel/marksheet) ----------
+    line_items = _admission_income_line_items(instance)
+    if not line_items:
+        return
+
+    stamp = instance.paid_at.date() if instance.paid_at else timezone.localdate()
+    for source, amount, label in line_items:
+        cat, _ = IncomeCategory.objects.get_or_create(
+            code=source,
+            defaults={"name": label, "is_fixed": True, "is_active": True}
+        )
+        Income.objects.create(
+            category=cat,
+            student=user if profile else None,   # tag to student if we have a profile
+            amount=amount,
+            date=stamp,
+            description=(
+                f"{label} — Applicant: {instance.full_name} "
+                f"| Provider: {instance.payment_provider or 'n/a'} | TXN:{instance.payment_txn_id or 'n/a'}"
+            ),
+            content_object=instance,
+        )
+
+
+
+
+class StudentProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="student_profile",
+    )
+    school_class = models.ForeignKey(
+        "content.AcademicClass",
+        on_delete=models.PROTECT,
+        related_name="students",
+    )
+    section = models.CharField(max_length=20, blank=True)
+    roll_number = models.PositiveIntegerField()  # numeric roll
+    joined_on = models.DateField(default=timezone.localdate)
+
+    class Meta:
+        unique_together = ("school_class", "section", "roll_number")
+        ordering = ("school_class", "section", "roll_number")
+        verbose_name = "Student Profile"
+        verbose_name_plural = "Student Profiles"
+
+    def __str__(self):
+        sec = f" – {self.section}" if self.section else ""
+        return f"{self.user} — {self.school_class}{sec} — Roll {self.roll_number}"
+
+    @classmethod
+    def next_roll(cls, klass, section=""):
+        qs = cls.objects.filter(school_class=klass, section=section).order_by("-roll_number")
+        last = qs.first()
+        return (last.roll_number + 1) if last else 1
+
+
+
+@receiver(post_save, sender=TuitionPayment)
+def _update_invoice_and_post_income(sender, instance: "TuitionPayment", created, **kwargs):
+    if not created:
+        return
+    inv = instance.invoice
+    inv.paid_amount = (inv.paid_amount or 0) + instance.amount
+    inv.save(update_fields=["paid_amount"])
+    inv.post_income_line(instance, category_code="tuition")
+
+    # --- Auto email receipt (best-effort) ---
+    try:
+        if inv.student and getattr(inv.student, "email", ""):
+            bal = inv.balance
+            send_mail(
+                subject=f"Payment received: {inv.period_year}-{inv.period_month:02d}",
+                message=(
+                    f"Dear {getattr(inv.student, 'first_name', '') or inv.student},\n\n"
+                    f"We received your payment of {instance.amount} on {instance.paid_on}.\n"
+                    f"Invoice period: {inv.period_year}-{inv.period_month:02d}\n"
+                    f"Outstanding balance: {bal}\n\n"
+                    f"Thank you."
+                ),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                recipient_list=[inv.student.email],
+                fail_silently=True,
+            )
+    except Exception:
+        pass
