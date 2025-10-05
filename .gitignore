@@ -15,3 +15,5 @@ __pycache__/
 
 # Django settings (if sensitive)
 core/settings.py
+
+school_project.git/
