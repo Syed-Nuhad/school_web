@@ -1373,6 +1373,7 @@ document.addEventListener('click', function (e) {
 
 
 
+<script>
 (function () {
   const modalEl = document.getElementById('functionImageModal');
   if (!modalEl) return;
@@ -1384,6 +1385,38 @@ document.addEventListener('click', function (e) {
 
   const btnIn  = document.getElementById('fimZoomIn');
   const btnOut = document.getElementById('fimZoomOut');
+
+  // Get Bootstrap modal instance (if Bootstrap is present)
+  const bsModal = (window.bootstrap && window.bootstrap.Modal)
+    ? window.bootstrap.Modal.getOrCreateInstance(modalEl)
+    : null;
+
+  // ---------- NEW: intercept clicks so LightGallery can't hijack ----------
+  const gallery = document.getElementById('functions-gallery');
+  if (gallery) {
+    gallery.addEventListener('click', function (e) {
+      const a = e.target.closest('a.js-fn-item');
+      if (!a) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();  // prevents LightGallery from opening
+
+      const src  = a.getAttribute('href') || a.getAttribute('data-img') || '';
+      const text = (a.getAttribute('data-title') || a.getAttribute('title') || a.textContent || 'Full View').trim();
+      if (!src) return;
+
+      // Fill your modal now (so we don't depend on relatedTarget)
+      title.textContent = text;
+      dl.href = src;
+      try { dl.download = src.split('/').pop().split('?')[0] || 'image'; } catch(e){}
+      img.src = src;
+      img.alt = text;
+
+      if (bsModal) bsModal.show();
+    }, true); // capture phase beats LG's handler
+  }
+
+  // ---------- your original code below (with one tiny guard) ----------
 
   // state
   let base = 1;     // fit-to-screen baseline
@@ -1427,6 +1460,9 @@ document.addEventListener('click', function (e) {
 
   // Bootstrap: set image when opening via data-* button
   modalEl.addEventListener('show.bs.modal', (ev) => {
+    // ---------- NEW: if opened programmatically (no relatedTarget), do nothing ----------
+    if (!ev.relatedTarget) return;
+
     const btn   = ev.relatedTarget;             // <button data-img="..." data-title="...">
     const src   = btn?.getAttribute('data-img') || '';
     const text  = btn?.getAttribute('data-title') || 'Full View';
@@ -1455,8 +1491,8 @@ document.addEventListener('click', function (e) {
   });
 
   // Zoom buttons (+ / -)
-  btnIn.addEventListener('click',  () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1.2));
-  btnOut.addEventListener('click', () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1/1.2));
+  if (btnIn)  btnIn.addEventListener('click',  () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1.2));
+  if (btnOut) btnOut.addEventListener('click', () => zoomAt(vp.clientWidth/2, vp.clientHeight/2, 1/1.2));
 
   // Mouse wheel zoom (like WA)
   vp.addEventListener('wheel', (e) => {
@@ -1496,6 +1532,7 @@ document.addEventListener('click', function (e) {
     if (modalEl.classList.contains('show')) fitToScreen();
   });
 })();
+
 
 (function () {
   // --- Hero MP4 video via Bootstrap modal ---

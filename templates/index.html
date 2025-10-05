@@ -321,7 +321,7 @@
       {% if about.body %}<p class="lead text-muted">{{ about.body }}</p>{% endif %}
       {% if about.bullet_list %}
         <ul class="list-unstyled mt-3">
-          {% for b in about.bullet_list %}<li>✅ {{ b }}</li>{% endfor %}
+          {% for b in about.bullet_list %}<li><i class="fa-regular fa-circle-check"></i> {{ b }}</li>{% endfor %}
         </ul>
       {% endif %}
     </div>
@@ -565,6 +565,7 @@
 
 {# === Modal with close icon & back button === #}
 <!-- WhatsApp-like Image Viewer -->
+<!-- Modal -->
 <div class="modal fade" id="functionImageModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-fullscreen-md-down modal-xl">
     <div class="modal-content bg-black text-white">
@@ -572,11 +573,13 @@
       <!-- Header: title left | actions right -->
       <div class="modal-header py-2 px-3 border-0">
         <div class="fw-semibold" id="fimTitle">Full View</div>
+
         <div class="d-flex align-items-center gap-2">
           <!-- download -->
           <a id="fimDownload" class="btn btn-sm btn-outline-light" href="#" download title="Download">
             <i class="bi bi-download"></i>
           </a>
+
           <!-- zoom - / + -->
           <button id="fimZoomOut" class="btn btn-sm btn-outline-light" type="button" title="Zoom out">
             <i class="bi bi-zoom-out"></i>
@@ -584,6 +587,7 @@
           <button id="fimZoomIn" class="btn btn-sm btn-outline-light" type="button" title="Zoom in">
             <i class="bi bi-zoom-in"></i>
           </button>
+
           <!-- close -->
           <button type="button" class="btn btn-sm btn-light ms-1" data-bs-dismiss="modal" aria-label="Close">
             <i class="bi bi-x-lg"></i>
@@ -593,8 +597,27 @@
 
       <!-- Body: centered image, pan/zoom -->
       <div class="modal-body p-0 d-flex justify-content-center align-items-center" style="min-height:70vh;">
-        <div id="fimViewport" class="w-100 h-100 d-flex justify-content-center align-items-center overflow-hidden" style="background:#0f0f0f;">
-          <img id="fimImg" src="" alt="" style="max-width:none; max-height:none; user-select:none; -webkit-user-drag:none; cursor:grab;">
+        <!-- added position-relative to anchor the arrows -->
+        <div id="fimViewport" class="w-100 h-100 d-flex justify-content-center align-items-center overflow-hidden position-relative" style="background:#0f0f0f;">
+
+          <!-- ◀ prev arrow (added) -->
+          <button id="fimPrev" type="button"
+                  class="btn btn-light position-absolute top-50 start-0 translate-middle-y ms-2"
+                  style="opacity:.9;" aria-label="Previous">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+
+          <!-- image -->
+          <img id="fimImg" src="" alt=""
+               style="max-width:none; max-height:none; user-select:none; -webkit-user-drag:none; cursor:grab;">
+
+          <!-- ▶ next arrow (added) -->
+          <button id="fimNext" type="button"
+                  class="btn btn-light position-absolute top-50 end-0 translate-middle-y me-2"
+                  style="opacity:.9;" aria-label="Next">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+
         </div>
       </div>
 
