@@ -1,9 +1,11 @@
 # content/admin.py
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.sites import NotRegistered
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Sum
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import path
 from django.utils.html import format_html
@@ -933,3 +935,85 @@ class StudentProfileAdmin(OwnableAdminMixin):
     list_filter = ("school_class__year", "school_class__name", "section")
     search_fields = ("user__username", "user__first_name", "user__last_name", "user__email", "roll_number")
     ordering = ("school_class", "section", "roll_number")
+
+
+
+
+
+@staff_member_required
+def student_ledger_admin(request):
+    ctx = {"title": "Student Ledger"}
+    q_class = request.GET.get("class_id")
+    q_section = (request.GET.get("section") or "").strip()
+    q_roll = (request.GET.get("roll") or "").strip()
+
+    student = None
+    invoices = []
+    totals = {}
+
+    if q_class and q_roll:
+        # You said “roll + class + section” identifies a student.
+        # If you have a StudentProfile model, query that here to get the User.
+        # Fallback: if your User model stores roll & section, adapt this query.
+        profile = None
+        try:
+            from .models import StudentProfile
+            qs = StudentProfile.objects.filter(school_class_id=q_class, roll_number=q_roll)
+            if q_section:
+                qs = qs.filter(section__iexact=q_section)
+            profile = qs.select_related("user", "school_class").first()
+        except Exception:
+            profile = None
+
+        if profile:
+            student = profile.user
+            ctx["profile"] = profile
+
+            # Tuition invoices for this student
+            invoices = (TuitionInvoice.objects
+                        .filter(student=student)
+                        .order_by("-period_year", "-period_month"))
+
+            paid_months = invoices.filter(paid_amount__gte=models.F("tuition_amount")).count()
+            due_months  = invoices.filter(paid_amount__lt=models.F("tuition_amount")).count()
+
+            totals["tuition_paid"] = invoices.aggregate(s=Sum("paid_amount"))["s"] or 0
+            totals["tuition_due"]  = invoices.aggregate(s=Sum(models.F("tuition_amount") - models.F("paid_amount")))["s"] or 0
+
+            # Other fees, only if we added Income.student
+            exam_cat = IncomeCategory.objects.filter(code="exam").first()
+            bus_cat  = IncomeCategory.objects.filter(code="bus").first()
+
+            totals["exam_fee"] = (Income.objects.filter(student=student, category=exam_cat)
+                                               .aggregate(s=Sum("amount"))["s"] or 0) if exam_cat else 0
+            totals["bus_fee"]  = (Income.objects.filter(student=student, category=bus_cat)
+                                               .aggregate(s=Sum("amount"))["s"] or 0)  if bus_cat else 0
+
+            totals["overall_paid"] = (Income.objects.filter(student=student)
+                                                    .aggregate(s=Sum("amount"))["s"] or 0)
+
+            ctx.update({
+                "student": student,
+                "invoices": invoices,
+                "paid_months": paid_months,
+                "due_months": due_months,
+                "totals": totals,
+            })
+        else:
+            messages.warning(request, "No student found for the given Class/Section/Roll.")
+
+    ctx["classes"] = AcademicClass.objects.order_by("-year", "name")
+    ctx["q"] = {"class_id": q_class, "section": q_section, "roll": q_roll}
+    return render(request, "admin/finance/student_ledger.html", ctx)
+
+# hook the URL into the admin
+class FinanceAdminSite(admin.AdminSite):  # if you already have one, just add to get_urls
+    def get_urls(self):
+        urls = super().get_urls()
+        extra = [
+            path("finance/student-ledger/", self.admin_view(student_ledger_admin), name="finance_student_ledger"),
+        ]
+        return extra + urls
+
+# if you're using the default site, you can monkey-patch:
+admin.site.get_urls = FinanceAdminSite().get_urls

@@ -336,7 +336,7 @@
   <div class="row g-4">
     {% for item in calendar_items %}
       <div class="col-md-4">
-        <div class="shadow rounded p-4 h-100 text-center calendar-card">
+        <div class=" shadow-lg border-0 rounded-4 p-4 h-100 text-center calendar-card">
           <div class="calendar-icon {{ item.icon_tone_class }}">
             <i class="{{ item.icon_class }} text-white" aria-hidden="true"></i>
           </div>
@@ -786,7 +786,7 @@
   <div class="row g-4">
     <!-- HOD -->
     <div class="col-md-3">
-      <div class="card dashboard-card text-center p-3 shadow-sm">
+      <div class="card dashboard-card text-center p-3 shadow-lg border-0 rounded-4">
         <div class="card-icon mb-2 fs-1">👨‍💼</div>
         <h5 class="card-title">Head of Department</h5>
         <div class="small text-muted mb-2">{{ members_counts.hod|default_if_none:"0" }} total</div>
@@ -800,7 +800,7 @@
 
     <!-- Teachers -->
     <div class="col-md-3">
-      <div class="card dashboard-card text-center p-3 shadow-sm">
+      <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
         <div class="card-icon mb-2 fs-1">👩‍🏫</div>
         <h5 class="card-title">Teachers</h5>
         <div class="small text-muted mb-2">{{ members_counts.teacher|default_if_none:"0" }} total</div>
@@ -814,7 +814,7 @@
 
     <!-- Students -->
     <div class="col-md-3">
-      <div class="card dashboard-card text-center p-3 shadow-sm">
+      <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
         <div class="card-icon mb-2 fs-1">👨‍🎓</div>
         <h5 class="card-title">Students</h5>
         <div class="small text-muted mb-2">{{ members_counts.student|default_if_none:"0" }} total</div>
@@ -828,7 +828,7 @@
 
     <!-- Staff -->
     <div class="col-md-3">
-      <div class="card dashboard-card text-center p-3 shadow-sm">
+      <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
         <div class="card-icon mb-2 fs-1">🧑‍🔧</div>
         <h5 class="card-title">Staff</h5>
         <div class="small text-muted mb-2">{{ members_counts.staff|default_if_none:"0" }} total</div>
@@ -957,7 +957,7 @@
     <div class="row g-4">
       <!-- Left: Contact info from admin -->
       <div class="col-lg-4">
-        <div class="card shadow-sm border-0 h-100">
+        <div class="card shadow-lg border-0 rounded-4 h-100">
           <div class="card-body">
             <h5 class="fw-normal mb-3">Get in Touch</h5>
 
@@ -998,7 +998,7 @@
 
       <!-- Right: Contact form (Django form fields) -->
       <div class="col-lg-8">
-        <div class="card shadow-sm border-0">
+        <div class="card  shadow-lg border-0 rounded-4">
           <div class="card-body">
             <form id="contact-form" method="post" action="{% url 'contact_submit' %}#contact" novalidate>
               {% csrf_token %}

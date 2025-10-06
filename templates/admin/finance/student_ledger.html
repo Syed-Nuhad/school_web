@@ -1,0 +1,88 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Student Ledger{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> › Student Ledger
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content">
+  <h1>Student Ledger</h1>
+
+  <div class="module aligned d-print-none">
+    <form method="get" class="form-row" style="gap:.5rem;">
+      <label>Class:
+        <select name="class_id">
+          <option value="">— choose —</option>
+          {% for c in classes %}
+            <option value="{{ c.id }}" {% if q.class_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
+              {{ c.name }}{% if c.section %} – {{ c.section }}{% endif %} ({{ c.year }})
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Section:
+        <input type="text" name="section" value="{{ q.section|default:'' }}" placeholder="optional">
+      </label>
+      <label>Roll:
+        <input type="text" name="roll" value="{{ q.roll|default:'' }}">
+      </label>
+      <input type="submit" class="default" value="Search">
+      {% if student %}<a href="javascript:window.print()" class="button">Print</a>{% endif %}
+    </form>
+  </div>
+
+  {% if student %}
+    <div class="module">
+      <h2>Student</h2>
+      <table class="listing">
+        <tbody>
+          <tr><th>Name</th><td>{{ student.get_full_name|default:student.username }}</td></tr>
+          <tr><th>Class</th><td>{{ profile.school_class }}</td></tr>
+          <tr><th>Section</th><td>{{ profile.section|default:"—" }}</td></tr>
+          <tr><th>Roll</th><td>{{ profile.roll_number }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h2>Tuition Summary</h2>
+      <table class="listing">
+        <tbody>
+          <tr><th>Months Paid</th><td>{{ paid_months }}</td></tr>
+          <tr><th>Months Due</th><td>{{ due_months }}</td></tr>
+          <tr><th>Paid (₹)</th><td>{{ totals.tuition_paid }}</td></tr>
+          <tr><th>Due (₹)</th><td>{{ totals.tuition_due }}</td></tr>
+          <tr><th>Exam Fee (₹)</th><td>{{ totals.exam_fee }}</td></tr>
+          <tr><th>Bus Fee (₹)</th><td>{{ totals.bus_fee }}</td></tr>
+          <tr><th>Overall Paid (₹)</th><td><strong>{{ totals.overall_paid }}</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="module">
+      <h2>Invoices</h2>
+      <table class="listing">
+        <thead><tr><th>Period</th><th class="right">Tuition</th><th class="right">Paid</th><th class="right">Balance</th><th>Due Date</th></tr></thead>
+        <tbody>
+          {% for inv in invoices %}
+            <tr>
+              <td>{{ inv.period_year }}-{{ inv.period_month|stringformat:"02d" }}</td>
+              <td class="right">{{ inv.tuition_amount }}</td>
+              <td class="right">{{ inv.paid_amount }}</td>
+              <td class="right">{{ inv.balance }}</td>
+              <td>{{ inv.due_date|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5"><em>No invoices.</em></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

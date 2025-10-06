@@ -86,7 +86,6 @@ urlpatterns = [
         name="attendance_class_page",
     ),
     path("dj-admin/students/lookup/", admin.site.admin_view(student_lookup_admin), name="student-lookup"),
-    path("dj-admin/", admin.site.urls),
 ]
 
 
