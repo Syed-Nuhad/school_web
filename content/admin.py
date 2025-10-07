@@ -3,13 +3,15 @@ from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Sum
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import path
+from django.utils import timezone
 from django.utils.html import format_html
-from django.conf import settings
+from django.db.models import Sum, F, Max
 
 from .models import (
     # Core content
@@ -55,8 +57,14 @@ from .views import finance_overview, build_finance_context
 # -------------------------------------------------------------------
 def is_student_user(user): return user.groups.filter(name__iexact="Student").exists()
 
+
 def can_access_admin(user):
-    return user.is_authenticated and user.is_staff and not is_student_user(user)
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:          # superuser bypass
+        return True
+    # staff allowed unless they’re explicitly in Student group
+    return user.is_staff and not user.groups.filter(name__iexact="Student").exists()
 
 def can_delete_admin(user):
     return user.is_superuser or user.groups.filter(name__iexact="Admin").exists()
@@ -385,7 +393,108 @@ class AdmissionApplicationAdmin(OwnableAdminMixin):
         "fee_base_subtotal","fee_selected_total","fee_total",
         "created_at",
     )
+    actions = ["approve_selected"]
 
+    @admin.action(description="Approve selected applications (create profile + auto roll)")
+    def approve_selected(self, request, queryset):
+        count = 0
+        for app in queryset:
+            try:
+                app.approve(by_user=request.user)
+                count += 1
+            except Exception as e:
+                self.message_user(request, f"Failed to approve {app.full_name}: {e}", level=messages.ERROR)
+        if count:
+            self.message_user(request, f"Approved {count} application(s).")
+
+    @admin.action(description="Approve → user + StudentProfile + auto-roll (+ first invoice)")
+    def approve_and_enroll(self, request, queryset):
+        """
+        For each application:
+          - create/find User
+          - create/update StudentProfile with next roll in (class, section)
+          - optionally create this month's tuition invoice from course.monthly_fee
+        """
+        User = get_user_model()
+        created = 0
+        with transaction.atomic():
+            for app in queryset.select_related("desired_course"):
+                if not getattr(app, "enroll_class", None):
+                    self.message_user(request, f"{app.full_name}: no class selected (enroll_class). Skipped.", level=messages.WARNING)
+                    continue
+
+                # make/find user
+                base_username = (app.email or app.phone or app.full_name).split("@")[0].replace(" ", "").lower()[:30] or f"stu{app.pk}"
+                username = base_username
+                # keep it safe if username exists
+                i = 1
+                UserModel = User
+                while UserModel.objects.filter(username=username).exists():
+                    i += 1
+                    username = f"{base_username}{i}"
+
+                user, _ = UserModel.objects.get_or_create(
+                    username=username,
+                    defaults={
+                        "email": app.email or "",
+                        "first_name": (app.full_name or "").split(" ")[0],
+                        "last_name": " ".join((app.full_name or "").split(" ")[1:]),
+                    },
+                )
+                # mark as student (your custom User has role)
+                if hasattr(user, "role"):
+                    try:
+                        user.role = user.Role.STUDENT
+                    except Exception:
+                        user.role = "STUDENT"
+                user.is_staff = False
+                user.is_superuser = False
+                user.save()
+
+                # compute next roll in that class+section
+                section = (getattr(app, "enroll_section", "") or "").strip()
+                last = (StudentProfile.objects
+                        .filter(school_class=app.enroll_class, section__iexact=section)
+                        .aggregate(m=Max("roll_number"))["m"]) or 0
+                next_roll = last + 1
+
+                # create/update profile
+                sp, _ = StudentProfile.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        "school_class": app.enroll_class,
+                        "section": section,
+                        "roll_number": next_roll,
+                    }
+                )
+                sp.school_class = app.enroll_class
+                sp.section = section
+                if not sp.roll_number:
+                    sp.roll_number = next_roll
+                sp.save()
+
+                # reflect roll back to application if the fields exist
+                if hasattr(app, "generated_roll"):
+                    app.generated_roll = sp.roll_number
+
+                # optional: create first monthly invoice for THIS month from course.monthly_fee
+                if getattr(app, "add_tuition", False) and getattr(app, "desired_course", None) and hasattr(app.desired_course, "monthly_fee"):
+                    fee = app.desired_course.monthly_fee
+                    if fee:
+                        today = timezone.localdate()
+                        TuitionInvoice.objects.get_or_create(
+                            student=user, period_year=today.year, period_month=today.month,
+                            defaults={"tuition_amount": fee, "due_date": today.replace(day=min(28, today.day))}
+                        )
+
+                if hasattr(app, "generated_roll"):
+                    app.save(update_fields=["generated_roll"])
+                created += 1
+
+        self.message_user(request, f"Approved {created} application(s).")
+
+    # attach the action
+    actions = ["approve_and_enroll"]
 # -------------------------------------------------------------------
 # FunctionHighlight
 # -------------------------------------------------------------------
@@ -846,10 +955,11 @@ class ExpenseCategoryAdmin(OwnableAdminMixin):
 
 @admin.register(Income)
 class IncomeAdmin(OwnableAdminMixin):
-    list_display = ("date", "category", "amount", "description")
+    list_display = ("date", "category", "amount", "student", "description")
     list_filter  = ("category", "date")
-    search_fields = ("description", "category__name")
+    search_fields = ("description", "category__name", "student__username", "student__email")
     date_hierarchy = "date"
+    autocomplete_fields = ("student",)
 
     # Inline total in changelist
     def changelist_view(self, request, extra_context=None):
@@ -974,11 +1084,11 @@ def student_ledger_admin(request):
                         .filter(student=student)
                         .order_by("-period_year", "-period_month"))
 
-            paid_months = invoices.filter(paid_amount__gte=models.F("tuition_amount")).count()
-            due_months  = invoices.filter(paid_amount__lt=models.F("tuition_amount")).count()
+            paid_months = invoices.filter(paid_amount__gte=F("tuition_amount")).count()
+            due_months = invoices.filter(paid_amount__lt=F("tuition_amount")).count()
 
-            totals["tuition_paid"] = invoices.aggregate(s=Sum("paid_amount"))["s"] or 0
-            totals["tuition_due"]  = invoices.aggregate(s=Sum(models.F("tuition_amount") - models.F("paid_amount")))["s"] or 0
+            agg = invoices.aggregate(t=Sum("tuition_amount"), p=Sum("paid_amount"))
+            totals["tuition_due"] = (agg["t"] or 0) - (agg["p"] or 0)
 
             # Other fees, only if we added Income.student
             exam_cat = IncomeCategory.objects.filter(code="exam").first()
@@ -1016,4 +1126,15 @@ class FinanceAdminSite(admin.AdminSite):  # if you already have one, just add to
         return extra + urls
 
 # if you're using the default site, you can monkey-patch:
-admin.site.get_urls = FinanceAdminSite().get_urls
+# --- safely extend the existing admin site's URLs ---
+def _extra_admin_urls():
+    return [
+        path("finance/student-ledger/", admin.site.admin_view(student_ledger_admin), name="finance_student_ledger"),
+        path("finance/overview/", admin.site.admin_view(finance_overview_admin), name="finance-overview"),
+    ]
+
+_original_get_urls = admin.site.get_urls
+def _patched_get_urls():
+    return _extra_admin_urls() + _original_get_urls()
+
+admin.site.get_urls = _patched_get_urls

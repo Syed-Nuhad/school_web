@@ -117,7 +117,7 @@
       {# show ONLY the latest 4, even if the view passed more #}
       {% for n in notices|slice:":4" %}
         <div class="col-12 col-sm-6 col-lg-3">
-          <article class="h-100 border rounded-3 overflow-hidden bg-white">
+          <article class="h-100 border-0 shadow-lg   overflow-hidden bg-white">
             {% if n.image_src %}
               <a class="ratio ratio-16x9 d-block" href="{% url 'notice_detail' n.pk %}" aria-label="Open notice">
                 <div class="w-100 h-100"
@@ -153,7 +153,10 @@
   {% endif %}
 </section>
 <!-- ⭐ End: Notice Board -->
-<!-- ⭐ End: Notice Board -->
+
+
+
+
 <!-- ✅ Modern Timeline (Bootstrap + inline styles only) -->
 <section class="py-5" id="academic-timeline">
   <div class="container" style="max-width:1100px;">
@@ -170,21 +173,21 @@
           <div class="row gx-4 gy-3 align-items-start">
             <!-- date: auto width, left-aligned -->
             <div class="col-12 col-md-auto text-start">
-              <span class="badge rounded-pill text-bg-info fw-semibold">
+              <span class="badge rounded-pill text-bg-primary fw-semibold">
                 {{ e.date|date:"M j, Y" }}
               </span>
             </div>
 
             <!-- content: takes the rest, but capped using cols -->
-            <div class="col-12 col-md-9 col-lg-8 position-relative border-start border-2 border-info">
+            <div class="col-12 col-md-9 col-lg-8 position-relative border-start border-2 border-primary">
 
               <!-- dot on rail -->
-              <span class="position-absolute d-none d-md-inline-block rounded-circle bg-info"
+              <span class="position-absolute d-none d-md-inline-block rounded-circle bg-primary"
                     style="left:-7px; top:14px; width:14px; height:14px; box-shadow:0 0 0 6px rgba(13,202,240,.18);"></span>
-              <span class="position-absolute d-inline-block d-md-none rounded-circle bg-info"
+              <span class="position-absolute d-inline-block d-md-none rounded-circle bg-primary"
                     style="left:-6px; top:10px; width:12px; height:12px; box-shadow:0 0 0 5px rgba(13,202,240,.18);"></span>
 
-              <div class="bg-white shadow-sm rounded-3 p-3 p-md-4 border border-light-subtle">
+              <div class="bg-white shadow-lg rounded-3 p-3 p-md-4 border-0 border-light-subtle">
                 <h5 class="mb-1 fw-normal">{{ e.title }}</h5>
                 {% if e.description %}
                   <p class="mb-0 text-muted">{{ e.description }}</p>
@@ -219,7 +222,7 @@
         <!-- Keep .glx-card and data-* for your JS -->
         <a href="#"
            role="button"
-           class="glx-card d-block text-decoration-none border bg-body rounded-4 shadow-sm p-3 h-100"
+           class="glx-card d-block text-decoration-none border bg-body shadow-lg p-3 h-100"
            data-kind="{{ item.kind }}"
            data-image="{% if item.image %}{{ item.image.url }}{% endif %}"
            data-video="{{ item.youtube_embed_url }}"
@@ -228,7 +231,7 @@
            data-datetime="{% if item.taken_at %}{{ item.taken_at|date:'M j, Y, g:i A' }}{% endif %}">
 
           <!-- Big thumbnail, cropped nicely, no custom CSS -->
-          <div class="glx-thumb ratio rounded-4 overflow-hidden mb-3 position-relative">
+          <div class="glx-thumb ratio border-0 shadow-lg rounded-3 overflow-hidden mb-3 position-relative">
             <img
               src="{% if item.thumbnail %}{{ item.thumbnail.url }}{% elif item.image %}{{ item.image.url }}{% else %}{% static 'img/placeholder-16x9.jpg' %}{% endif %}"
               alt="{{ item.title }}"

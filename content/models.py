@@ -1,7 +1,7 @@
 # content/models.py
 from decimal import Decimal
 from urllib.parse import urlparse, parse_qs, unquote
-
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -868,6 +868,103 @@ class AdmissionApplication(models.Model):
         auto_now_add=True,
         help_text="When this application was submitted.",
     )
+
+
+    enroll_class = models.ForeignKey("content.AcademicClass", on_delete=models.PROTECT, null=True, blank=True)
+    enroll_section = models.CharField(max_length=20, blank=True)
+    generated_roll = models.PositiveIntegerField(null=True, blank=True)
+
+
+    # ---- helpers ----
+    def _next_roll(self):
+        from django.db.models import Max
+        if not self.enroll_class:
+            return None
+        q = StudentProfile.objects.filter(school_class=self.enroll_class)
+        if self.enroll_section:
+            q = q.filter(section__iexact=self.enroll_section)
+        last = q.aggregate(m=Max('roll_number'))['m'] or 0
+        return last + 1
+
+    @transaction.atomic
+    def approve(self, by_user=None, create_first_month_invoice=True):
+        """
+        Create/attach user, create StudentProfile, auto-assign roll, and (optionally)
+        create the current month's tuition invoice.
+        """
+        from django.contrib.auth import get_user_model
+        from .models import TuitionInvoice  # local import to avoid cycles
+        User = get_user_model()
+
+        # 1) Find or create the User for this applicant
+        user = None
+        if getattr(self, 'email', None):
+            user = User.objects.filter(email__iexact=self.email).first()
+        if not user and getattr(self, 'phone', None):
+            user = User.objects.filter(username__iexact=self.phone).first()
+
+        if not user:
+            username = (self.email or self.phone or f"student-{timezone.now().timestamp()}").split('@')[0]
+            user = User.objects.create(
+                username=username,
+                email=getattr(self, 'email', '') or None,
+                first_name=(self.full_name or '').split(' ')[0],
+                last_name=' '.join((self.full_name or '').split(' ')[1:]),
+            )
+        # ensure role
+        if getattr(user, 'role', None) and user.role != 'STUDENT':
+            user.role = 'STUDENT'
+            user.save(update_fields=['role'])
+
+        # 2) Ensure enroll_class/section is set
+        if not self.enroll_class and getattr(self, 'desired_course_id', None):
+            # if you map course->class elsewhere, set here; otherwise require admin to choose class in admin
+            pass
+
+        # 3) Create/Update StudentProfile with next roll
+        sp, _ = StudentProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'school_class': self.enroll_class,
+                'section': self.enroll_section or '',
+                'roll_number': self._next_roll() or 1,
+                'joined_on': timezone.now().date(),
+            }
+        )
+        # keep in sync if admin changed class/section in the form before approval
+        changed = False
+        if self.enroll_class and sp.school_class_id != self.enroll_class_id:
+            sp.school_class = self.enroll_class; changed = True
+        if self.enroll_section and (sp.section or '') != (self.enroll_section or ''):
+            sp.section = self.enroll_section; changed = True
+        if not sp.roll_number:
+            sp.roll_number = self._next_roll() or 1; changed = True
+        if changed:
+            sp.save()
+
+        # store roll back onto the application
+        if sp.roll_number and self.generated_roll != sp.roll_number:
+            self.generated_roll = sp.roll_number
+
+        # 4) Optionally create a first-month invoice (for tuition)
+        if create_first_month_invoice:
+            today = timezone.now().date()
+            TuitionInvoice.objects.get_or_create(
+                student=user,
+                period_year=today.year,
+                period_month=today.month,
+                defaults={
+                    'tuition_amount': getattr(self, 'fee_tuition', 0) or getattr(self, 'fee_total', 0) or 0,
+                    'due_date': today.replace(day=28),  # simple default; adjust as you like
+                }
+            )
+
+        # 5) mark approved (and paid if you want approval to imply payment)
+        if self.payment_status == 'pending':
+            self.payment_status = 'approved'
+        self.save(update_fields=['payment_status', 'generated_roll'])
+        return sp
+
 
     class Meta:
         ordering = ("-created_at",)
@@ -2082,7 +2179,6 @@ class Income(models.Model):
     content_object = GenericForeignKey("content_type", "object_id")
 
     created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ["-date", "-id"]
 
@@ -2385,7 +2481,7 @@ class StudentProfile(models.Model):
     section = models.CharField(max_length=20, blank=True)
     roll_number = models.PositiveIntegerField()  # numeric roll
     joined_on = models.DateField(default=timezone.localdate)
-
+    monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     class Meta:
         unique_together = ("school_class", "section", "roll_number")
         ordering = ("school_class", "section", "roll_number")

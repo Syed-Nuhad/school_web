@@ -1,88 +1,130 @@
 {% extends "admin/base_site.html" %}
-{% load static %}
+{% load humanize %}
 
-{% block title %}Student Ledger{% endblock %}
-
-{% block breadcrumbs %}
-<div class="breadcrumbs">
-  <a href="{% url 'admin:index' %}">Home</a> › Student Ledger
-</div>
+{% block extrastyle %}
+<style>
+  .admin-student-ledger .filter-bar{
+    display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;
+  }
+  .admin-student-ledger .filter-bar input,
+  .admin-student-ledger .filter-bar select{
+    max-width:240px;
+  }
+  .admin-student-ledger .grid{
+    display:grid; grid-template-columns: 1fr 2fr; gap:1rem;
+  }
+  .admin-student-ledger .card{ background:#fff; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
+  .admin-student-ledger .card .card-header{
+    padding:.6rem .9rem; border-bottom:1px solid #eee; font-weight:600;
+  }
+  .admin-student-ledger .card .card-body{ padding:.9rem; }
+  .admin-student-ledger table{ width:100%; border-collapse:collapse; }
+  .admin-student-ledger th, .admin-student-ledger td{
+    padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; vertical-align:top;
+  }
+  .admin-student-ledger th{ font-weight:600; }
+  .admin-student-ledger ul{ margin:0; padding-left:1.2rem; }
+  @media (max-width: 900px){ .admin-student-ledger .grid{ grid-template-columns: 1fr; } }
+</style>
 {% endblock %}
 
-{% block content %}
-<div id="content">
-  <h1>Student Ledger</h1>
+{% block content_title %}Student Ledger{% endblock %}
 
-  <div class="module aligned d-print-none">
-    <form method="get" class="form-row" style="gap:.5rem;">
-      <label>Class:
-        <select name="class_id">
-          <option value="">— choose —</option>
-          {% for c in classes %}
-            <option value="{{ c.id }}" {% if q.class_id|stringformat:'s' == c.id|stringformat:'s' %}selected{% endif %}>
-              {{ c.name }}{% if c.section %} – {{ c.section }}{% endif %} ({{ c.year }})
-            </option>
-          {% endfor %}
-        </select>
-      </label>
-      <label>Section:
-        <input type="text" name="section" value="{{ q.section|default:'' }}" placeholder="optional">
-      </label>
-      <label>Roll:
-        <input type="text" name="roll" value="{{ q.roll|default:'' }}">
-      </label>
-      <input type="submit" class="default" value="Search">
-      {% if student %}<a href="javascript:window.print()" class="button">Print</a>{% endif %}
-    </form>
-  </div>
+{% block content %}
+<div class="admin-student-ledger">
+
+  <form method="get" class="filter-bar">
+    <label>Class:</label>
+    <select name="class_id" class="form-control form-control-sm">
+      {% for c in classes %}
+        <option value="{{ c.id }}"
+          {% if q.class_id|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+          {{ c.name }}{% if c.section %}-{{ c.section }}{% endif %} ({{ c.year }})
+        </option>
+      {% endfor %}
+    </select>
+
+    <label>Section:</label>
+    <input type="text" name="section" class="form-control form-control-sm"
+           value="{{ q.section|default_if_none:'' }}"/>
+
+    <label>Roll:</label>
+    <input type="text" name="roll" class="form-control form-control-sm"
+           value="{{ q.roll|default_if_none:'' }}"/>
+
+    <button class="button btn btn-primary btn-sm" type="submit">Search</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print</button>
+  </form>
 
   {% if student %}
-    <div class="module">
-      <h2>Student</h2>
-      <table class="listing">
-        <tbody>
-          <tr><th>Name</th><td>{{ student.get_full_name|default:student.username }}</td></tr>
-          <tr><th>Class</th><td>{{ profile.school_class }}</td></tr>
-          <tr><th>Section</th><td>{{ profile.section|default:"—" }}</td></tr>
-          <tr><th>Roll</th><td>{{ profile.roll_number }}</td></tr>
-        </tbody>
-      </table>
+    <div class="grid">
+
+      <div class="card">
+        <div class="card-header">Student</div>
+        <div class="card-body">
+          <div><strong>Username:</strong> {{ student.username }}</div>
+          {% if profile %}
+            <div><strong>Roll:</strong> {{ profile.roll_number }}</div>
+            <div><strong>Class:</strong> {{ profile.school_class }}</div>
+            {% if profile.section %}<div><strong>Section:</strong> {{ profile.section }}</div>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Totals</div>
+        <div class="card-body">
+          <ul class="totals">
+            <li>Tuition paid: ৳ {{ totals.tuition_paid|floatformat:2|intcomma }}</li>
+            <li>Tuition due: ৳ {{ totals.tuition_due|floatformat:2|intcomma }}</li>
+            <li>Exam fee: ৳ {{ totals.exam_fee|floatformat:2|intcomma }}</li>
+            <li>Bus fee: ৳ {{ totals.bus_fee|floatformat:2|intcomma }}</li>
+            <li><strong>Overall paid:</strong> ৳ {{ totals.overall_paid|floatformat:2|intcomma }}</li>
+          </ul>
+        </div>
+      </div>
+
     </div>
 
-    <div class="module">
-      <h2>Tuition Summary</h2>
-      <table class="listing">
-        <tbody>
-          <tr><th>Months Paid</th><td>{{ paid_months }}</td></tr>
-          <tr><th>Months Due</th><td>{{ due_months }}</td></tr>
-          <tr><th>Paid (₹)</th><td>{{ totals.tuition_paid }}</td></tr>
-          <tr><th>Due (₹)</th><td>{{ totals.tuition_due }}</td></tr>
-          <tr><th>Exam Fee (₹)</th><td>{{ totals.exam_fee }}</td></tr>
-          <tr><th>Bus Fee (₹)</th><td>{{ totals.bus_fee }}</td></tr>
-          <tr><th>Overall Paid (₹)</th><td><strong>{{ totals.overall_paid }}</strong></td></tr>
-        </tbody>
-      </table>
+    <div class="card" style="margin-top:1rem;">
+      <div class="card-header">Invoices</div>
+      <div class="card-body">
+        {% if invoices %}
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Month</th>
+                <th>Amount</th>
+                <th>Paid</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inv in invoices %}
+                <tr>
+                  <td>{{ inv.period_year }}</td>
+                  <td>{{ inv.period_month }}</td>
+                  <td>৳ {{ inv.tuition_amount|floatformat:2|intcomma }}</td>
+                  <td>৳ {{ inv.paid_amount|floatformat:2|intcomma }}</td>
+                  <td>৳ {{ inv.balance|floatformat:2|intcomma }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <em>No invoices found for this student.</em>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="module">
-      <h2>Invoices</h2>
-      <table class="listing">
-        <thead><tr><th>Period</th><th class="right">Tuition</th><th class="right">Paid</th><th class="right">Balance</th><th>Due Date</th></tr></thead>
-        <tbody>
-          {% for inv in invoices %}
-            <tr>
-              <td>{{ inv.period_year }}-{{ inv.period_month|stringformat:"02d" }}</td>
-              <td class="right">{{ inv.tuition_amount }}</td>
-              <td class="right">{{ inv.paid_amount }}</td>
-              <td class="right">{{ inv.balance }}</td>
-              <td>{{ inv.due_date|default:"—" }}</td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="5"><em>No invoices.</em></td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+  {% else %}
+    <div class="card">
+      <div class="card-body">
+        <em>Pick a Class and enter Roll to view the ledger.</em>
+      </div>
     </div>
   {% endif %}
+
 </div>
 {% endblock %}

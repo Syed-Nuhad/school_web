@@ -2,7 +2,8 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-# Create your models here.
+
+
 class User(AbstractUser):
     class Role(models.TextChoices):
         ADMIN = "ADMIN", "Admin"
@@ -10,13 +11,12 @@ class User(AbstractUser):
         STUDENT = "STUDENT", "Student"
 
     role = models.CharField(max_length=16, choices=Role.choices, default=Role.STUDENT)
-
-    # Preferences we’ll use later for i18n/theme (safe to add now)
     pref_language = models.CharField(max_length=8, default="en")
     pref_theme = models.CharField(max_length=8, default="light")
 
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        # OLD: return f"{self.username} ({self.role})"
+        return self.username  # <- remove the “(STUDENT)” suffix in admin
 
     @property
     def is_admin(self): return self.role == self.Role.ADMIN
@@ -24,6 +24,12 @@ class User(AbstractUser):
     def is_teacher(self): return self.role == self.Role.TEACHER
     @property
     def is_student(self): return self.role == self.Role.STUDENT
+
+    def save(self, *args, **kwargs):
+        # Keep admins/superusers as staff so they always see Django admin
+        if self.is_superuser or self.role == self.Role.ADMIN:
+            self.is_staff = True
+        super().save(*args, **kwargs)
 
 
 class SecurityLog(models.Model):
