@@ -15,8 +15,8 @@ class User(AbstractUser):
     pref_theme = models.CharField(max_length=8, default="light")
 
     def __str__(self):
-        # OLD: return f"{self.username} ({self.role})"
-        return self.username  # <- remove the “(STUDENT)” suffix in admin
+
+        return self.username
 
     @property
     def is_admin(self): return self.role == self.Role.ADMIN

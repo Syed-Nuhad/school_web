@@ -10,7 +10,7 @@
     <div class="row g-4">
       {% for n in page_obj.object_list %}
         <div class="col-md-4">
-          <div class="card h-100 shadow-sm border-0">
+          <div class="card h-100 shadow-lg border-0">
             {% if n.image_src %}
               <img src="{{ n.image_src }}" class="card-img-top" alt="{{ n.title|default:'Notice Image' }}">
             {% endif %}

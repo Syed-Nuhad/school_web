@@ -2204,61 +2204,89 @@ class Expense(models.Model):
         return f"{self.category.name} — {self.amount} on {self.date}"
 
 
-# ---------- Tuition invoices ----------
+KIND_CHOICES = (
+    ("monthly", "Monthly tuition"),
+    ("custom", "Custom"),
+)
+
 class TuitionInvoice(models.Model):
-    """
-    One invoice per student per month (or custom period) for monthly tuition.
-    """
-    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tuition_invoices")
-    # Period granularity: store month/year or a specific due_date
-    period_year = models.PositiveIntegerField()
-    period_month = models.PositiveIntegerField()  # 1-12
-    due_date = models.DateField(blank=True, null=True)
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="tuition_invoices",
+    )
 
-    tuition_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # amounts
+    tuition_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    paid_amount    = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
-    notes = models.CharField(max_length=255, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # “monthly” vs “custom”
+    kind  = models.CharField(max_length=20, choices=KIND_CHOICES, default="monthly")
+    title = models.CharField(max_length=120, blank=True)
+
+    # “monthly” period (nullable so “custom” can omit)
+    period_year  = models.IntegerField(null=True, blank=True)
+    period_month = models.IntegerField(null=True, blank=True)
+
+    due_date  = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("student", "period_year", "period_month")
-        ordering = ["-period_year", "-period_month", "-id"]
+        ordering = ["period_year", "period_month", "id"]
+        constraints = [
+            # Guarantees NO duplicates for monthly invoices
+            models.UniqueConstraint(
+                fields=["student", "kind", "period_year", "period_month"],
+                name="uniq_student_monthly_invoice",
+                condition=Q(kind="monthly"),
+            )
+        ]
+        indexes = [
+            models.Index(fields=["student", "kind"]),
+            models.Index(fields=["period_year", "period_month"]),
+        ]
 
     @property
-    def balance(self):
-        return max(self.tuition_amount - self.paid_amount, 0)
+    def balance(self) -> Decimal:
+        return (self.tuition_amount or Decimal("0")) - (self.paid_amount or Decimal("0"))
 
-    @property
-    def is_paid(self):
-        return self.balance <= 0
+    def clean(self):
+        from django.core.exceptions import ValidationError
 
-    def post_income_line(self, payment, category_code="tuition"):
-        """
-        Create an Income line whenever we receive a tuition payment.
-        """
-        cat, _ = IncomeCategory.objects.get_or_create(code=category_code, defaults={
-            "name": "Tuition Fee", "is_fixed": True, "is_active": True
-        })
-        Income.objects.create(
-            category=cat,
-            amount=payment.amount,
-            student=self.student,
-            date=payment.paid_on or timezone.localdate(),
-            description=f"Tuition payment — {self.student} — {self.period_year}-{self.period_month:02d} — TXN:{payment.txn_id or 'n/a'}",
-            content_object=self,
+        if self.kind == "monthly":
+            if not self.period_year or not self.period_month:
+                raise ValidationError("Monthly invoices require year and month.")
+        if self.kind == "custom" and not (self.title or "").strip():
+            raise ValidationError("Custom invoices require a title.")
+        super().clean()
+
+    def __str__(self):
+        label = self.title or (
+            f"{self.period_year}-{self.period_month:02d}"
+            if self.period_year and self.period_month else "Invoice"
         )
+        return f"{self.get_kind_display()} — {self.student} — {label} — {self.tuition_amount}"
 
 
 class TuitionPayment(models.Model):
-    invoice  = models.ForeignKey("content.TuitionInvoice", on_delete=models.CASCADE, related_name="payments")
+    PROVIDERS = (
+        ("stripe", "Stripe"),
+        ("paypal", "PayPal"),
+        ("bkash",  "bKash"),
+        ("manual", "Manual"),
+    )
+
+    invoice  = models.ForeignKey(
+        "content.TuitionInvoice",
+        on_delete=models.CASCADE,
+        related_name="payments",
+    )
     amount   = models.DecimalField(max_digits=12, decimal_places=2)
-    provider = models.CharField(max_length=60, blank=True)
-    txn_id   = models.CharField(max_length=120, blank=True, null=True)  # <-- make NULLs allowed
+    provider = models.CharField(max_length=60, choices=PROVIDERS, blank=True)
+    txn_id   = models.CharField(max_length=120, blank=True, null=True)  # allow NULL for manual/offline
     paid_on  = models.DateField(default=timezone.localdate)
     created_at = models.DateTimeField(auto_now_add=True)
-
-
 
     class Meta:
         ordering = ["-paid_on", "-id"]
@@ -2271,7 +2299,8 @@ class TuitionPayment(models.Model):
             ),
         ]
 
-
+    def __str__(self):
+        return f"{self.invoice} · {self.amount} ({self.provider or 'n/a'})"
 
 # ---------- Seed built-in categories after migrate ----------
 @receiver(post_migrate)
@@ -2471,6 +2500,8 @@ class StudentProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="student_profile",
     )
     school_class = models.ForeignKey(
@@ -2526,3 +2557,105 @@ def _update_invoice_and_post_income(sender, instance: "TuitionPayment", created,
             )
         except Exception:
             pass
+# --- START: Auto-generate receipts for AdmissionApplication ---
+@receiver(post_save, sender=AdmissionApplication)
+def make_receipt_for_admission(sender, instance: AdmissionApplication, created, **kwargs):
+    # Only trigger after payment confirmed
+    if instance.payment_status != "paid":
+        return
+    if not instance.pk or not instance.payment_reference:
+        return
+    if PaymentReceipt.objects.filter(txn_id=instance.payment_reference).exists():
+        return
+
+    student = None
+    if hasattr(instance, "user") and instance.user_id:
+        student = instance.user
+    elif hasattr(instance, "full_name"):
+        # fallback: temporary pseudo-user
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        student, _ = User.objects.get_or_create(
+            username=f"admission_{instance.pk}",
+            defaults={"first_name": instance.full_name or "Applicant"},
+        )
+
+    # --- generate simple PDF like before ---
+    from io import BytesIO
+    from django.core.files.base import ContentFile
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    pdf_buffer = BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=A4)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, 800, "Admission Payment Receipt")
+    p.setFont("Helvetica", 12)
+    p.drawString(60, 760, f"Name: {instance.full_name}")
+    p.drawString(60, 740, f"Course: {instance.desired_course}")
+    p.drawString(60, 720, f"Amount Paid: BDT {instance.fee_total}")
+    p.drawString(60, 700, f"Provider: {instance.payment_method or 'manual'}")
+    p.drawString(60, 680, f"Reference: {instance.payment_reference}")
+    p.drawString(60, 660, f"Date: {timezone.localdate()}")
+    p.drawString(60, 640, "Thank you for your admission payment.")
+    p.showPage()
+    p.save()
+
+    pdf_buffer.seek(0)
+    receipt = PaymentReceipt.objects.create(
+        student=student,
+        admission=instance,
+        amount=instance.fee_total,
+        provider=instance.payment_method or "manual",
+        txn_id=instance.payment_reference,
+    )
+    receipt.pdf.save(f"admission_receipt_{receipt.id}.pdf", ContentFile(pdf_buffer.read()))
+# --- END ---
+
+
+
+
+# --- START: PaymentReceipt model ---
+class PaymentReceipt(models.Model):
+    provider_choices = [
+        ('stripe', 'Stripe'),
+        ('paypal', 'PayPal'),
+        ('manual', 'Manual'),
+    ]
+
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="receipts")
+    payment = models.ForeignKey("TuitionPayment", on_delete=models.CASCADE, related_name="receipts", null=True, blank=True)
+    admission = models.ForeignKey("AdmissionApplication", on_delete=models.CASCADE, related_name="receipts", null=True, blank=True)
+
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    provider = models.CharField(max_length=30, choices=provider_choices)
+    txn_id = models.CharField(max_length=100, unique=True)
+    pdf = models.FileField(upload_to="receipts/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Receipt #{self.id} — {self.student} — {self.amount}"
+
+    class Meta:
+        ordering = ["-created_at"]
+# --- END ---
+
+
+# --- NEW: simple settings row you can edit in admin ---
+class FinanceSettings(models.Model):
+    default_monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, default=2000)
+    notes = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        verbose_name_plural = "Finance settings"
+
+    def __str__(self):
+        return f"Finance Settings (monthly={self.default_monthly_fee})"
+
+    @classmethod
+    def current(cls):
+        obj = cls.objects.first()
+        if obj:
+            return obj
+        # lazily create one with default if missing
+        return cls.objects.create(default_monthly_fee=2000)

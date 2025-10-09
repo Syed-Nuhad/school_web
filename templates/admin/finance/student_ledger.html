@@ -3,28 +3,24 @@
 
 {% block extrastyle %}
 <style>
-  .admin-student-ledger .filter-bar{
-    display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:1rem;
-  }
+  :root { --hair:#e5e7eb; --muted:#6b7280; }
+  .admin-student-ledger .filter-bar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:0 0 1rem;}
   .admin-student-ledger .filter-bar input,
-  .admin-student-ledger .filter-bar select{
-    max-width:240px;
-  }
-  .admin-student-ledger .grid{
-    display:grid; grid-template-columns: 1fr 2fr; gap:1rem;
-  }
-  .admin-student-ledger .card{ background:#fff; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,.06); }
-  .admin-student-ledger .card .card-header{
-    padding:.6rem .9rem; border-bottom:1px solid #eee; font-weight:600;
-  }
-  .admin-student-ledger .card .card-body{ padding:.9rem; }
-  .admin-student-ledger table{ width:100%; border-collapse:collapse; }
-  .admin-student-ledger th, .admin-student-ledger td{
-    padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; vertical-align:top;
-  }
-  .admin-student-ledger th{ font-weight:600; }
-  .admin-student-ledger ul{ margin:0; padding-left:1.2rem; }
-  @media (max-width: 900px){ .admin-student-ledger .grid{ grid-template-columns: 1fr; } }
+  .admin-student-ledger .filter-bar select{max-width:240px;}
+  .admin-student-ledger .grid{display:grid;grid-template-columns:1fr 2fr;gap:1rem;}
+  .admin-student-ledger .card{background:#fff;border:1px solid var(--hair);border-radius:8px;}
+  .admin-student-ledger .card .card-header{padding:.6rem .9rem;border-bottom:1px solid var(--hair);font-weight:600;}
+  .admin-student-ledger .card .card-body{padding:.9rem;}
+  .admin-student-ledger table{width:100%;border-collapse:collapse;}
+  .admin-student-ledger th,.admin-student-ledger td{padding:.5rem .6rem;border-bottom:1px solid #f3f4f6;vertical-align:top;}
+  .admin-student-ledger th{font-weight:600;background:#fafafa;}
+  .muted{color:var(--muted)}
+  .nowrap{white-space:nowrap}
+  .t-right{text-align:right}
+  .btn{display:inline-block;padding:.35rem .6rem;border:1px solid var(--hair);border-radius:6px;background:#fff;cursor:pointer;text-decoration:none}
+  .btn.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+  @media (max-width: 900px){ .admin-student-ledger .grid{grid-template-columns:1fr;} }
+  @media print{ .filter-bar{display:none!important} .card{border:none} th{background:#fff} }
 </style>
 {% endblock %}
 
@@ -33,9 +29,11 @@
 {% block content %}
 <div class="admin-student-ledger">
 
+  <!-- Filters -->
   <form method="get" class="filter-bar">
     <label>Class:</label>
     <select name="class_id" class="form-control form-control-sm">
+      <option value="">— select —</option>
       {% for c in classes %}
         <option value="{{ c.id }}"
           {% if q.class_id|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
@@ -52,13 +50,18 @@
     <input type="text" name="roll" class="form-control form-control-sm"
            value="{{ q.roll|default_if_none:'' }}"/>
 
-    <button class="button btn btn-primary btn-sm" type="submit">Search</button>
-    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print</button>
+    <button class="btn primary btn-sm" type="submit">Search</button>
+    <button type="button" class="btn btn-sm" onclick="window.print()">Print</button>
   </form>
+
+  {% if messages %}{% for m in messages %}
+    <p class="muted">{{ m }}</p>
+  {% endfor %}{% endif %}
 
   {% if student %}
     <div class="grid">
 
+      <!-- Student -->
       <div class="card">
         <div class="card-header">Student</div>
         <div class="card-body">
@@ -71,21 +74,28 @@
         </div>
       </div>
 
+      <!-- Totals -->
       <div class="card">
         <div class="card-header">Totals</div>
         <div class="card-body">
-          <ul class="totals">
+          <ul style="margin:0; padding-left:1rem;">
             <li>Tuition paid: ৳ {{ totals.tuition_paid|floatformat:2|intcomma }}</li>
             <li>Tuition due: ৳ {{ totals.tuition_due|floatformat:2|intcomma }}</li>
             <li>Exam fee: ৳ {{ totals.exam_fee|floatformat:2|intcomma }}</li>
             <li>Bus fee: ৳ {{ totals.bus_fee|floatformat:2|intcomma }}</li>
             <li><strong>Overall paid:</strong> ৳ {{ totals.overall_paid|floatformat:2|intcomma }}</li>
           </ul>
+          {% if paid_months is not None and due_months is not None %}
+            <div class="muted" style="margin-top:.5rem;">
+              Months paid: <strong>{{ paid_months }}</strong> · Months due: <strong>{{ due_months }}</strong>
+            </div>
+          {% endif %}
         </div>
       </div>
 
     </div>
 
+    <!-- Invoices -->
     <div class="card" style="margin-top:1rem;">
       <div class="card-header">Invoices</div>
       <div class="card-body">
@@ -95,20 +105,54 @@
               <tr>
                 <th>Year</th>
                 <th>Month</th>
-                <th>Amount</th>
-                <th>Paid</th>
-                <th>Balance</th>
+                <th class="t-right">Tuition</th>
+                <th class="t-right">Paid</th>
+                <th class="t-right">Balance</th>
               </tr>
             </thead>
             <tbody>
               {% for inv in invoices %}
                 <tr>
                   <td>{{ inv.period_year }}</td>
-                  <td>{{ inv.period_month }}</td>
-                  <td>৳ {{ inv.tuition_amount|floatformat:2|intcomma }}</td>
-                  <td>৳ {{ inv.paid_amount|floatformat:2|intcomma }}</td>
-                  <td>৳ {{ inv.balance|floatformat:2|intcomma }}</td>
+                  <td class="nowrap">{{ inv.period_month|stringformat:"02d" }}</td>
+                  <td class="t-right">৳ {{ inv.tuition_amount|floatformat:2|intcomma }}</td>
+                  <td class="t-right">৳ {{ inv.paid_amount|floatformat:2|intcomma }}</td>
+                  <td class="t-right" {% if inv.balance > 0 %}style="color:#b91c1c"{% endif %}>
+                    ৳ {{ inv.balance|floatformat:2|intcomma }}
+                  </td>
                 </tr>
+                {% if inv.tuitionpayment_set.all %}
+                  <tr>
+                    <td colspan="5" style="padding:0;border:0;">
+                      <table style="width:100%; border-collapse:collapse; margin:.25rem 0 1rem;">
+                        <thead>
+                          <tr>
+                            <th style="width:25%">Payment Date</th>
+                            <th class="t-right" style="width:20%">Amount</th>
+                            <th style="width:15%">Provider</th>
+                            <th>Txn ID</th>
+                            <th style="width:15%">Receipt</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for pay in inv.tuitionpayment_set.all %}
+                          <tr>
+                            <td class="nowrap">{{ pay.paid_on|date:"Y-m-d" }}</td>
+                            <td class="t-right">৳ {{ pay.amount|floatformat:2|intcomma }}</td>
+                            <td class="nowrap">{{ pay.provider|default:"—" }}</td>
+                            <td class="nowrap">{{ pay.txn_id|default:"—" }}</td>
+                            <td class="nowrap">
+                              {% if pay.txn_id %}
+                                <a href="{% url 'content:receipt-by-txn' pay.txn_id %}" target="_blank">Open</a>
+                              {% else %}—{% endif %}
+                            </td>
+                          </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                {% endif %}
               {% endfor %}
             </tbody>
           </table>

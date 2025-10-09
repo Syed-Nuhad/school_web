@@ -1,22 +1,23 @@
 {% load static %}
-<!-- ===== Modern Navbar (Bootstrap 5) ===== -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top border-bottom shadow-sm">
+<nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
   <div class="container">
+
     <!-- Brand -->
-    <a class="navbar-brand d-flex align-items-center" href="{% url 'home' %}">
-      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" class="me-2" style="height:36px;width:auto;">
-      <span class="fw-normal">Titu BD Science College</span>
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'home' %}">
+      <img src="{% static 'img/logo/DS-Logo.png' %}" alt="Logo" style="height:36px; width:auto;">
+      <span>Titu BD Science College</span>
     </a>
 
     <!-- Toggler -->
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#siteNav"
-            aria-controls="siteNav" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+            aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <!-- Nav links -->
-    <div class="collapse navbar-collapse" id="siteNav">
-      <ul class="navbar-nav ms-auto align-items-lg-center">
+    <!-- Collapsible -->
+    <div class="collapse navbar-collapse" id="mainNav">
+      <!-- Left links -->
+      <ul class="navbar-nav ms-auto">
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}">Home</a>
         </li>
@@ -26,11 +27,9 @@
 
         <!-- Cultural -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="culturalDropdown" role="button"
-             data-bs-toggle="dropdown" aria-expanded="false">
-            Cultural
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="culturalDropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="culturalMenu" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">Cultural</a>
+          <ul class="dropdown-menu" aria-labelledby="culturalMenu">
             <li><a class="dropdown-item" href="{% url 'home' %}#college-functions">Events</a></li>
             <li><a class="dropdown-item" href="{% url 'gallery' %}">Gallery</a></li>
           </ul>
@@ -38,43 +37,76 @@
 
         <!-- Student Corner -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="studentDropdown" role="button"
-             data-bs-toggle="dropdown" aria-expanded="false">
-            Student Corner
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="studentDropdown">
-            <li><a class="dropdown-item" href="{% url 'home' %}#academics" target="" rel="noopener">Online Admission Form</a></li>
+          <a class="nav-link dropdown-toggle" href="#" id="studentMenu" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">Student Corner</a>
+          <ul class="dropdown-menu" aria-labelledby="studentMenu">
+            <li><a class="dropdown-item" href="{% url 'home' %}#academics">Online Admission Form</a></li>
+
             {% if default_class_id %}
               <li>
-                <a class="dropdown-item"
-                   href="{% url 'attendance_class_page' default_class_id %}">
+                <a class="dropdown-item" href="{% url 'attendance_class_page' default_class_id %}">
                   Class Attendance Overview
                 </a>
               </li>
             {% else %}
               <li><span class="dropdown-item disabled">Class Attendance Overview</span></li>
             {% endif %}
-            <li><a class="dropdown-item" href="{% url 'content:bus_routes_page' %}" rel="noopener">School Bus Information</a></li>
+
+            <li><a class="dropdown-item" href="{% url 'content:bus_routes_page' %}">School Bus Information</a></li>
           </ul>
         </li>
 
         <!-- Exam Corner -->
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="examDropdown" role="button"
-             data-bs-toggle="dropdown" aria-expanded="false">
-            Exam Corner
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="examDropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="examMenu" role="button"
+             data-bs-toggle="dropdown" aria-expanded="false">Exam Corner</a>
+          <ul class="dropdown-menu" aria-labelledby="examMenu">
             <li><a class="dropdown-item" href="{% url 'content:exam_routines_page' %}">Exam Routines</a></li>
-            <li><a class="dropdown-item" href="{% url 'index' %}" rel="noopener">Class-wise Result Overview</a></li>
+            <li><a class="dropdown-item" href="{% url 'index' %}">Class-wise Result Overview</a></li>
             <li><a class="dropdown-item" href="{% url 'content:marksheet_search' %}">Student Marksheet</a></li>
           </ul>
         </li>
 
-        <!-- Contact as a CTA button -->
-        <li class="nav-item ms-lg-2">
-          <a class="btn btn-primary btn-sm px-3" href="#contact">Contact</a>
+        <!-- Contact CTA -->
+        <li class="nav-item pt-2">
+          <a class="btn btn-primary btn-sm ms-lg-2" href="{% url 'home' %}#contact">Contact</a>
         </li>
+
+        <!-- Auth area -->
+        {% if request.user.is_authenticated %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="acctMenu"
+               role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle me-1"></i>{{ request.user.get_short_name|default:request.user.username }}
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="acctMenu">
+              <!-- Student self-service -->
+              <li><a class="dropdown-item" href="{% url 'my-invoices' %}">My Invoices</a></li>
+
+              {% if request.user.is_staff %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/dj-admin/">Admin</a></li>
+                <li><a class="dropdown-item" href="{% url 'finance-overview' %}">Finance Overview</a></li>
+                <li><a class="dropdown-item" href="{% url 'student-lookup' %}">Student Lookup</a></li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'finance-student-ledger' %}{% if default_class_id %}?class_id={{ default_class_id }}{% endif %}">
+                    Student Ledger
+                  </a>
+                </li>
+              {% endif %}
+
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
+            </ul>
+          </li>
+        {% else %}
+          <li class="nav-item ms-lg-2">
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:login' %}">Login</a>
+          </li>
+          <li class="nav-item ms-lg-2">
+            <a class="btn btn-success btn-sm" href="{% url 'accounts:student-register' %}">Student Sign Up</a>
+          </li>
+        {% endif %}
       </ul>
     </div>
   </div>

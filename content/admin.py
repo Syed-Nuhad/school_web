@@ -8,10 +8,17 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.template.response import TemplateResponse
-from django.urls import path
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.db.models import Sum, F, Max
+from django.utils.safestring import mark_safe
+from django.db.models.functions import Coalesce
+from django.db.models import Sum, F, Value, DecimalField, ExpressionWrapper
+
+
+
+
 
 from .models import (
     # Core content
@@ -41,7 +48,7 @@ from .models import (
     # Attendance + Exams
     AttendanceSession,
     ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding, Expense, Income,
-    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile,
+    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile, PaymentReceipt,
 )
 from .views import finance_overview, build_finance_context
 
@@ -981,9 +988,22 @@ class ExpenseAdmin(OwnableAdminMixin):
 class TuitionPaymentInline(admin.TabularInline):
     model = TuitionPayment
     extra = 0
-    fields = ("amount", "provider", "txn_id", "paid_on")
-    readonly_fields = ()
+    fields = ("amount", "provider", "txn_id", "paid_on", "receipt_link")  # ← add
+    readonly_fields = ("receipt_link",)
     show_change_link = True
+
+    def receipt_link(self, obj):
+        if not obj.pk:
+            return "—"
+        rec = PaymentReceipt.objects.filter(invoice=obj.invoice, txn_id=obj.txn_id).first()
+        if rec and rec.pdf:
+            return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">Download PDF</a>')
+        # fallback: look by txn only
+        rec = PaymentReceipt.objects.filter(txn_id=obj.txn_id).first()
+        if rec and rec.pdf:
+            return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">Download PDF</a>')
+        return "—"
+    receipt_link.short_description = "Receipt"
 
 
 @admin.register(TuitionInvoice)
@@ -995,6 +1015,10 @@ class TuitionInvoiceAdmin(OwnableAdminMixin):
 
     actions = ["print_outstanding"]
 
+    @admin.display(description="Pay (dev)")
+    def pay_dev(self, obj):
+        url = reverse("content:stripe-checkout-create", args=[obj.id])
+        return format_html('<a class="button" href="{}">Stripe Checkout</a>', url)
     def print_outstanding(self, request, queryset):
         """
         Opens the printable Outstanding Tuition view with only selected invoices
@@ -1039,14 +1063,25 @@ def finance_overview_admin(request):
     return TemplateResponse(request, "admin/finance/overview.html", ctx)
 
 
+
+
+class StudentProfileAdminForm(forms.ModelForm):
+    class Meta:
+        model = StudentProfile
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # even if blank=True, make it crystal-clear to the admin form
+        self.fields["user"].required = False
+        self.fields["user"].empty_label = "— (no user yet) —"
+
 @admin.register(StudentProfile)
-class StudentProfileAdmin(OwnableAdminMixin):
-    list_display = ("user", "school_class", "section", "roll_number", "joined_on")
-    list_filter = ("school_class__year", "school_class__name", "section")
-    search_fields = ("user__username", "user__first_name", "user__last_name", "user__email", "roll_number")
-    ordering = ("school_class", "section", "roll_number")
-
-
+class StudentProfileAdmin(admin.ModelAdmin):
+    form = StudentProfileAdminForm
+    list_display = ("__str__", "school_class", "section", "roll_number", "user")
+    search_fields = ("user__username", "section")
+    list_filter = ("school_class", "section")
 
 
 
@@ -1062,9 +1097,7 @@ def student_ledger_admin(request):
     totals = {}
 
     if q_class and q_roll:
-        # You said “roll + class + section” identifies a student.
-        # If you have a StudentProfile model, query that here to get the User.
-        # Fallback: if your User model stores roll & section, adapt this query.
+        # Find profile by Class / Section / Roll
         profile = None
         try:
             from .models import StudentProfile
@@ -1079,28 +1112,43 @@ def student_ledger_admin(request):
             student = profile.user
             ctx["profile"] = profile
 
-            # Tuition invoices for this student
+            # All tuition invoices for this student
             invoices = (TuitionInvoice.objects
                         .filter(student=student)
                         .order_by("-period_year", "-period_month"))
 
+            # ---- totals (safe for Decimal fields) ----
+            zero = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            balance_expr = ExpressionWrapper(
+                F("tuition_amount") - F("paid_amount"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+
+            agg = invoices.aggregate(
+                paid=Coalesce(Sum("paid_amount"), zero),
+                due =Coalesce(Sum(balance_expr),   zero),
+            )
+
             paid_months = invoices.filter(paid_amount__gte=F("tuition_amount")).count()
-            due_months = invoices.filter(paid_amount__lt=F("tuition_amount")).count()
+            due_months  = invoices.filter(paid_amount__lt=F("tuition_amount")).count()
 
-            agg = invoices.aggregate(t=Sum("tuition_amount"), p=Sum("paid_amount"))
-            totals["tuition_due"] = (agg["t"] or 0) - (agg["p"] or 0)
-
-            # Other fees, only if we added Income.student
+            # Other fees (only if you save Income rows with student=<user>)
             exam_cat = IncomeCategory.objects.filter(code="exam").first()
             bus_cat  = IncomeCategory.objects.filter(code="bus").first()
 
-            totals["exam_fee"] = (Income.objects.filter(student=student, category=exam_cat)
-                                               .aggregate(s=Sum("amount"))["s"] or 0) if exam_cat else 0
-            totals["bus_fee"]  = (Income.objects.filter(student=student, category=bus_cat)
-                                               .aggregate(s=Sum("amount"))["s"] or 0)  if bus_cat else 0
+            exam_fee = (Income.objects.filter(student=student, category=exam_cat)
+                                  .aggregate(s=Sum("amount"))["s"] or 0) if exam_cat else 0
+            bus_fee  = (Income.objects.filter(student=student, category=bus_cat)
+                                  .aggregate(s=Sum("amount"))["s"] or 0) if bus_cat else 0
 
-            totals["overall_paid"] = (Income.objects.filter(student=student)
-                                                    .aggregate(s=Sum("amount"))["s"] or 0)
+            totals = {
+                "tuition_paid": agg["paid"],
+                "tuition_due":  agg["due"],
+                "exam_fee":     exam_fee,
+                "bus_fee":      bus_fee,
+                "overall_paid": agg["paid"] + exam_fee + bus_fee,
+            }
+            # -----------------------------------------
 
             ctx.update({
                 "student": student,
@@ -1115,6 +1163,10 @@ def student_ledger_admin(request):
     ctx["classes"] = AcademicClass.objects.order_by("-year", "name")
     ctx["q"] = {"class_id": q_class, "section": q_section, "roll": q_roll}
     return render(request, "admin/finance/student_ledger.html", ctx)
+
+
+
+
 
 # hook the URL into the admin
 class FinanceAdminSite(admin.AdminSite):  # if you already have one, just add to get_urls
@@ -1138,3 +1190,79 @@ def _patched_get_urls():
     return _extra_admin_urls() + _original_get_urls()
 
 admin.site.get_urls = _patched_get_urls
+
+
+
+
+
+
+@admin.register(PaymentReceipt)
+class PaymentReceiptAdmin(OwnableAdminMixin):
+    list_display = ("id", "student", "amount", "provider", "txn_id", "created_at", "pdf_link")
+    search_fields = ("txn_id", "student__username", "student__email")
+    readonly_fields = ("pdf_link",)
+    date_hierarchy = "created_at"
+
+    def pdf_link(self, obj):
+        if obj.pdf:
+            return mark_safe(f'<a href="{obj.pdf.url}" target="_blank">Open PDF</a>')
+        return "—"
+    pdf_link.short_description = "PDF"
+
+
+
+class TuitionInvoiceForm(forms.ModelForm):
+    class Meta:
+        model = TuitionInvoice
+        fields = (
+            "student", "kind", "title",
+            "period_year", "period_month",
+            "tuition_amount", "paid_amount", "due_date",
+        )
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Default to “custom”; admin can switch to “monthly” if needed.
+        if not self.instance.pk:
+            self.fields["kind"].initial = "custom"
+            self.fields["paid_amount"].initial = 0
+
+    def clean(self):
+        cleaned = super().clean()
+        kind = cleaned.get("kind")
+        title = (cleaned.get("title") or "").strip()
+        y = cleaned.get("period_year")
+        m = cleaned.get("period_month")
+
+        if kind == "custom":
+            if not title:
+                self.add_error("title", "Custom invoices need a title.")
+            # no month/year required
+            cleaned["period_year"] = None
+            cleaned["period_month"] = None
+        else:  # monthly
+            if not y or not m:
+                self.add_error("period_month", "Monthly invoices require year and month.")
+        return cleaned
+
+
+@admin.register(TuitionInvoice)
+class TuitionInvoiceAdmin(admin.ModelAdmin):
+    form = TuitionInvoiceForm
+    list_display = (
+        "student", "kind", "title", "period_year", "period_month",
+        "tuition_amount", "paid_amount", "due_date", "created_at",
+    )
+    list_filter = ("kind", "period_year", "period_month")
+    search_fields = ("student__username", "student__first_name", "student__last_name", "title")
+    autocomplete_fields = ("student",)
+    readonly_fields = ("created_at",)
+
+@admin.register(TuitionPayment)
+class TuitionPaymentAdmin(admin.ModelAdmin):
+    list_display = ("invoice", "amount", "provider", "txn_id", "paid_on", "created_at")
+    search_fields = ("invoice__student__username", "txn_id", "provider")
+    list_filter = ("provider", "paid_on")

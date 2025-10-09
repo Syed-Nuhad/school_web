@@ -1,0 +1,117 @@
+{# templates/students/invoices.html #}
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}My Invoices{% endblock %}
+
+{% block content %}
+<section class="py-4">
+  <div class="container">
+
+    <!-- Header + actions -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 gap-2">
+      <div>
+        <h3 class="mb-0">My Invoices</h3>
+        <p class="text-muted mb-0">Review your monthly tuition and any custom fees.</p>
+      </div>
+
+      <form method="post" action="{% url 'content:invoice-bulk-checkout' %}">
+        {% csrf_token %}
+        <button
+          type="submit"
+          class="btn btn-primary"
+          {% if not summary or summary.total_due|floatformat:2 == '0.00' %}disabled{% endif %}>
+          Pay all dues
+          {% if summary and summary.total_due > 0 %}
+            (৳ {{ summary.total_due|floatformat:0|intcomma }})
+          {% endif %}
+        </button>
+      </form>
+    </div>
+
+    <!-- Upcoming info (no auto-creation here) -->
+    {% if summary and summary.upcoming %}
+      <div class="alert alert-dark py-2 px-3">
+        Upcoming month ready:
+        <strong>{{ summary.upcoming.period_year }}-{{ summary.upcoming.period_month|stringformat:"02d" }}</strong>.
+        You can pay dues anytime.
+      </div>
+    {% endif %}
+
+    {% if invoices %}
+      <div class="card">
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">Year</th>
+                  <th scope="col">Month</th>
+                  <th scope="col" class="text-end">Tuition</th>
+                  <th scope="col" class="text-end">Paid</th>
+                  <th scope="col" class="text-end">Balance</th>
+                  <th scope="col" class="text-end">Action</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {% for inv in invoices %}
+                  <tr>
+                    <td>{{ inv.period_year|default:"—" }}</td>
+                    <td>{{ inv.period_month|default:"—" }}</td>
+                    <td class="text-end">৳ {{ inv.tuition_amount|default:0|floatformat:2|intcomma }}</td>
+                    <td class="text-end">৳ {{ inv.paid_amount|default:0|floatformat:2|intcomma }}</td>
+                    <td class="text-end">
+                      {% with db=inv.display_balance|default:0 %}
+                        {% if db > 0 %}
+                          <span class="text-danger">৳ {{ db|floatformat:2|intcomma }}</span>
+                        {% else %}
+                          <span>৳ {{ db|floatformat:2|intcomma }}</span>
+                        {% endif %}
+                      {% endwith %}
+                    </td>
+                    <td class="text-end">
+                      {% if inv.display_balance|default:0 > 0 %}
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'invoice-pay' inv.id %}">Pay now</a>
+                      {% else %}
+                        <span class="badge text-bg-success">Paid</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+
+              {% if summary %}
+                <tfoot class="table-light">
+                  <tr>
+                    <th scope="row" colspan="4" class="text-end">Total due</th>
+                    <th class="text-end">৳ {{ summary.total_due|floatformat:2|intcomma }}</th>
+                    <th class="text-end">
+                      <form method="post" action="{% url 'content:invoice-bulk-checkout' %}">
+                        {% csrf_token %}
+                        <button
+                          type="submit"
+                          class="btn btn-sm btn-primary"
+                          {% if summary.total_due|floatformat:2 == '0.00' %}disabled{% endif %}>
+                          Pay all
+                        </button>
+                      </form>
+                    </th>
+                  </tr>
+                </tfoot>
+              {% endif %}
+            </table>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="card">
+        <div class="card-body">
+          <p class="mb-0 text-muted">No invoices yet.</p>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

@@ -162,7 +162,7 @@
   <div class="container" style="max-width:1100px;">
     <div class="text-start mb-4">
       <h1 class="fw-normal mb-1">Timeline</h1>
-      <p class="text-muted mb-0">All the key dates at a glance</p>
+      <p class="text-muted mb-0 p-3">All the key dates at a glance</p>
     </div>
 
     {% for e in timeline_events %}
@@ -211,7 +211,7 @@
 <section id="glx-gallery" class="container py-5">
   <div class="mb-4">
     <h1 class="fw-normal mb-1">Campus Gallery</h1>
-    <p class="text-muted mb-0">Photos &amp; videos from campus life</p>
+    <p class="text-muted mb-0 p-3">Photos &amp; videos from campus life</p>
   </div>
 
   <!-- more breathing room on big screens -->
@@ -307,7 +307,7 @@
 {% if about %}
 <section class="container py-5" id="about" data-aos="fade-up">
   <div class="text-start fw-normal mb-1">
-    <h1 class="fw-normal">{{ about.title }}</h1>
+    <h1 class="fw-normal p-4">{{ about.title }}</h1>
   </div>
 
   <div class="row align-items-center">
@@ -320,7 +320,7 @@
     </div>
 
     <div class="col-md-6 fade-in delay-2">
-      {% if about.college_name %}<h2 class="text-primary fw-normal mb-3">{{ about.college_name }}</h2>{% endif %}
+      {% if about.college_name %}<h2 class="text-primary fw-normal mb-3 p-3">{{ about.college_name }}</h2>{% endif %}
       {% if about.body %}<p class="lead text-muted">{{ about.body }}</p>{% endif %}
       {% if about.bullet_list %}
         <ul class="list-unstyled mt-3">
@@ -334,7 +334,7 @@
 
 <!--END-->
 <section class="container py-5 academic-calendar-section" data-aos="fade-up">
-  <h2 class="text-start fw-normal mb-4">Academic Calendar</h2>
+  <h2 class="text-start fw-normal mb-4 p-3">Academic Calendar</h2>
 
   <div class="row g-4">
     {% for item in calendar_items %}
@@ -369,8 +369,8 @@
 <section id="academics" class="py-5">
   <div class="container" data-aos="fade-up">
     <div class="text-center mb-4">
-      <h2 class="fw-normal">Programs & Courses</h2>
-      <p class="text-muted">Explore our programs — durations, eligibility, fees and downloadable syllabi.</p>
+      <h2 class="fw-normal p-3">Programs & Courses</h2>
+      <p class="text-muted p-3">Explore our programs — durations, eligibility, fees and downloadable syllabi.</p>
     </div>
 
     <div class="d-flex justify-content-center mb-4 flex-wrap gap-2">
@@ -475,7 +475,7 @@
 
 <!-- ⭐⭐⭐⭐⭐ Start : College Function Highlights -->
 <section class="container my-5" id="college-functions">
-  <h2 class="fw-normal">College Function Highlights</h2>
+  <h2 class="fw-normal p-4">College Function Highlights</h2>
 
   <div id="functions-gallery" class="row g-5 align-items-center">
     {% for f in functions_page %}
@@ -520,7 +520,7 @@
         </div>
       </div>
     {% empty %}
-      <div class="col-12">
+      <div class="col-12 p-4">
         <div class="alert alert-info">No function highlights yet.</div>
       </div>
     {% endfor %}
@@ -953,8 +953,8 @@
     {% endif %}
 
     <div class="text-center mb-4">
-      <h2 class="fw-normal">Contact Us</h2>
-      <p class="text-muted">We’d love to hear from you! Reach out using the form or visit us directly.</p>
+      <h2 class="fw-normal p-3">Contact Us</h2>
+      <p class="text-muted p-3">We’d love to hear from you! Reach out using the form or visit us directly.</p>
     </div>
 
     <div class="row g-4">
@@ -1069,7 +1069,7 @@
       </div>
 
       <!-- Map (admin-managed embed URL) -->
-      <div class="col-12">
+      <div class="col-12 p-5">
         <div class="map-container shadow-sm">
           {% if contact_info and contact_info.map_embed_src %}
             <iframe

@@ -14,9 +14,14 @@ from django.contrib.auth.models import Group
 from django.core.mail import send_mail
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseNotFound
 from django.shortcuts import render, redirect
+from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+from django.views.generic import FormView
 
-from .forms import StudentSignupForm, StaffSignupForm, SlimAuthForm
+from content.models import StudentProfile
+from .forms import StudentSignupForm, StaffSignupForm, SlimAuthForm, StudentRegisterForm
 from .models import SecurityLog
 
 User = get_user_model()
@@ -330,6 +335,10 @@ def signup_student(request):
     return render(request, "accounts/signup.html", {"form": form, "role": ROLE_STUDENT})
 
 
+
+
+
+
 # =============================================================================
 # (10) SECRET: TEACHER / ADMIN AUTH (password + email 2FA)
 # =============================================================================
@@ -420,3 +429,95 @@ def logout_view(request):
     logout(request)
     messages.info(request, "You have been logged out.")
     return redirect("accounts:login_student")
+
+# Class-based view (recommended)
+# ------------------------------
+@method_decorator(ensure_csrf_cookie, name="dispatch")   # sets csrftoken cookie on GET
+@method_decorator(csrf_protect, name="dispatch")         # enforces CSRF on POST
+class StudentRegisterView(FormView):
+    template_name = "accounts/student_register.html"   # <-- matches your template
+    form_class = StudentRegisterForm
+    success_url = reverse_lazy("home")                 # or reverse_lazy("my-invoices")
+
+    def form_valid(self, form):
+        # 1) Create the user
+        user = User.objects.create_user(
+            username=form.cleaned_data["username"],
+            email=form.cleaned_data.get("email") or "",
+            password=form.cleaned_data["password1"],
+            first_name=form.cleaned_data["full_name"],   # adjust if you split name fields
+        )
+        # Optional role field on your custom User model
+        if hasattr(user, "role"):
+            user.role = getattr(settings, "ROLE_STUDENT", "student")
+            user.save(update_fields=["role"])
+
+        # 2) Link to an existing StudentProfile (the form validated these fields)
+        sp = form.cleaned_data.get("_student_profile")  # set in form.clean()
+        if sp is not None:
+            sp.user = user
+            sp.save(update_fields=["user"])
+        else:
+            # Fallback: create a profile if enabled
+            if getattr(settings, "ALLOW_STUDENT_PROFILE_CREATE_ON_SIGNUP", False):
+                StudentProfile.objects.create(
+                    user=user,
+                    school_class=form.cleaned_data["school_class"],
+                    section=form.cleaned_data["section"],
+                    roll_number=form.cleaned_data["roll_number"],
+                )
+            # else: leave unattached (shouldn't happen because form enforces match)
+
+        # 3) Log in and redirect
+        login(self.request, user)
+        messages.success(self.request, "Account created and linked to your roll.")
+        return super().form_valid(form)
+
+
+# ------------------------------------
+# Function-based view (alternative)
+# ------------------------------------
+@ensure_csrf_cookie
+@csrf_protect
+def student_register(request):
+    """
+    Use this instead of the CBV if you prefer FBVs.
+    Make sure your urls.py points to this (name='student-register').
+    """
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        form = StudentRegisterForm(request.POST)
+        if form.is_valid():
+            # Create user
+            user = User.objects.create_user(
+                username=form.cleaned_data["username"],
+                email=form.cleaned_data.get("email") or "",
+                password=form.cleaned_data["password1"],
+                first_name=form.cleaned_data["full_name"],
+            )
+            if hasattr(user, "role"):
+                user.role = getattr(settings, "ROLE_STUDENT", "student")
+                user.save(update_fields=["role"])
+
+            # Link or create StudentProfile
+            sp = form.cleaned_data.get("_student_profile")
+            if sp is not None:
+                sp.user = user
+                sp.save(update_fields=["user"])
+            elif getattr(settings, "ALLOW_STUDENT_PROFILE_CREATE_ON_SIGNUP", False):
+                StudentProfile.objects.create(
+                    user=user,
+                    school_class=form.cleaned_data["school_class"],
+                    section=form.cleaned_data["section"],
+                    roll_number=form.cleaned_data["roll_number"],
+                )
+
+            login(request, user)
+            messages.success(request, "Welcome! Your student account was created.")
+            return redirect("my-invoices")  # make sure this URL name exists
+    else:
+        form = StudentRegisterForm()
+
+    return render(request, "accounts/student_register.html", {"form": form})

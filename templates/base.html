@@ -28,7 +28,7 @@
   {% block extra_head %}{% endblock %}
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
   {% include "partials/navbar.html" %}
 
   <!-- Django messages rendered as Bootstrap alerts -->
@@ -43,7 +43,10 @@
   {% endif %}
 
   <!-- Main page content -->
-  {% block content %}{% endblock %}
+  <main id="page" class="flex-grow-1">
+    {% block content %}{% endblock %}
+  </main>
+
 
   {% include "partials/footer.html" %}
 

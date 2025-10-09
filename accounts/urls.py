@@ -1,7 +1,9 @@
 # accounts/urls.py
 from django.conf import settings
+from django.contrib.auth.views import LogoutView, LoginView
 from django.urls import path
 from . import views
+from .views import StudentRegisterView
 
 app_name = "accounts"
 
@@ -35,4 +37,8 @@ urlpatterns = [
     path(f"{P}/verify/", views.verify_code, name="verify_code"),
     path(f"{P}verify/", views.verify_code, name="verify_code"),
     path(f"{P}verify/resend/", views.resend_code, name="resend_code"),
+    path("register/student/", StudentRegisterView.as_view(), name="student-register"),
+    path("login/", LoginView.as_view(template_name="accounts/login.html"), name="login"),
+    path("logout/", LogoutView.as_view(next_page="home"), name="logout"),
+    path("register/student/", StudentRegisterView.as_view(), name="student-register"),
 ]

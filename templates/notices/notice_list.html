@@ -3,13 +3,13 @@
 
 {% block content %}
 <section class="container py-4">
-  <h1 class="h4 fw-normal mb-4">All Notices</h1>
+  <h1 class="fw-normal mb-4">All Notices</h1>
 
   {% if notices %}
     <div class="row g-4">
       {% for n in notices %}
         <div class="col-12 col-sm-6 col-lg-4">
-          <article class="h-100 border rounded-3 shadow-sm overflow-hidden">
+          <article class="h-100 border rounded-3 shadow-lg shadow-sm overflow-hidden">
             {% if n.image_src %}
               <a class="ratio ratio-16x9 d-block" href="{% url 'notice_detail' n.pk %}">
                 <div class="w-100 h-100"
