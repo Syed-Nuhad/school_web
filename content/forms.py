@@ -64,6 +64,15 @@ class AdmissionApplicationForm(forms.ModelForm):
             "add_hostel": "Add Hostel Seat",
             "add_marksheet": "Add Exact Marksheet",
         }
+        exclude = (
+            # system fields (non-editable)
+            "add_admission", "add_tuition", "add_exam",
+            "fee_admission", "fee_tuition", "fee_exam",
+            "fee_bus", "fee_hostel", "fee_marksheet",
+            "fee_base_subtotal", "fee_selected_total", "fee_total",
+            "payment_status", "payment_provider", "payment_txn_id", "paid_at",
+            "generated_roll", "created_at",
+        )
 
     # --- Validation ---
     def clean_phone(self):

@@ -68,7 +68,7 @@
         </li>
 
         <!-- Contact CTA -->
-        <li class="nav-item pt-2">
+        <li class="nav-item pt-1">
           <a class="btn btn-primary btn-sm ms-lg-2" href="{% url 'home' %}#contact">Contact</a>
         </li>
 
@@ -100,11 +100,11 @@
             </ul>
           </li>
         {% else %}
-          <li class="nav-item ms-lg-2">
-            <a class="btn btn-outline-secondary btn-sm" href="{% url 'accounts:login' %}">Login</a>
+          <li class="nav-item ms-lg-2 pt-1">
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'accounts:login' %}">Login</a>
           </li>
-          <li class="nav-item ms-lg-2">
-            <a class="btn btn-success btn-sm" href="{% url 'accounts:student-register' %}">Student Sign Up</a>
+          <li class="nav-item ms-lg-2 pt-1">
+            <a class="btn btn-primary btn-sm" href="{% url 'accounts:student-register' %}">Student Sign Up</a>
           </li>
         {% endif %}
       </ul>

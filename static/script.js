@@ -1644,3 +1644,65 @@ document.addEventListener('click', function (e) {
     lg.openGallery(Math.max(0, Math.min(startIndex, dynamicEl.length - 1)));
   });
 })();
+
+
+
+
+
+
+  // --- Select & pay selected (Stripe multi-line) ---
+  const checks = () => Array.from(document.querySelectorAll('.row-check')).filter(c => c.checked).map(c => c.value);
+  const toggleAll = document.getElementById('toggle-all');
+  const payBtn = document.getElementById('pay-selected-btn');
+
+  function updatePayBtn(){
+    const n = checks().length;
+    payBtn.disabled = n === 0;
+    payBtn.textContent = n ? `Pay selected (${n})` : 'Pay selected';
+  }
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'toggle-all') {
+      document.querySelectorAll('.row-check').forEach(cb => cb.checked = toggleAll.checked);
+    }
+    updatePayBtn();
+  });
+
+  // CSRF helper
+  function getCookie(name){
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+  payBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const ids = checks();
+    if (!ids.length) return;
+    payBtn.disabled = true;
+    try {
+      const resp = await fetch("{% url 'content:invoice-bulk-checkout-selected' %}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie('csrftoken') || '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ invoice_ids: ids })
+      });
+      const data = await resp.json();
+      if (data.ok && data.url) {
+        window.location.href = data.url; // Stripe Checkout
+      } else {
+        alert(data.error || "Could not start checkout.");
+        payBtn.disabled = false;
+      }
+    } catch(err){
+      console.error(err);
+      alert("Network error");
+      payBtn.disabled = false;
+    }
+  });
+
+.invoice-card{border:1px solid #e9ecef;border-radius:.5rem;background:#fff}
+.chip{display:inline-block;padding:.15rem .5rem;border-radius:1rem;font-size:.85rem}
+.chip-due{background:#fff3cd;border:1px solid #ffe69c;color:#8c6d1f}
+.chip-paid{background:#e9f7ef;border:1px solid #b7ebc6;color:#1f6d40}
+.row-overdue{--bs-table-bg: #fff7f7}

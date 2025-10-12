@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import datetime
 import decimal
 import json
 import uuid
@@ -13,7 +14,8 @@ from decimal import Decimal
 from typing import Dict
 
 from django.contrib.auth import get_user_model
-from django.db.models import Value, DecimalField, ExpressionWrapper
+from django.db import transaction
+from django.db.models import Value, DecimalField, ExpressionWrapper, Case, When, IntegerField
 from django.db.models.functions import Coalesce
 
 from django.conf import settings
@@ -27,7 +29,7 @@ from django.http import (
     JsonResponse,
     HttpResponseBadRequest,
     HttpResponseRedirect,
-    HttpResponse, HttpResponseForbidden, Http404, HttpRequest, HttpResponseNotAllowed,
+    HttpResponse, HttpResponseForbidden, Http404, HttpRequest, HttpResponseNotAllowed, FileResponse,
 )
 
 from django.shortcuts import redirect, render, get_object_or_404
@@ -56,6 +58,7 @@ from .models import (
     AcademicClass,
     StudentProfile, PaymentReceipt,
 )
+from .services.receipts import generate_payment_receipt
 
 # --------------------------------------------------------------------------------------
 # Payments config guard (so imports don’t crash when not configured)
@@ -63,6 +66,7 @@ from .models import (
 P = getattr(settings, "PAYMENTS", {})
 PP_READY = all(P.get(k) for k in ("PP_BASE", "PP_CLIENT", "PP_SECRET"))
 User = get_user_model()
+stripe.api_key = settings.STRIPE_SECRET_KEY
 # --------------------------------------------------------------------------------------
 # Small helpers
 # --------------------------------------------------------------------------------------
@@ -807,9 +811,61 @@ def stripe_checkout_create(request, invoice_id: int):
     return redirect(session.url)
 
 @login_required
-def stripe_checkout_success(request):
-    messages.success(request, "Payment processing… If successful, it will appear on the invoice within a few seconds.")
-    return redirect("finance-overview")
+def stripe_checkout_success(request: HttpRequest):
+    """
+    Fallback: if the webhook didn't reach us (local dev), finalize the payment here.
+    We read ?session_id=... from Stripe's redirect and allocate funds idempotently.
+    """
+    session_id = request.GET.get("session_id")
+    if not session_id:
+        messages.info(request, "Payment processing…")
+        return redirect("content:my-invoices")
+
+    try:
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        session = stripe.checkout.Session.retrieve(session_id, expand=["payment_intent", "line_items"])
+    except Exception as e:
+        messages.error(request, f"Could not verify payment: {e}")
+        return redirect("content:my-invoices")
+
+    # Only proceed if Stripe says it's paid
+    if (session.get("payment_status") or "").lower() != "paid":
+        messages.info(request, "Payment pending. It will update shortly.")
+        return redirect("content:my-invoices")
+
+    # Idempotency: if we already recorded this txn, just show success
+    payment_intent = session.get("payment_intent")
+    txn_id = getattr(payment_intent, "id", None) or session.get("id")
+    if txn_id and PaymentReceipt.objects.filter(txn_id=txn_id).exists():
+        messages.success(request, "Payment confirmed.")
+        return redirect("content:my-invoices")
+
+    # Who paid and how much?
+    md = session.get("metadata") or {}
+    user_id = md.get("user_id") or request.user.id
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        messages.error(request, "User not found for this payment.")
+        return redirect("content:my-invoices")
+
+    amount_cents = session.get("amount_total") or 0
+    amount = Decimal(amount_cents) / Decimal("100")
+
+    # Allocate across the user's unpaid invoices (FIFO). Idempotent with txn_id.
+    try:
+        allocate_payment_across_invoices(
+            user=user,
+            amount=amount,
+            provider="stripe",
+            txn_id=str(txn_id or f"stripe-{session_id}"),
+        )
+    except Exception as e:
+        messages.error(request, f"Failed to apply payment: {e}")
+        return redirect("content:my-invoices")
+
+    messages.success(request, "Payment confirmed. Your invoices were updated.")
+    return redirect("content:my-invoices")
 
 @login_required
 def stripe_checkout_cancel(request):
@@ -818,51 +874,165 @@ def stripe_checkout_cancel(request):
 
 
 @csrf_exempt
-@require_POST
-def stripe_webhook(request: HttpRequest):
+def stripe_webhook(request):
     payload = request.body
     sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
-    endpoint_secret = settings.STRIPE_WEBHOOK_SECRET
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-    except Exception as e:
-        return HttpResponseBadRequest(str(e))
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponseBadRequest("Invalid payload")
+    except stripe.error.SignatureVerificationError:
+        return HttpResponseBadRequest("Invalid signature")
 
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
+    # Single source of truth
+    if event.get("type") != "checkout.session.completed":
+        return HttpResponse(status=200)
 
-        metadata = session.get("metadata") or {}
-        user_id = metadata.get("user_id")
-        kind    = metadata.get("kind", "")
+    data = event["data"]["object"]
+    meta = data.get("metadata") or {}
 
-        # Amount actually paid (in cents). Prefer amount_total on session.
-        amount_cents = session.get("amount_total") or 0
-        amount = Decimal(amount_cents) / Decimal("100")
+    payment_intent_id = data.get("payment_intent")
+    payer_email = (data.get("customer_details") or {}).get("email")
+    customer_id = data.get("customer")
 
-        # Stripe payment intent id (stable identifier for txn)
-        txn_id = session.get("payment_intent") or session.get("id")
+    paid_ts = event.get("created")
+    paid_at = timezone.make_aware(datetime.datetime.fromtimestamp(paid_ts)) if paid_ts else timezone.now()
 
-        # Safety: make sure user exists
+    # Parse invoice_map if present: "12:2000.00,15:500.00"
+    pairs: list[tuple[int, Decimal]] = []
+    invoice_map = (meta.get("invoice_map") or "").strip()
+    if invoice_map:
         try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return HttpResponse("user not found", status=200)
+            for part in invoice_map.split(","):
+                iid, amt = part.split(":")
+                pairs.append((int(iid), Decimal(amt)))
+        except Exception:
+            pairs = []
 
-        if kind == "bulk":
-            # Fan out across unpaid invoices (FIFO)
-            allocate_payment_across_invoices(
-                user=user,
-                amount=amount,
+    # Fallback to single invoice/amount if old metadata is used
+    if not pairs:
+        inv_id_meta = meta.get("tuition_invoice_id")
+        amount_total = Decimal((data.get("amount_total") or 0)) / Decimal("100")
+        if inv_id_meta:
+            try:
+                pairs = [(int(inv_id_meta), amount_total)]
+            except Exception:
+                pairs = []
+
+    with transaction.atomic():
+        if not pairs:
+            # No explicit mapping; nothing to apply, but still store a payment row without invoice
+            tp, _ = TuitionPayment.objects.get_or_create(
                 provider="stripe",
-                txn_id=str(txn_id),
+                gateway_ref=payment_intent_id,
+                defaults={
+                    "amount": Decimal((data.get("amount_total") or 0)) / Decimal("100"),
+                    "paid_at": paid_at,
+                },
             )
-        else:
-            # keep your existing single-invoice branch here (unchanged)
-            # e.g., read metadata["invoice_id"] and mark just that one.
-            pass
+            if not tp.gateway_payer_email:
+                tp.gateway_payer_email = payer_email
+            if not tp.gateway_payer_id:
+                tp.gateway_payer_id = customer_id
+            if not tp.gateway_payload:
+                tp.gateway_payload = event
+            tp.save()
+            generate_payment_receipt(tp)
+            return HttpResponse(status=200)
+
+        # For each targeted invoice, upsert ONE TuitionPayment row tied to that invoice
+        # Use (provider, gateway_ref, invoice) to avoid merging across invoices for the same PI
+        payments_for_receipt = []
+        for inv_id, portion in pairs:
+            try:
+                inv = TuitionInvoice.objects.select_for_update().get(id=inv_id)
+            except TuitionInvoice.DoesNotExist:
+                continue
+
+            tp, created = TuitionPayment.objects.get_or_create(
+                provider="stripe",
+                gateway_ref=payment_intent_id,
+                invoice=inv,
+                defaults={
+                    "amount": portion,
+                    "paid_at": paid_at,
+                },
+            )
+            # If it already existed (retries), ensure we at least store evidence and keep amount >= portion
+            if not created and (tp.amount or Decimal("0")) < portion:
+                tp.amount = portion
+
+            if not tp.gateway_payer_email:
+                tp.gateway_payer_email = payer_email
+            if not tp.gateway_payer_id:
+                tp.gateway_payer_id = customer_id
+            if not tp.gateway_payload:
+                tp.gateway_payload = event
+            tp.save()
+
+            # Recalculate invoice paid_amount (idempotent)
+            total = (
+                TuitionPayment.objects.filter(invoice=inv).aggregate(s=Sum("amount"))["s"]
+                or Decimal("0.00")
+            )
+            if inv.paid_amount != total:
+                inv.paid_amount = total
+                inv.save(update_fields=["paid_amount"])
+            inv.maybe_mark_paid()
+
+            payments_for_receipt.append(tp)
+
+        # Generate one receipt per payment row
+        for tp in payments_for_receipt:
+            generate_payment_receipt(tp)
 
     return HttpResponse(status=200)
+
+def paypal_capture_and_record(request, tuition_payment_id: int, capture_res: dict):
+    pu = (capture_res.get("purchase_units") or [{}])[0]
+    payments = pu.get("payments") or {}
+    captures = (payments.get("captures") or [{}])
+    capture = captures[0]
+
+    capture_id = capture.get("id")
+    payer_id = (capture_res.get("payer") or {}).get("payer_id")
+    payer_email = (capture_res.get("payer") or {}).get("email_address")
+
+    with transaction.atomic():
+        tp = TuitionPayment.objects.select_for_update().get(id=tuition_payment_id)
+
+        # Upsert by gateway_ref to avoid duplicates
+        exists = TuitionPayment.objects.filter(provider="paypal", gateway_ref=capture_id).exclude(id=tp.id).exists()
+        if exists:
+            # already recorded elsewhere; nothing to do
+            return JsonResponse({"ok": True, "dup": True})
+
+        tp.provider = "paypal"
+        tp.gateway_ref = capture_id
+        tp.gateway_payer_id = payer_id
+        tp.gateway_payer_email = payer_email
+        tp.gateway_payload = capture_res
+        tp.paid_at = tp.paid_at or timezone.now()
+        tp.save()
+
+        if tp.invoice_id:
+            inv = TuitionInvoice.objects.select_for_update().get(id=tp.invoice_id)
+            total = (TuitionPayment.objects
+                     .filter(invoice=inv)
+                     .aggregate(s=Sum("amount"))["s"]) or Decimal("0.00")
+            if inv.paid_amount != total:
+                inv.paid_amount = total
+                inv.save(update_fields=["paid_amount"])
+            inv.maybe_mark_paid()
+
+        generate_payment_receipt(tp)
+
+    return JsonResponse({"ok": True, "payment_id": tp.id, "capture_id": capture_id})
+# ========= END: paypal capture snippet =========
+
 @require_GET
 def receipt_by_txn(request, txn_id: str):
     """
@@ -878,7 +1048,12 @@ def receipt_by_txn(request, txn_id: str):
 # ============== LIST (self-service page) ==============
 @login_required
 def my_invoices(request):
-    # ensure current + next exist (or remove if you don’t want auto-create)
+    """
+    Show ALL invoices for the logged-in student:
+      - Monthly invoices (sorted newest first)
+      - Custom one-time invoices (Admission/Exam/Marksheet etc.)
+    """
+    # Keep if you want auto-create of current & next month invoices
     ensure_monthly_window_for_user(request.user, months_ahead=1)
 
     zero = Value(Decimal("0.00"), output_field=DecimalField(max_digits=12, decimal_places=2))
@@ -886,7 +1061,11 @@ def my_invoices(request):
     invoices = (
         TuitionInvoice.objects
         .filter(student=request.user)
-        .order_by("-period_year", "-period_month", "-id")
+        # Monthly first (0), then custom (1); then newest period first; then newest created
+        .order_by(
+            Case(When(kind="monthly", then=0), default=1, output_field=IntegerField()),
+            "-period_year", "-period_month", "-created_at", "-id",
+        )
         .annotate(
             display_balance=ExpressionWrapper(
                 Coalesce(F("tuition_amount"), zero) - Coalesce(F("paid_amount"), zero),
@@ -894,47 +1073,87 @@ def my_invoices(request):
             )
         )
     )
+    payments = (
+        TuitionPayment.objects
+        .filter(invoice__student=request.user)  # ← join through invoice
+        .order_by("-paid_on", "-id")  # ← use paid_on (your field)
+    )
+    summary = compute_dues_summary(request.user)  # returns totals for banner/footer
+    return render(request, "students/invoices.html", {
+        "invoices": invoices,
+        "summary": summary,
 
-    summary = compute_dues_summary(request.user)
-    return render(request, "students/invoices.html", {"invoices": invoices, "summary": summary})
+        "payments": payments,
+    })
+
+
 
 # ============== PAY ONE INVOICE ==============
-@login_required
-def invoice_pay(request: HttpRequest, invoice_id: int):
-    """
-    Create a Stripe Checkout Session for a single invoice’s remaining balance.
-    """
-    inv = get_object_or_404(TuitionInvoice, pk=invoice_id, student=request.user)
-    balance = (inv.tuition_amount or decimal.Decimal("0")) - (inv.paid_amount or decimal.Decimal("0"))
-    if balance <= 0:
-        messages.info(request, "This invoice is already fully paid.")
-        return redirect("my-invoices")
 
-    amount_cents = int((balance.quantize(decimal.Decimal("0.01")) * 100).to_integral_value())
+
+# ============== PAY ONE INVOICE (Stripe Checkout) ==============
+def _due_amount(inv: TuitionInvoice) -> Decimal:
+    amt = inv.tuition_amount or Decimal("0.00")
+    paid = inv.paid_amount or Decimal("0.00")
+    due = amt - paid
+    return due if due > 0 else Decimal("0.00")
+
+
+def _label(inv: TuitionInvoice) -> str:
+    if inv.kind == "monthly":
+        m = f"{(inv.period_month or 0):02d}" if inv.period_month else "??"
+        y = f"{inv.period_year}" if inv.period_year else "????"
+        return f"Tuition {y}-{m}"
+    return inv.title or "Custom fee"
+
+
+@login_required
+@require_http_methods(["POST", "GET"])
+def invoice_pay(request, pk: int):
+    """
+    Create a Stripe Checkout Session for ONE invoice.
+    (GET is allowed so your 'Pay now' links can be simple anchors; POST also works.)
+    """
+    inv = get_object_or_404(TuitionInvoice, id=pk, student=request.user)
+
+    due = _due_amount(inv)
+    if due <= 0:
+        return HttpResponseBadRequest("Nothing due for this invoice.")
+
+    unit_amount = int((due * 100).quantize(Decimal("1")))  # Stripe takes minor units
+
+    success_url = request.build_absolute_uri(reverse("content:checkout-success"))
+    cancel_url  = request.build_absolute_uri(reverse("content:checkout-cancel"))
+
+    # Metadata is read by your webhook (you already wired this)
+    metadata = {
+        "student_id": str(request.user.id),
+        "tuition_invoice_id": str(inv.id),
+    }
 
     session = stripe.checkout.Session.create(
         mode="payment",
-        payment_method_types=["card"],
         line_items=[{
             "price_data": {
-                "currency": settings.STRIPE_CURRENCY,
-                "product_data": {"name": f"Tuition {inv.period_year}-{inv.period_month:02d}"},
-                "unit_amount": amount_cents,
+                "currency": "bdt",            # change if you use another currency
+                "unit_amount": unit_amount,
+                "product_data": {"name": _label(inv)},
             },
             "quantity": 1,
         }],
-        metadata={
-            "kind": "single",
-            "invoice_id": str(inv.id),
-            "student_id": str(request.user.id),
-        },
-        success_url=f"{settings.SITE_URL}{reverse('my-invoices')}?paid=1",
-        cancel_url=f"{settings.SITE_URL}{reverse('my-invoices')}?cancel=1",
+        success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url=cancel_url,
+        client_reference_id=str(request.user.id),
+        metadata=metadata,
     )
-    return redirect(session.url, permanent=False)
+    return HttpResponseRedirect(session.url)
+
+def _gen_txn_id(prefix: str = "BULK") -> str:
+    """Local fallback txn-id generator."""
+    return f"{prefix}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
 
-# ============== BULK PAY: ALL DUES (single line item) ==============
+
 @login_required
 def invoice_bulk_checkout_all(request: HttpRequest):
     """
@@ -945,22 +1164,23 @@ def invoice_bulk_checkout_all(request: HttpRequest):
         return HttpResponseNotAllowed(["POST"])
 
     summary = compute_dues_summary(request.user)
-    total_due = summary.total_due or Decimal("0")
+    total_due = Decimal(summary.total_due or 0)
     if total_due <= 0:
         messages.info(request, "You have no dues to pay.")
         return redirect("my-invoices")
 
-    amount_cents = int((total_due * Decimal("100")).to_integral_value())
+    amount_cents = int((total_due.quantize(Decimal("0.01")) * 100).to_integral_value())
 
     # Optional metadata: list unpaid invoice IDs
-    invoice_ids_csv = ",".join(str(i.id) for i in summary.unpaid)
+    unpaid = getattr(summary, "unpaid", [])
+    invoice_ids_csv = ",".join(str(i.id) for i in unpaid)
 
     session = stripe.checkout.Session.create(
         mode="payment",
         payment_method_types=["card"],
         line_items=[{
             "price_data": {
-                "currency": settings.STRIPE_CURRENCY,
+                "currency": getattr(settings, "STRIPE_CURRENCY", "usd"),
                 "product_data": {"name": "Pay all outstanding school fees"},
                 "unit_amount": amount_cents,
             },
@@ -1012,12 +1232,11 @@ def invoice_bulk_checkout_selected(request: HttpRequest):
         if balance <= 0:
             continue
         amount_cents = int((balance.quantize(Decimal("0.01")) * 100).to_integral_value())
+        name = f"Tuition {inv.period_year}-{inv.period_month:02d}" if inv.period_year and inv.period_month else (inv.title or "Custom fee")
         line_items.append({
             "price_data": {
                 "currency": currency,
-                "product_data": {
-                    "name": f"Tuition {inv.period_year}-{inv.period_month:02d}",
-                },
+                "product_data": {"name": name},
                 "unit_amount": amount_cents,
             },
             "quantity": 1,
@@ -1042,10 +1261,11 @@ def invoice_bulk_checkout_selected(request: HttpRequest):
 
 
 @login_required
-def invoice_bulk_checkout(request):
+@transaction.atomic
+def invoice_bulk_checkout(request: HttpRequest):
     """
     Backend-first: charge the user's *total due* by allocating across unpaid
-    invoices (oldest → newest). Swap this later to Stripe if you want.
+    invoices (oldest → newest). Uses a generated txn_id to satisfy NOT NULL.
     """
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
@@ -1057,12 +1277,101 @@ def invoice_bulk_checkout(request):
         messages.info(request, "You have no dues to pay.")
         return redirect("my-invoices")
 
-    # Allocate like a successful payment:
     allocate_payment_across_invoices(
         request.user,
         amount=total_due,
         provider="manual",
-        txn_id=None,
+        txn_id=_gen_txn_id("LOCAL"),  # <-- never NULL now
     )
+
     messages.success(request, f"Paid all dues (৳ {total_due}). Thank you!")
     return redirect("my-invoices")
+
+
+@login_required
+def download_latest_receipt(request, payment_id: int):
+    payment = get_object_or_404(TuitionPayment, id=payment_id, student=request.user)
+    receipt = payment.receipts.order_by("-created_at").first()
+    if not receipt or not receipt.pdf:
+        raise Http404("Receipt not available yet.")
+    return FileResponse(receipt.pdf.open("rb"), as_attachment=True, filename=f"receipt-{payment.id}.pdf")
+
+
+
+def _fmt_label(inv: TuitionInvoice) -> str:
+    if inv.kind == "monthly":
+        m = f"{inv.period_month:02d}" if inv.period_month else "??"
+        y = f"{inv.period_year}" if inv.period_year else "????"
+        return f"Tuition {y}-{m}"
+    return inv.title or "Custom fee"
+
+@login_required
+@require_POST
+def invoice_bulk_checkout_selected(request):
+    # Accept repeated invoice_ids (checkbox array) or CSV string
+    raw_ids = request.POST.getlist("invoice_ids") or []
+    if not raw_ids:
+        csv = request.POST.get("invoice_ids_csv", "")
+        if csv:
+            raw_ids = [p.strip() for p in csv.split(",") if p.strip()]
+
+    if not raw_ids:
+        return HttpResponseBadRequest("No invoices selected.")
+
+    # Only allow the student's own unpaid invoices
+    inv_qs = (TuitionInvoice.objects
+              .filter(id__in=raw_ids, student=request.user)
+              .order_by("period_year", "period_month", "id"))
+
+    invoices = list(inv_qs)
+    if not invoices:
+        return HttpResponseBadRequest("No valid invoices selected.")
+
+    # Build line items and compute each invoice's due now
+    line_items = []
+    invoice_map_parts = []  # "invoice_id:amount"
+    total_due = Decimal("0.00")
+
+    for inv in invoices:
+        amt = (inv.tuition_amount or Decimal("0")) - (inv.paid_amount or Decimal("0"))
+        if amt <= 0:
+            continue
+        # Stripe uses integer minor units
+        unit_amount = int((amt * 100).quantize(Decimal("1")))
+        line_items.append({
+            "price_data": {
+                "currency": "bdt",  # change if you use another currency
+                "unit_amount": unit_amount,
+                "product_data": {
+                    "name": _fmt_label(inv),
+                },
+            },
+            "quantity": 1,
+        })
+        invoice_map_parts.append(f"{inv.id}:{amt}")
+        total_due += amt
+
+    if not line_items:
+        return HttpResponseBadRequest("Selected invoices have no due balance.")
+
+    # Success/cancel URLs (adjust to your routes)
+    success_url = request.build_absolute_uri(reverse("content:checkout-success"))
+    cancel_url  = request.build_absolute_uri(reverse("content:checkout-cancel"))
+
+    # Metadata: we’ll split by these exact amounts in the webhook
+    metadata = {
+        "student_id": str(request.user.id),
+        "invoice_map": ",".join(invoice_map_parts),  # e.g. "12:2000.00,15:500.00"
+    }
+
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=line_items,
+        success_url=success_url + "?session_id={CHECKOUT_SESSION_ID}",
+        cancel_url=cancel_url,
+        client_reference_id=str(request.user.id),
+        metadata=metadata,
+    )
+
+    # Let the browser go to Stripe
+    return HttpResponseRedirect(session.url)

@@ -2013,3 +2013,24 @@ body { background: #fff !important; }
   .drawer-label{ font-size:.75rem; letter-spacing:.04em; color:#9ca3af; font-weight:700; }
   .drawer-sublink{ padding:.35rem 0 .35rem .5rem; color:#374151; display:block; text-decoration:none; }
   .drawer-sublink:hover{ color:#0d6efd; }
+
+
+
+  /* subtle page polish */
+  .invoice-card { border: 1px solid rgba(0,0,0,.05); border-radius: .75rem; overflow: hidden; }
+  .table thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; }
+  .row-overdue { --bs-table-bg: #fff5f5; }          /* light red row background */
+  .chip { padding:.25rem .5rem; border-radius: 50rem; font-size:.75rem; }
+  .chip-paid { background: #e8f7ef; color: #13795b; }
+  .chip-due  { background: #fff0f0; color: #b02a37; }
+  @media (max-width: 576px){
+    .hide-sm { display:none; }
+  }
+
+  .invoice-card{border:1px solid #e9ecef;border-radius:.5rem;background:#fff}
+  .chip{display:inline-block;padding:.15rem .5rem;border-radius:1rem;font-size:.85rem}
+  .chip-due{background:#fff3cd;border:1px solid #ffe69c;color:#8c6d1f}
+  .chip-paid{background:#e9f7ef;border:1px solid #b7ebc6;color:#1f6d40}
+  .row-overdue{--bs-table-bg: #fff7f7}
+  .hide-sm{display:none}
+  @media (min-width:768px){ .hide-sm{display:table-cell} }

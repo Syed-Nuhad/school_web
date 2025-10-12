@@ -13,26 +13,30 @@ from .views import (
     # Admissions flow
     AdmissionApplyView, AdmissionReviewView, AdmissionConfirmView, AdmissionReceiptView,
 
-    # Payments (generic + PayPal + Stripe webhook & dev checkout)
+    # Payments (generic + PayPal + Stripe webhook & checkout)
     create_payment_order, mark_payment_paid,
     paypal_create, paypal_capture,
     stripe_webhook, stripe_checkout_create, stripe_checkout_success, stripe_checkout_cancel,
 
-    # Finance overview + export (admin-style page)
-    finance_totals, finance_overview, finance_export_csv, receipt_by_txn, my_invoices, invoice_pay,
-    invoice_bulk_checkout_all, invoice_bulk_checkout_selected, invoice_bulk_checkout,
+    # Finance overview + export + receipts
+    finance_totals, finance_overview, finance_export_csv, receipt_by_txn,
+
+    # Student invoices
+    my_invoices, invoice_pay,
+    invoice_bulk_checkout_all, invoice_bulk_checkout_selected, invoice_bulk_checkout, download_latest_receipt,
 )
 
 # These views live in ui.views but we expose them under the `content:` namespace
-# so existing templates like {% url 'content:exam_routines_page' %} keep working.
 from ui.views import (
-    exam_routines_page, exam_routine_detail, exam_routines_json, exam_routine_detail_json, exam_routine_detail_page,
+    exam_routines_page, exam_routine_detail, exam_routines_json,
+    exam_routine_detail_json, exam_routine_detail_page,
     bus_routes_page, bus_route_detail_page, bus_routes_json, bus_route_detail_json,
     marksheet_search, marksheet_detail, marksheet_pdf,
 )
 
 app_name = "content"
 
+# Secret manage prefix (optional)
 P = getattr(settings, "SECRET_LOGIN_PREFIX", "x9f83").strip("/")
 
 urlpatterns = [
@@ -47,19 +51,19 @@ urlpatterns = [
     path("confirm/<int:pk>/", AdmissionConfirmView.as_view(), name="confirm"),
     path("receipt/<int:pk>/", AdmissionReceiptView.as_view(), name="receipt"),
 
-    # Payment hooks (server-computed amount + mark-paid callback)
+    # Server-computed amount + admission mark-paid callback
     path("payment/<int:pk>/create/", create_payment_order, name="payment-create"),
     path("payment/<int:pk>/mark-paid/", mark_payment_paid, name="payment-mark-paid"),
 
-    # Optional: dev PayPal helpers
+    # ---------- PayPal helpers (dev) ----------
     path("pay/paypal/create/", paypal_create, name="paypal_create"),
     path("pay/paypal/capture/", paypal_capture, name="paypal_capture"),
 
-    # Optional: dev Stripe checkout (admin/staff-triggered) + webhook
+    # ---------- Stripe checkout + webhook ----------
     path("pay/stripe/create/<int:invoice_id>/", stripe_checkout_create, name="stripe-checkout-create"),
     path("pay/stripe/success/", stripe_checkout_success, name="stripe-checkout-success"),
     path("pay/stripe/cancel/", stripe_checkout_cancel, name="stripe-checkout-cancel"),
-    path("pay/stripe/webhook/", stripe_webhook, name="stripe-webhook"),
+    path("stripe/webhook/", stripe_webhook, name="stripe-webhook"),
 
     # ---------- Manage (teacher/admin) behind secret prefix ----------
     path(f"{P}/manage/slides/create/", manage_slide_create, name="manage_slide_create"),
@@ -84,16 +88,20 @@ urlpatterns = [
     path("results/marksheets/<int:pk>/", marksheet_detail, name="marksheet_detail"),
     path("results/marksheets/<int:pk>/pdf/", marksheet_pdf, name="marksheet_pdf"),
 
-    # ---------- Finance (admin-style overview + CSV + receipt) ----------
+    # ---------- Finance (overview + CSV + receipt by txn) ----------
     path("api/finance/totals/", finance_totals, name="finance_totals"),
     path("admin/finance/overview/", finance_overview, name="finance-overview"),
     path("admin/finance/export/", finance_export_csv, name="finance-export"),
     path("admin/finance/receipt/txn/<str:txn_id>/", receipt_by_txn, name="receipt-by-txn"),
+
+    # ---------- Student invoices (self-service) ----------
     path("me/invoices/", my_invoices, name="my-invoices"),
     path("me/invoices/<int:invoice_id>/pay/", invoice_pay, name="invoice-pay"),
     path("me/invoices/checkout/all/", invoice_bulk_checkout_all, name="invoice-bulk-checkout-all"),
     path("me/invoices/checkout/selected/", invoice_bulk_checkout_selected, name="invoice-bulk-checkout-selected"),
     path("me/invoices/checkout/", invoice_bulk_checkout, name="invoice-bulk-checkout"),
+    path("receipts/<int:payment_id>/download/", download_latest_receipt, name="receipt-download"),
+    path("checkout/selected/", invoice_bulk_checkout_selected, name="invoice-bulk-checkout-selected"),
 ]
 
 # Media (dev)

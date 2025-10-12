@@ -131,6 +131,27 @@ class OwnableAdminMixin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+def _safe_unregister(model):
+    try:
+        admin.site.unregister(model)
+    except NotRegistered:
+        pass
+
+for _m in [
+    Banner, Notice, TimelineEvent, GalleryItem, AboutSection, AcademicCalendarItem,
+    Course, AdmissionApplication, FunctionHighlight, CollegeFestival, Member,
+    ContactInfo, ContactMessage, FooterSettings, GalleryPost, AcademicClass,
+    AttendanceSession, ExamRoutine, ExamTerm, BusRoute, Subject,
+    StudentMarksheet, StudentMarksheetItem, IncomeCategory, ExpenseCategory,
+    Income, Expense, TuitionInvoice, TuitionPayment, StudentProfile, PaymentReceipt,
+    SiteBranding,
+]:
+    _safe_unregister(_m)
+
+
+
+
+
 
 @admin.register(SiteBranding)
 class SiteBrandingAdmin(OwnableAdminMixin):
@@ -400,7 +421,7 @@ class AdmissionApplicationAdmin(OwnableAdminMixin):
         "fee_base_subtotal","fee_selected_total","fee_total",
         "created_at",
     )
-    actions = ["approve_selected"]
+    actions = ["approve_selected", "approve_and_enroll"]
 
     @admin.action(description="Approve selected applications (create profile + auto roll)")
     def approve_selected(self, request, queryset):
@@ -988,51 +1009,93 @@ class ExpenseAdmin(OwnableAdminMixin):
 class TuitionPaymentInline(admin.TabularInline):
     model = TuitionPayment
     extra = 0
-    fields = ("amount", "provider", "txn_id", "paid_on", "receipt_link")  # ← add
+    fields = ("amount", "provider", "txn_id", "paid_on", "receipt_link")
     readonly_fields = ("receipt_link",)
     show_change_link = True
 
     def receipt_link(self, obj):
         if not obj.pk:
             return "—"
-        rec = PaymentReceipt.objects.filter(invoice=obj.invoice, txn_id=obj.txn_id).first()
+        rec = PaymentReceipt.objects.filter(payment=obj).first()
         if rec and rec.pdf:
-            return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">Download PDF</a>')
-        # fallback: look by txn only
-        rec = PaymentReceipt.objects.filter(txn_id=obj.txn_id).first()
-        if rec and rec.pdf:
-            return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">Download PDF</a>')
+            return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">PDF</a>')
+        # fallback by txn_id
+        if obj.txn_id:
+            rec = PaymentReceipt.objects.filter(txn_id=obj.txn_id).first()
+            if rec and rec.pdf:
+                return mark_safe(f'<a href="{rec.pdf.url}" target="_blank">PDF</a>')
         return "—"
     receipt_link.short_description = "Receipt"
 
 
 @admin.register(TuitionInvoice)
-class TuitionInvoiceAdmin(OwnableAdminMixin):
-    list_display = ("student", "period_year", "period_month", "tuition_amount", "paid_amount", "balance", "due_date")
-    list_filter  = ("period_year", "period_month")
-    search_fields = ("student__email", "student__username")
+class TuitionInvoiceAdmin(admin.ModelAdmin):
+    list_display = (
+        "student", "kind", "title_or_period", "tuition_amount",
+        "paid_amount", "balance", "due_date", "created_at",
+    )
+    list_filter = ("kind", "period_year", "period_month", "due_date", "created_at")
+    search_fields = ("student__username", "student__first_name", "student__last_name", "title")
+    autocomplete_fields = ("student",)
+    readonly_fields = ("created_at", "updated_at")
     inlines = [TuitionPaymentInline]
+    ordering = ("-created_at",)
 
-    actions = ["print_outstanding"]
+    @admin.display(description="Title / Period")
+    def title_or_period(self, obj):
+        if obj.kind == "monthly" and obj.period_year and obj.period_month:
+            return f"{obj.period_year}-{obj.period_month:02d}"
+        return obj.title or "—"
 
-    @admin.display(description="Pay (dev)")
-    def pay_dev(self, obj):
-        url = reverse("content:stripe-checkout-create", args=[obj.id])
-        return format_html('<a class="button" href="{}">Stripe Checkout</a>', url)
-    def print_outstanding(self, request, queryset):
-        """
-        Opens the printable Outstanding Tuition view with only selected invoices
-        (when none selected, we print all outstanding for current month).
-        """
-        ids = list(queryset.values_list("id", flat=True))
-        request.session["finance_outstanding_ids"] = ids
-        self.message_user(request, "Opening printable outstanding list…")
-        from django.urls import reverse
-        return TemplateResponse(request, "admin/finance/overview.html", {
-            "trigger_only_outstanding": True,  # the view will compute outstanding anyway
-        })
-    print_outstanding.short_description = "Open printable Outstanding Tuition list"
+    @admin.display(description="Balance")
+    def balance(self, obj):
+        try:
+            return obj.balance
+        except Exception:
+            return 0
 
+
+@admin.register(TuitionPayment)
+class TuitionPaymentAdmin(admin.ModelAdmin):
+    list_display = ("invoice", "amount", "provider", "txn_id", "paid_on", "created_at")
+    list_filter = ("provider", "paid_on", "created_at")
+    search_fields = ("invoice__student__username", "txn_id", "provider")
+    autocomplete_fields = ("invoice",)
+    ordering = ("-paid_on", "-id")
+    def gateway_payload_pretty(self, obj):
+        import json
+        if not obj.gateway_payload:
+            return "—"
+        return f"<pre style='white-space:pre-wrap'>{json.dumps(obj.gateway_payload, indent=2, ensure_ascii=False)}</pre>"
+    gateway_payload_pretty.allow_tags = True
+    gateway_payload_pretty.short_description = "Gateway payload"
+# @admin.register(TuitionInvoice)
+# class TuitionInvoiceAdmin(OwnableAdminMixin):
+#     list_display = ("student", "period_year", "period_month", "tuition_amount", "paid_amount", "balance", "due_date")
+#     list_filter  = ("period_year", "period_month")
+#     search_fields = ("student__email", "student__username")
+#     inlines = [TuitionPaymentInline]
+#
+#     actions = ["print_outstanding"]
+#
+#     @admin.display(description="Pay (dev)")
+#     def pay_dev(self, obj):
+#         url = reverse("content:stripe-checkout-create", args=[obj.id])
+#         return format_html('<a class="button" href="{}">Stripe Checkout</a>', url)
+#     def print_outstanding(self, request, queryset):
+#         """
+#         Opens the printable Outstanding Tuition view with only selected invoices
+#         (when none selected, we print all outstanding for current month).
+#         """
+#         ids = list(queryset.values_list("id", flat=True))
+#         request.session["finance_outstanding_ids"] = ids
+#         self.message_user(request, "Opening printable outstanding list…")
+#         from django.urls import reverse
+#         return TemplateResponse(request, "admin/finance/overview.html", {
+#             "trigger_only_outstanding": True,  # the view will compute outstanding anyway
+#         })
+#     print_outstanding.short_description = "Open printable Outstanding Tuition list"
+#
 
 # ---- Admin-level Finance Overview page (URL under admin/finance/overview) ----
 class FinanceAdminSiteMixin(OwnableAdminMixin):
@@ -1192,25 +1255,27 @@ def _patched_get_urls():
 admin.site.get_urls = _patched_get_urls
 
 
-
-
-
-
 @admin.register(PaymentReceipt)
 class PaymentReceiptAdmin(OwnableAdminMixin):
-    list_display = ("id", "student", "amount", "provider", "txn_id", "created_at", "pdf_link")
+    list_display = ("id", "student", "amount", "provider", "txn_id", "created_at", "payment", "pdf_link")
     search_fields = ("txn_id", "student__username", "student__email")
     readonly_fields = ("pdf_link",)
     date_hierarchy = "created_at"
+    ordering = ("-created_at", "-id")
 
     def pdf_link(self, obj):
-        if obj.pdf:
-            return mark_safe(f'<a href="{obj.pdf.url}" target="_blank">Open PDF</a>')
+        # Be defensive: pdf may be None, or have no .url yet
+        pdf = getattr(obj, "pdf", None)
+        try:
+            if pdf and getattr(pdf, "url", ""):
+                return mark_safe(f'<a href="{pdf.url}" target="_blank">Open PDF</a>')
+        except Exception:
+            pass
         return "—"
     pdf_link.short_description = "PDF"
 
 
-
+# ---- TuitionInvoice form ----
 class TuitionInvoiceForm(forms.ModelForm):
     class Meta:
         model = TuitionInvoice
@@ -1219,13 +1284,10 @@ class TuitionInvoiceForm(forms.ModelForm):
             "period_year", "period_month",
             "tuition_amount", "paid_amount", "due_date",
         )
-        widgets = {
-            "due_date": forms.DateInput(attrs={"type": "date"}),
-        }
+        widgets = {"due_date": forms.DateInput(attrs={"type": "date"})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Default to “custom”; admin can switch to “monthly” if needed.
         if not self.instance.pk:
             self.fields["kind"].initial = "custom"
             self.fields["paid_amount"].initial = 0
@@ -1240,29 +1302,18 @@ class TuitionInvoiceForm(forms.ModelForm):
         if kind == "custom":
             if not title:
                 self.add_error("title", "Custom invoices need a title.")
-            # no month/year required
+            # Ensure monthly fields are blanked for custom
             cleaned["period_year"] = None
             cleaned["period_month"] = None
-        else:  # monthly
+        else:
+            # Monthly invoices must have year + month
             if not y or not m:
                 self.add_error("period_month", "Monthly invoices require year and month.")
         return cleaned
 
 
-@admin.register(TuitionInvoice)
-class TuitionInvoiceAdmin(admin.ModelAdmin):
-    form = TuitionInvoiceForm
-    list_display = (
-        "student", "kind", "title", "period_year", "period_month",
-        "tuition_amount", "paid_amount", "due_date", "created_at",
-    )
-    list_filter = ("kind", "period_year", "period_month")
-    search_fields = ("student__username", "student__first_name", "student__last_name", "title")
-    autocomplete_fields = ("student",)
-    readonly_fields = ("created_at",)
+# ---- TuitionInvoice admin (ensure there is ONLY this one in your project) ----
 
-@admin.register(TuitionPayment)
-class TuitionPaymentAdmin(admin.ModelAdmin):
-    list_display = ("invoice", "amount", "provider", "txn_id", "paid_on", "created_at")
-    search_fields = ("invoice__student__username", "txn_id", "provider")
-    list_filter = ("provider", "paid_on")
+
+
+

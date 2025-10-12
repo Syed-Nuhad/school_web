@@ -1,5 +1,7 @@
 # content/models.py
+import uuid
 from decimal import Decimal
+from io import BytesIO
 from urllib.parse import urlparse, parse_qs, unquote
 from django.apps import apps
 from django.conf import settings
@@ -7,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models, transaction
@@ -16,6 +19,8 @@ from django.utils import timezone
 import re
 from django.db.models.signals import post_save, post_delete, post_migrate
 from django.dispatch import receiver
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 User = settings.AUTH_USER_MODEL
 
@@ -24,6 +29,19 @@ USER_MODEL = settings.AUTH_USER_MODEL
 
 # For querying/creating users in code
 UserModel = get_user_model()
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def branding_upload_to(instance, filename):
     dt = timezone.now()
@@ -684,7 +702,6 @@ class Course(models.Model):
     def __str__(self):
         return self.title
 
-
 # ---------- Admissions ----------
 
 def admission_photo_upload_to(instance, filename):
@@ -710,34 +727,14 @@ class AdmissionApplication(models.Model):
     so that later fee changes in the Course model won't affect past applications.
     """
 
-    full_name = models.CharField(
-        max_length=200,
-        help_text="Applicant’s full legal name.",
-    )
-    email = models.EmailField(
-        blank=True,
-        help_text="Applicant’s email (optional, but helps for communication).",
-    )
-    phone = models.CharField(
-        max_length=20,
-        help_text="Primary contact number (WhatsApp preferred if available).",
-    )
-    date_of_birth = models.DateField(
-        blank=True, null=True,
-        help_text="Optional, used for record verification.",
-    )
-    address = models.TextField(
-        blank=True,
-        help_text="Present address with district/upazila for correspondence.",
-    )
-    guardian_name = models.CharField(
-        max_length=200, blank=True,
-        help_text="Parent/guardian full name (optional).",
-    )
-    guardian_phone = models.CharField(
-        max_length=20, blank=True,
-        help_text="Parent/guardian phone number (optional).",
-    )
+    # --- applicant info ---
+    full_name = models.CharField(max_length=200, help_text="Applicant’s full legal name.")
+    email = models.EmailField(blank=True, help_text="Applicant’s email (optional, but helps for communication).")
+    phone = models.CharField(max_length=20, help_text="Primary contact number (WhatsApp preferred if available).")
+    date_of_birth = models.DateField(blank=True, null=True, help_text="Optional, used for record verification.")
+    address = models.TextField(blank=True, help_text="Present address with district/upazila for correspondence.")
+    guardian_name = models.CharField(max_length=200, blank=True, help_text="Parent/guardian full name (optional).")
+    guardian_phone = models.CharField(max_length=20, blank=True, help_text="Parent/guardian phone number (optional).")
 
     desired_course = models.ForeignKey(
         "content.Course",
@@ -746,136 +743,59 @@ class AdmissionApplication(models.Model):
         null=True, blank=True,
         help_text="The course the applicant is applying to.",
     )
-    shift = models.CharField(
-        max_length=20, blank=True,
-        help_text="Preferred shift (Morning/Day/Evening).",
-    )
+    shift = models.CharField(max_length=20, blank=True, help_text="Preferred shift (Morning/Day/Evening).")
 
-    previous_school = models.CharField(
-        max_length=200, blank=True,
-        help_text="Last attended school/college (optional).",
-    )
-    ssc_gpa = models.DecimalField(
-        max_digits=3, decimal_places=2, blank=True, null=True,
-        help_text="Secondary exam GPA (or equivalent), if applicable.",
-    )
+    previous_school = models.CharField(max_length=200, blank=True, help_text="Last attended school/college (optional).")
+    ssc_gpa = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True,
+                                  help_text="Secondary exam GPA (or equivalent), if applicable.")
 
-    photo = models.ImageField(
-        upload_to="admissions/photos/", blank=True, null=True,
-        help_text="Passport-size photo (optional in demo).",
-    )
-    transcript = models.FileField(
-        upload_to="admissions/transcripts/", blank=True, null=True,
-        help_text="Academic transcript/certificate (optional).",
-    )
-    message = models.TextField(
-        blank=True,
-        help_text="Any additional information or questions.",
-    )
+    photo = models.ImageField(upload_to=admission_photo_upload_to, blank=True, null=True,
+                              help_text="Passport-size photo (optional in demo).")
+    transcript = models.FileField(upload_to=admission_doc_upload_to, blank=True, null=True,
+                                  help_text="Academic transcript/certificate (optional).")
+    message = models.TextField(blank=True, help_text="Any additional information or questions.")
 
-    # Chosen add-ons
-    add_bus = models.BooleanField(
-        default=False,
-        help_text="Applicant opts for transport service.",
-    )
-    add_hostel = models.BooleanField(
-        default=False,
-        help_text="Applicant opts for hostel/accommodation.",
-    )
-    add_marksheet = models.BooleanField(
-        default=False,
-        help_text="Applicant opts for marksheet/certification processing.",
-    )
+    # --- user-selectable add-ons (optional) ---
+    add_bus = models.BooleanField(default=False, help_text="Applicant opts for transport service.")
+    add_hostel = models.BooleanField(default=False, help_text="Applicant opts for hostel/accommodation.")
+    add_marksheet = models.BooleanField(default=False, help_text="Applicant opts for marksheet/certification processing.")
 
-    # Base rows (allow toggling in UI)
-    add_admission = models.BooleanField(
-        default=False,
-        help_text="Include Admission fee row in snapshot.",
-    )
-    add_tuition = models.BooleanField(
-        default=False,
-        help_text="Include First Month Tuition row in snapshot.",
-    )
-    add_exam = models.BooleanField(
-        default=False,
-        help_text="Include Exam fee row in snapshot.",
-    )
+    # --- mandatory base rows (non-editable on forms) ---
+    add_admission = models.BooleanField(default=True, editable=False, help_text="Always included: Admission fee row.")
+    add_tuition = models.BooleanField(default=True, editable=False, help_text="Always included: First Month Tuition row.")
+    add_exam = models.BooleanField(default=True, editable=False, help_text="Always included: Exam fee row.")
 
-    # Fee snapshot (copied from Course at the time of submit)
-    fee_admission = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of admission fee at submit time.",
-    )
-    fee_tuition = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of first-month tuition at submit time.",
-    )
-    fee_exam = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of exam fee at submit time.",
-    )
-    fee_bus = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of transport fee at submit time.",
-    )
-    fee_hostel = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of hostel fee at submit time.",
-    )
-    fee_marksheet = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Snapshot of marksheet fee at submit time.",
-    )
+    # --- fee snapshots (copied from Course at submit/change) ---
+    fee_admission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_tuition   = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_exam      = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_bus       = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_hostel    = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    fee_marksheet = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
 
-    fee_base_subtotal = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Admission + First Month Tuition + Exam (if chosen).",
-    )
-    fee_selected_total = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Total of all selected rows (base + add-ons).",
-    )
+    # --- totals (computed) ---
+    fee_base_subtotal  = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"),
+                                             help_text="Admission + First Month Tuition + Exam.")
+    fee_selected_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"),
+                                             help_text="Total of all selected rows (base + add-ons).")
+    fee_total          = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"),
+                                             help_text="Legacy mirror of fee_selected_total.")
 
-    # legacy compatibility
-    fee_total = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"),
-        help_text="Legacy total; prefer fee_selected_total.",
-    )
+    # --- payment tracking ---
+    PAYMENT_STATUS = [("pending", "Pending"), ("paid", "Paid"), ("failed", "Failed")]
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default="pending")
+    payment_provider = models.CharField(max_length=30, blank=True)
+    payment_txn_id = models.CharField(max_length=100, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
 
-    PAYMENT_STATUS = [
-        ("pending", "Pending"),
-        ("paid", "Paid"),
-        ("failed", "Failed"),
-    ]
-    payment_status = models.CharField(
-        max_length=20, choices=PAYMENT_STATUS, default="pending",
-        help_text="Status of the application payment, if any.",
-    )
-    payment_provider = models.CharField(
-        max_length=30, blank=True,
-        help_text="e.g., 'paypal', 'bkash' (set when payment succeeds).",
-    )
-    payment_txn_id = models.CharField(
-        max_length=100, blank=True,
-        help_text="Gateway transaction/capture ID.",
-    )
-    paid_at = models.DateTimeField(
-        null=True, blank=True,
-        help_text="Timestamp recorded when payment_status becomes Paid.",
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When this application was submitted.",
-    )
-
-
+    # --- enrollment targets (for profile creation) ---
     enroll_class = models.ForeignKey("content.AcademicClass", on_delete=models.PROTECT, null=True, blank=True)
     enroll_section = models.CharField(max_length=20, blank=True)
     generated_roll = models.PositiveIntegerField(null=True, blank=True)
 
-
-    # ---- helpers ----
+    # --------- helpers ---------
     def _next_roll(self):
         from django.db.models import Max
         if not self.enroll_class:
@@ -883,59 +803,121 @@ class AdmissionApplication(models.Model):
         q = StudentProfile.objects.filter(school_class=self.enroll_class)
         if self.enroll_section:
             q = q.filter(section__iexact=self.enroll_section)
-        last = q.aggregate(m=Max('roll_number'))['m'] or 0
+        last = q.aggregate(m=Max("roll_number"))["m"] or 0
         return last + 1
+
+    # --- snapshot & totals ---
+    def _snapshot_fees_from_course(self, force: bool = False):
+        """
+        Copy current Course fee fields into this application once,
+        or again if force=True (e.g. course changed before approval).
+        """
+        if not self.desired_course_id:
+            return
+        c = self.desired_course
+
+        all_zero = all(
+            Decimal(getattr(self, f, 0) or 0) == 0
+            for f in ("fee_admission", "fee_tuition", "fee_exam", "fee_bus", "fee_hostel", "fee_marksheet")
+        )
+        if not force and not all_zero:
+            return
+
+        self.fee_admission = Decimal(c.admission_fee or 0)
+        self.fee_tuition   = Decimal(c.first_month_tuition or 0)
+        self.fee_exam      = Decimal(c.exam_fee or 0)
+        self.fee_bus       = Decimal(c.bus_fee or 0)
+        self.fee_hostel    = Decimal(c.hostel_fee or 0)
+        self.fee_marksheet = Decimal(c.marksheet_fee or 0)
+
+    def _recompute_totals(self):
+        adm = Decimal(self.fee_admission or 0)
+        tui = Decimal(self.fee_tuition   or 0)
+        exm = Decimal(self.fee_exam      or 0)
+        bus = Decimal(self.fee_bus       or 0) if self.add_bus else Decimal("0.00")
+        hst = Decimal(self.fee_hostel    or 0) if self.add_hostel else Decimal("0.00")
+        mks = Decimal(self.fee_marksheet or 0) if self.add_marksheet else Decimal("0.00")
+
+        self.fee_base_subtotal  = adm + tui + exm
+        self.fee_selected_total = self.fee_base_subtotal + bus + hst + mks
+        self.fee_total = self.fee_selected_total  # legacy mirror
+
+    # --- validation & save ---
+    def clean(self):
+        super().clean()
+        # enforce mandatory base rows in all pathways
+        self.add_admission = True
+        self.add_tuition = True
+        self.add_exam = True
+
+    def save(self, *args, **kwargs):
+        # Force mandatory base rows ON
+        self.add_admission = True
+        self.add_tuition = True
+        self.add_exam = True
+
+        # If new OR course changed, resnapshot fees
+        course_changed = False
+        if self.pk:
+            try:
+                old = type(self).objects.only("desired_course_id").get(pk=self.pk)
+                course_changed = (old.desired_course_id != self.desired_course_id)
+            except type(self).DoesNotExist:
+                course_changed = True
+        else:
+            course_changed = True
+
+        if self.desired_course_id:
+            self._snapshot_fees_from_course(force=course_changed)
+
+        # Totals from snapshot + selections
+        self._recompute_totals()
+
+        super().save(*args, **kwargs)
 
     @transaction.atomic
     def approve(self, by_user=None, create_first_month_invoice=True):
         """
-        Create/attach user, create StudentProfile, auto-assign roll, and (optionally)
-        create the current month's tuition invoice.
+        Create/attach user, create StudentProfile, auto-assign roll, and create invoices:
+          • One-time custom: Admission (mandatory), Exam (mandatory), Marksheet (optional)
+          • Current month: Tuition (mandatory) + Bus/Hostel add-ons if chosen
         """
         from django.contrib.auth import get_user_model
-        from .models import TuitionInvoice  # local import to avoid cycles
         User = get_user_model()
 
         # 1) Find or create the User for this applicant
         user = None
-        if getattr(self, 'email', None):
+        if getattr(self, "email", None):
             user = User.objects.filter(email__iexact=self.email).first()
-        if not user and getattr(self, 'phone', None):
+        if not user and getattr(self, "phone", None):
             user = User.objects.filter(username__iexact=self.phone).first()
 
         if not user:
-            username = (self.email or self.phone or f"student-{timezone.now().timestamp()}").split('@')[0]
+            username = (self.email or self.phone or f"student-{timezone.now().timestamp()}").split("@")[0]
             user = User.objects.create(
                 username=username,
-                email=getattr(self, 'email', '') or None,
-                first_name=(self.full_name or '').split(' ')[0],
-                last_name=' '.join((self.full_name or '').split(' ')[1:]),
+                email=(self.email or None),
+                first_name=(self.full_name or "").split(" ")[0],
+                last_name=" ".join((self.full_name or "").split(" ")[1:]),
             )
-        # ensure role
-        if getattr(user, 'role', None) and user.role != 'STUDENT':
-            user.role = 'STUDENT'
-            user.save(update_fields=['role'])
+        if getattr(user, "role", None) and user.role != "STUDENT":
+            user.role = "STUDENT"
+            user.save(update_fields=["role"])
 
-        # 2) Ensure enroll_class/section is set
-        if not self.enroll_class and getattr(self, 'desired_course_id', None):
-            # if you map course->class elsewhere, set here; otherwise require admin to choose class in admin
-            pass
-
-        # 3) Create/Update StudentProfile with next roll
+        # 2) Create/Update StudentProfile with next roll
         sp, _ = StudentProfile.objects.get_or_create(
             user=user,
             defaults={
-                'school_class': self.enroll_class,
-                'section': self.enroll_section or '',
-                'roll_number': self._next_roll() or 1,
-                'joined_on': timezone.now().date(),
-            }
+                "school_class": self.enroll_class,
+                "section": self.enroll_section or "",
+                "roll_number": self._next_roll() or 1,
+                "joined_on": timezone.now().date(),
+            },
         )
-        # keep in sync if admin changed class/section in the form before approval
         changed = False
         if self.enroll_class and sp.school_class_id != self.enroll_class_id:
             sp.school_class = self.enroll_class; changed = True
-        if self.enroll_section and (sp.section or '') != (self.enroll_section or ''):
+        if self.enroll_section and (sp.section or "") != (self.enroll_section or ""):
             sp.section = self.enroll_section; changed = True
         if not sp.roll_number:
             sp.roll_number = self._next_roll() or 1; changed = True
@@ -946,25 +928,46 @@ class AdmissionApplication(models.Model):
         if sp.roll_number and self.generated_roll != sp.roll_number:
             self.generated_roll = sp.roll_number
 
-        # 4) Optionally create a first-month invoice (for tuition)
+        # ---------- FEES FROM SNAPSHOT ----------
+        adm_fee  = Decimal(self.fee_admission or 0)
+        tui_fee  = Decimal(self.fee_tuition   or 0)
+        exam_fee = Decimal(self.fee_exam      or 0)
+
+        # Add-ons (optional, monthly)
+        bus_on       = bool(self.add_bus)
+        hostel_on    = bool(self.add_hostel)
+        marksheet_on = bool(self.add_marksheet)
+
+        bus_fee_m     = Decimal(self.fee_bus       or 0)
+        hostel_fee_m  = Decimal(self.fee_hostel    or 0)
+        marksheet_fee = Decimal(self.fee_marksheet or 0)  # one-time
+
+        # ---------- persist selections on the profile for future months ----------
+        sp.has_bus_service    = bus_on
+        sp.has_hostel_seat    = hostel_on
+        sp.bus_monthly_fee    = bus_fee_m if bus_on else Decimal("0.00")
+        sp.hostel_monthly_fee = hostel_fee_m if hostel_on else Decimal("0.00")
+        sp.save(update_fields=["has_bus_service", "has_hostel_seat", "bus_monthly_fee", "hostel_monthly_fee"])
+
+        # ---------- one-time custom invoices (mandatory base) ----------
+        today = timezone.localdate()
+        _ensure_custom_invoice(user, "Admission Fee", adm_fee, due_date=today)
+        _ensure_custom_invoice(user, "Exam Fee",      exam_fee, due_date=today)
+
+        # Marksheet is optional (one-time)
+        if marksheet_on and marksheet_fee > 0:
+            _ensure_custom_invoice(user, "Exact Marksheet", marksheet_fee, due_date=today)
+
+        # ---------- this month’s tuition (mandatory) with add-ons merged ----------
         if create_first_month_invoice:
-            today = timezone.now().date()
-            TuitionInvoice.objects.get_or_create(
-                student=user,
-                period_year=today.year,
-                period_month=today.month,
-                defaults={
-                    'tuition_amount': getattr(self, 'fee_tuition', 0) or getattr(self, 'fee_total', 0) or 0,
-                    'due_date': today.replace(day=28),  # simple default; adjust as you like
-                }
-            )
+            month_total = tui_fee + (bus_fee_m if bus_on else 0) + (hostel_fee_m if hostel_on else 0)
+            _ensure_monthly_invoice(user, today.year, today.month, month_total, due_date=today.replace(day=28))
 
-        # 5) mark approved (and paid if you want approval to imply payment)
-        if self.payment_status == 'pending':
-            self.payment_status = 'approved'
-        self.save(update_fields=['payment_status', 'generated_roll'])
+        # 5) mark approved
+        if self.payment_status == "pending":
+            self.payment_status = "approved"
+        self.save(update_fields=["payment_status", "generated_roll"])
         return sp
-
 
     class Meta:
         ordering = ("-created_at",)
@@ -974,16 +977,61 @@ class AdmissionApplication(models.Model):
     def __str__(self):
         return f"{self.full_name} — {self.desired_course}"
 
-    # helper
+    # --- payment helper ---
     def mark_paid(self, provider: str, txn_id: str):
-        """
-        Mark the application as paid and persist provider + transaction id.
-        """
         self.payment_provider = provider
         self.payment_txn_id = txn_id
         self.payment_status = "paid"
         self.paid_at = timezone.now()
         self.save(update_fields=["payment_provider", "payment_txn_id", "payment_status", "paid_at"])
+
+def _ensure_custom_invoice(student, title, amount, due_date=None):
+    """
+    Idempotent custom invoice (one-time). If an unpaid matching title exists,
+    reuse it; otherwise create it.
+    """
+    amount = Decimal(amount or 0)
+    if amount <= 0:
+        return None
+    qs = TuitionInvoice.objects.filter(
+        student=student, kind="custom", title=title, paid_amount__lt=F("tuition_amount")
+    )
+    inv = qs.first()
+    if inv:
+        return inv
+    return TuitionInvoice.objects.create(
+        student=student,
+        kind="custom",
+        title=title,
+        tuition_amount=amount,
+        due_date=due_date or timezone.localdate(),
+    )
+
+
+def _ensure_monthly_invoice(student, year, month, amount, due_date=None):
+    """
+    Unique monthly invoice (thanks to the UniqueConstraint).
+    If it exists and is still unpaid, keep it in sync with the computed amount.
+    """
+    amount = Decimal(amount or 0)
+    inv, created = TuitionInvoice.objects.get_or_create(
+        student=student,
+        kind="monthly",
+        period_year=year,
+        period_month=month,
+        defaults={
+            "tuition_amount": amount,
+            "due_date": due_date or timezone.localdate().replace(day=28),
+        },
+    )
+    if not created and inv.paid_amount == 0 and amount > 0 and inv.tuition_amount != amount:
+        inv.tuition_amount = amount
+        if not inv.due_date:
+            inv.due_date = due_date or timezone.localdate().replace(day=28)
+        inv.save(update_fields=["tuition_amount", "due_date"])
+    return inv
+
+
 
 
 # ---------- Function Highlights ----------
@@ -2246,7 +2294,13 @@ class TuitionInvoice(models.Model):
             models.Index(fields=["student", "kind"]),
             models.Index(fields=["period_year", "period_month"]),
         ]
+    paid_at = models.DateTimeField(blank=True, null=True)  # <-- new
 
+    def maybe_mark_paid(self):
+        """Call this after updating paid_amount."""
+        if (self.tuition_amount or 0) <= (self.paid_amount or 0) and not self.paid_at:
+            self.paid_at = timezone.now()
+            self.save(update_fields=["paid_at"])
     @property
     def balance(self) -> Decimal:
         return (self.tuition_amount or Decimal("0")) - (self.paid_amount or Decimal("0"))
@@ -2287,17 +2341,50 @@ class TuitionPayment(models.Model):
     txn_id   = models.CharField(max_length=120, blank=True, null=True)  # allow NULL for manual/offline
     paid_on  = models.DateField(default=timezone.localdate)
     created_at = models.DateTimeField(auto_now_add=True)
+    GATEWAY_STRIPE = "stripe"
+    GATEWAY_PAYPAL = "paypal"
+    GATEWAY_MANUAL = "manual"
+    GATEWAY_CHOICES = [
+        (GATEWAY_STRIPE, "Stripe"),
+        (GATEWAY_PAYPAL, "PayPal"),
+        (GATEWAY_MANUAL, "Manual"),
+    ]
 
+    gateway = models.CharField(max_length=16, choices=GATEWAY_CHOICES, default=GATEWAY_MANUAL)
+    gateway_ref = models.CharField(max_length=128, blank=True, null=True, db_index=True)   # PI / charge / capture_id
+    gateway_payer_email = models.EmailField(blank=True, null=True)
+    gateway_payer_id = models.CharField(max_length=128, blank=True, null=True)            # Stripe customer / PayPal payer_id
+    gateway_payload = models.JSONField(blank=True, null=True)                              # Full event/capture JSON
+
+    paid_at = models.DateTimeField(blank=True, null=True)  # set when funds confirmed
     class Meta:
         ordering = ["-paid_on", "-id"]
         constraints = [
             # Enforce uniqueness only when txn_id IS NOT NULL
             models.UniqueConstraint(
-                fields=["invoice", "txn_id"],
+                fields=["invoice", "txn_id", "provider", "gateway_ref"],
                 condition=Q(txn_id__isnull=False),
                 name="uniq_payment_txn_per_invoice_not_null",
             ),
         ]
+
+
+    GATEWAY_STRIPE = "stripe"
+    GATEWAY_PAYPAL = "paypal"
+    GATEWAY_MANUAL = "manual"
+    GATEWAY_CHOICES = [
+        (GATEWAY_STRIPE, "Stripe"),
+        (GATEWAY_PAYPAL, "PayPal"),
+        (GATEWAY_MANUAL, "Manual"),
+    ]
+
+    gateway = models.CharField(max_length=16, choices=GATEWAY_CHOICES, default=GATEWAY_MANUAL)
+    gateway_ref = models.CharField(max_length=128, blank=True, null=True, db_index=True)   # e.g. payment_intent / capture_id / charge_id
+    gateway_payer_email = models.EmailField(blank=True, null=True)
+    gateway_payer_id = models.CharField(max_length=128, blank=True, null=True)            # e.g. PayPal payer_id or Stripe customer
+    gateway_payload = models.JSONField(blank=True, null=True)                             # full webhook/capture JSON
+
+    paid_at = models.DateTimeField(blank=True, null=True)  # stamped when funds are confirmed
 
     def __str__(self):
         return f"{self.invoice} · {self.amount} ({self.provider or 'n/a'})"
@@ -2492,6 +2579,112 @@ def _post_income_when_paid(sender, instance: "AdmissionApplication", created, **
 
         Income.objects.create(**create_kwargs)
 
+
+
+
+
+
+
+# Signals
+
+
+
+@receiver(post_save, sender=AdmissionApplication)
+def create_invoices_when_paid(sender, instance: AdmissionApplication, created, **kwargs):
+    """
+    When an application flips to 'paid', create the required invoices:
+      • Custom one-time: Admission (mandatory), Exam (mandatory), Marksheet (if selected)
+      • Current month: Tuition (mandatory) + Bus/Hostel add-ons (if selected)
+    This runs with no manual commands and is idempotent via the _ensure_* helpers.
+    """
+    if instance.payment_status != "paid":
+        return
+
+    # --- find or create the student user (same logic as approve()) ---
+    User = get_user_model()
+    user = None
+    if instance.email:
+        user = User.objects.filter(email__iexact=instance.email).first()
+    if not user and instance.phone:
+        user = User.objects.filter(username__iexact=instance.phone).first()
+    if not user:
+        username = (instance.email or instance.phone or f"student-{timezone.now().timestamp()}").split("@")[0]
+        user = User.objects.create(
+            username=username,
+            email=instance.email or None,
+            first_name=(instance.full_name or "").split(" ")[0],
+            last_name=" ".join((instance.full_name or "").split(" ")[1:]),
+        )
+    if getattr(user, "role", None) and user.role != "STUDENT":
+        user.role = "STUDENT"
+        try:
+            user.save(update_fields=["role"])
+        except Exception:
+            user.save()
+
+    # --- persist selections on StudentProfile (so future months know add-ons) ---
+    # create/update profile only if class info is present
+    if instance.enroll_class_id:
+        sp, _ = StudentProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                "school_class": instance.enroll_class,
+                "section": instance.enroll_section or "",
+                "roll_number": instance._next_roll() or 1,
+                "joined_on": timezone.localdate(),
+            },
+        )
+        changed = False
+        if sp.school_class_id != instance.enroll_class_id:
+            sp.school_class = instance.enroll_class; changed = True
+        if (sp.section or "") != (instance.enroll_section or ""):
+            sp.section = instance.enroll_section or ""; changed = True
+
+        # store add-on selections + monthly fees for future cycles
+        bus_on   = bool(instance.add_bus)
+        host_on  = bool(instance.add_hostel)
+        sp.has_bus_service    = bus_on
+        sp.has_hostel_seat    = host_on
+        sp.bus_monthly_fee    = Decimal(instance.fee_bus or 0) if bus_on else Decimal("0.00")
+        sp.hostel_monthly_fee = Decimal(instance.fee_hostel or 0) if host_on else Decimal("0.00")
+        changed = True
+
+        if changed:
+            sp.save()
+
+        # reflect roll on the application if needed
+        if sp.roll_number and instance.generated_roll != sp.roll_number and hasattr(instance, "generated_roll"):
+            AdmissionApplication.objects.filter(pk=instance.pk).update(generated_roll=sp.roll_number)
+
+    # --- create invoices (idempotent) ---
+    today = timezone.localdate()
+
+    adm_fee   = Decimal(instance.fee_admission or 0)
+    exam_fee  = Decimal(instance.fee_exam or 0)
+    tui_fee   = Decimal(instance.fee_tuition or 0)
+    mark_on   = bool(instance.add_marksheet)
+    mark_fee  = Decimal(instance.fee_marksheet or 0)
+
+    bus_on    = bool(instance.add_bus)
+    host_on   = bool(instance.add_hostel)
+    bus_fee   = Decimal(instance.fee_bus or 0) if bus_on else Decimal("0.00")
+    host_fee  = Decimal(instance.fee_hostel or 0) if host_on else Decimal("0.00")
+
+    # one-time customs (mandatory base + optional marksheet)
+    _ensure_custom_invoice(user, "Admission Fee", adm_fee, due_date=today)
+    _ensure_custom_invoice(user, "Exam Fee",      exam_fee, due_date=today)
+    if mark_on and mark_fee > 0:
+        _ensure_custom_invoice(user, "Exact Marksheet", mark_fee, due_date=today)
+
+    # current month tuition (mandatory) + add-ons merged
+    month_total = tui_fee + bus_fee + host_fee
+    _ensure_monthly_invoice(user, today.year, today.month, month_total, due_date=today.replace(day=28))
+
+
+
+
+
+
 # ======================== END: Admission -> Income (FULL BLOCK) ========================
 
 
@@ -2513,6 +2706,11 @@ class StudentProfile(models.Model):
     roll_number = models.PositiveIntegerField()  # numeric roll
     joined_on = models.DateField(default=timezone.localdate)
     monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    has_bus_service = models.BooleanField(default=False)
+    has_hostel_seat = models.BooleanField(default=False)
+
+    bus_monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    hostel_monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     class Meta:
         unique_together = ("school_class", "section", "roll_number")
         ordering = ("school_class", "section", "roll_number")
@@ -2537,11 +2735,20 @@ class StudentProfile(models.Model):
 def _update_invoice_and_post_income(sender, instance: "TuitionPayment", created, **kwargs):
     if not created:
         return
+
     inv = instance.invoice
+
+    # 1) Update invoice paid amount
     inv.paid_amount = (inv.paid_amount or 0) + instance.amount
     inv.save(update_fields=["paid_amount"])
-    inv.post_income_line(instance, category_code="tuition")
 
+    # 2) Post to Income ledger (idempotent inside helper)
+    try:
+        inv.post_income_line(instance, category_code="tuition")
+    except Exception:
+        pass
+
+    # 3) Email (best-effort)
     student_email = getattr(inv.student, "email", "") or ""
     if student_email:
         try:
@@ -2557,57 +2764,86 @@ def _update_invoice_and_post_income(sender, instance: "TuitionPayment", created,
             )
         except Exception:
             pass
+
+    # 4) Create a PaymentReceipt with a simple PDF (idempotent by txn_id)
+    if instance.txn_id and PaymentReceipt.objects.filter(txn_id=instance.txn_id).exists():
+        return
+
+    # Build the PDF
+    pdf_buffer = BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=A4)
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(200, 800, "Tuition Payment Receipt")
+    p.setFont("Helvetica", 12)
+    p.drawString(60, 760, f"Student: {inv.student}")
+    label = (f"{inv.period_year}-{inv.period_month:02d}"
+             if inv.period_year and inv.period_month else inv.title or "Monthly Tuition")
+    p.drawString(60, 740, f"For: {label}")
+    p.drawString(60, 720, f"Amount Paid: BDT {instance.amount}")
+    p.drawString(60, 700, f"Provider: {instance.provider or 'manual'}")
+    if instance.txn_id:
+        p.drawString(60, 680, f"Reference: {instance.txn_id}")
+    p.drawString(60, 660, f"Date: {instance.paid_on or timezone.localdate()}")
+    p.drawString(60, 640, f"Invoice Balance After Payment: BDT {inv.balance}")
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    receipt = PaymentReceipt.objects.create(
+        student=inv.student,
+        payment=instance,
+        amount=instance.amount,
+        provider=instance.provider or "manual",
+        txn_id=instance.txn_id or f"manual-{instance.pk}",
+    )
+    receipt.pdf.save(f"tuition_receipt_{receipt.id}.pdf", ContentFile(pdf_buffer.read()))
+
+
+
 # --- START: Auto-generate receipts for AdmissionApplication ---
+
 @receiver(post_save, sender=AdmissionApplication)
 def make_receipt_for_admission(sender, instance: AdmissionApplication, created, **kwargs):
     # Only trigger after payment confirmed
     if instance.payment_status != "paid":
         return
-    if not instance.pk or not instance.payment_reference:
+    if not instance.pk or not (instance.payment_txn_id or "").strip():
         return
-    if PaymentReceipt.objects.filter(txn_id=instance.payment_reference).exists():
+    if PaymentReceipt.objects.filter(txn_id=instance.payment_txn_id).exists():
         return
 
-    student = None
-    if hasattr(instance, "user") and instance.user_id:
-        student = instance.user
-    elif hasattr(instance, "full_name"):
-        # fallback: temporary pseudo-user
+    # student to attach the receipt to
+    student = getattr(instance, "user", None)
+    if not student:
+        # fallback: create a lightweight user if missing
         from django.contrib.auth import get_user_model
         User = get_user_model()
         student, _ = User.objects.get_or_create(
             username=f"admission_{instance.pk}",
-            defaults={"first_name": instance.full_name or "Applicant"},
+            defaults={"first_name": (instance.full_name or "Applicant").split(" ")[0]},
         )
 
-    # --- generate simple PDF like before ---
-    from io import BytesIO
-    from django.core.files.base import ContentFile
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-
+    # Build a very simple PDF
     pdf_buffer = BytesIO()
     p = canvas.Canvas(pdf_buffer, pagesize=A4)
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(200, 800, "Admission Payment Receipt")
+    p.setFont("Helvetica-Bold", 16); p.drawString(180, 800, "Admission Payment Receipt")
     p.setFont("Helvetica", 12)
-    p.drawString(60, 760, f"Name: {instance.full_name}")
-    p.drawString(60, 740, f"Course: {instance.desired_course}")
+    p.drawString(60, 760, f"Name: {instance.full_name or ''}")
+    p.drawString(60, 740, f"Course: {str(instance.desired_course) if instance.desired_course_id else ''}")
     p.drawString(60, 720, f"Amount Paid: BDT {instance.fee_total}")
-    p.drawString(60, 700, f"Provider: {instance.payment_method or 'manual'}")
-    p.drawString(60, 680, f"Reference: {instance.payment_reference}")
+    p.drawString(60, 700, f"Provider: {instance.payment_provider or 'manual'}")
+    p.drawString(60, 680, f"Reference: {instance.payment_txn_id}")
     p.drawString(60, 660, f"Date: {timezone.localdate()}")
     p.drawString(60, 640, "Thank you for your admission payment.")
-    p.showPage()
-    p.save()
-
+    p.showPage(); p.save()
     pdf_buffer.seek(0)
+
     receipt = PaymentReceipt.objects.create(
         student=student,
         admission=instance,
         amount=instance.fee_total,
-        provider=instance.payment_method or "manual",
-        txn_id=instance.payment_reference,
+        provider=instance.payment_provider or "manual",
+        txn_id=instance.payment_txn_id,
     )
     receipt.pdf.save(f"admission_receipt_{receipt.id}.pdf", ContentFile(pdf_buffer.read()))
 # --- END ---
@@ -2616,6 +2852,24 @@ def make_receipt_for_admission(sender, instance: AdmissionApplication, created, 
 
 
 # --- START: PaymentReceipt model ---
+
+
+def gen_txn_id(prefix: str = "LOCAL") -> str:
+    return f"{prefix}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+
+# ---- add near your other models ----
+class ProcessedGatewayEvent(models.Model):
+    provider = models.CharField(max_length=32)      # 'stripe' | 'paypal'
+    event_id = models.CharField(max_length=128, unique=True)  # Stripe event id / PayPal capture id
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["provider", "event_id"])]
+
+
+
+
 class PaymentReceipt(models.Model):
     provider_choices = [
         ('stripe', 'Stripe'),
@@ -2659,3 +2913,7 @@ class FinanceSettings(models.Model):
             return obj
         # lazily create one with default if missing
         return cls.objects.create(default_monthly_fee=2000)
+
+
+
+
