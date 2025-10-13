@@ -86,3 +86,50 @@ def _ensure_monthly_on_profile_link(sender, instance: StudentProfile, created, *
             ensure_monthly_window_for_user(instance.user)
         except Exception:
             pass
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.utils import timezone
+
+from .models import EmailOutbox, CommsLog
+from .services.comms_templating import render_string
+from .services.emailing import send_email_smtp
+
+@receiver(post_save, sender=EmailOutbox)
+def auto_send_email_outbox(sender, instance: EmailOutbox, created, **kwargs):
+    if not created:
+        return
+    if not getattr(settings, "EMAIL_AUTO_SEND", False):
+        return
+    if instance.status in ("sent","failed","sending"):
+        return
+
+    tpl = instance.template
+    subject   = render_string(tpl.subject_template or "", instance.context)
+    body_text = render_string(tpl.body_text_template or "", instance.context)
+    body_html = render_string(tpl.body_html_template or "", instance.context) if tpl.body_html_template else None
+
+    msg_id = send_email_smtp(
+        to=instance.to,
+        subject=subject,
+        body_text=body_text,
+        body_html=body_html,
+        from_email=(instance.from_email or None),
+        reply_to=(instance.reply_to or None),
+    )
+
+    instance.provider = "smtp"
+    instance.provider_ref = msg_id or ""
+    instance.status = "sent"
+    instance.sent_at = timezone.now()
+    instance.last_error = ""
+    instance.save(update_fields=["provider","provider_ref","status","sent_at","last_error"])
+
+    CommsLog.objects.create(
+        when=instance.sent_at,
+        channel="email",
+        recipient=instance.to,
+        template_slug=tpl.slug,
+        status="sent",
+        detail=msg_id or "",
+    )

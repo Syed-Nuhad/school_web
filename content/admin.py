@@ -48,8 +48,10 @@ from .models import (
     # Attendance + Exams
     AttendanceSession,
     ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding, Expense, Income,
-    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile, PaymentReceipt,
+    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile, PaymentReceipt, EmailBounce,
+    CommsLog, EmailOutbox, SmsOutbox, MessageTemplate,
 )
+from .services.comms_outbox import queue_sms
 from .views import finance_overview, build_finance_context
 
 
@@ -1317,3 +1319,65 @@ class TuitionInvoiceForm(forms.ModelForm):
 
 
 
+
+
+
+
+@admin.action(description="Send dues SMS to selected invoices' students")
+def send_dues_sms(modeladmin, request, queryset):
+    # assumes you can get a phone number from a user profile; change attr accordingly
+    for inv in queryset.select_related("student"):
+        student = inv.student
+        phone = getattr(student, "phone", None) or getattr(student, "mobile", None)
+        if not phone:
+            continue
+        due = (inv.tuition_amount or 0) - (inv.paid_amount or 0)
+        if due <= 0:
+            continue
+        queue_sms(
+            to=str(phone),
+            template_slug="dues_notice",
+            context={"student_name": getattr(student, "first_name", "") or student.username,
+                     "amount_due": f"{due:.2f}", "due_date": (inv.due_date or "")},
+            created_by=request.user,
+        )
+    modeladmin.message_user(request, "Queued SMS for eligible rows.")
+
+@admin.register(MessageTemplate)
+class MessageTemplateAdmin(admin.ModelAdmin):
+    list_display = ("slug", "kind", "is_active", "updated_at")
+    list_filter = ("kind", "is_active")
+    search_fields = ("slug", "subject_template", "body_text_template")
+
+@admin.register(SmsOutbox)
+class SmsOutboxAdmin(admin.ModelAdmin):
+    list_display = ("id", "to", "template", "status", "attempts", "scheduled_at", "sent_at", "provider_ref")
+    list_filter = ("status", "provider")
+    search_fields = ("to", "provider_ref")
+    autocomplete_fields = ("template", "created_by")
+
+@admin.register(EmailOutbox)
+class EmailOutboxAdmin(admin.ModelAdmin):
+    list_display = ("id", "to", "template", "status", "attempts", "scheduled_at", "sent_at", "provider_ref")
+    list_filter = ("status", "provider")
+    search_fields = ("to", "provider_ref")
+    autocomplete_fields = ("template", "created_by")
+
+@admin.register(CommsLog)
+class CommsLogAdmin(admin.ModelAdmin):
+    list_display = ("when", "channel", "recipient", "template_slug", "status")
+    list_filter = ("channel", "status")
+    search_fields = ("recipient", "template_slug", "detail")
+
+@admin.register(EmailBounce)
+class EmailBounceAdmin(admin.ModelAdmin):
+    list_display = ("email", "event", "reason", "occurred_at")
+    list_filter = ("event",)
+    search_fields = ("email", "reason")
+
+
+"""
+python manage.py queue_dues_notices --send-sms --send-email
+python manage.py process_outbox --only both --limit 200
+
+"""

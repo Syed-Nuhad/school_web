@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator, RegexValidator
 from django.db import models, transaction
 from django.db.models import F, Q
 from django.urls import reverse
@@ -2378,13 +2378,7 @@ class TuitionPayment(models.Model):
         (GATEWAY_MANUAL, "Manual"),
     ]
 
-    gateway = models.CharField(max_length=16, choices=GATEWAY_CHOICES, default=GATEWAY_MANUAL)
-    gateway_ref = models.CharField(max_length=128, blank=True, null=True, db_index=True)   # e.g. payment_intent / capture_id / charge_id
-    gateway_payer_email = models.EmailField(blank=True, null=True)
-    gateway_payer_id = models.CharField(max_length=128, blank=True, null=True)            # e.g. PayPal payer_id or Stripe customer
-    gateway_payload = models.JSONField(blank=True, null=True)                             # full webhook/capture JSON
 
-    paid_at = models.DateTimeField(blank=True, null=True)  # stamped when funds are confirmed
 
     def __str__(self):
         return f"{self.invoice} · {self.amount} ({self.provider or 'n/a'})"
@@ -2917,3 +2911,119 @@ class FinanceSettings(models.Model):
 
 
 
+
+
+
+# ################################################
+
+
+
+
+class MessageTemplate(models.Model):
+    KIND_EMAIL = "email"
+    KIND_SMS = "sms"
+    KIND_CHOICES = [(KIND_EMAIL, "Email"), (KIND_SMS, "SMS")]
+
+    slug = models.SlugField(unique=True, max_length=80)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES)
+    subject_template = models.CharField(max_length=200, blank=True)  # email only
+    body_text_template = models.TextField(blank=True)                # email or sms
+    body_html_template = models.TextField(blank=True)                # email only
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # example: "dues_notice", "result_published", "receipt_ready"
+    def __str__(self) -> str:
+        return f"{self.slug} [{self.kind}]"
+
+
+class OutboxStatus(models.TextChoices):
+    QUEUED = "queued", "Queued"
+    SENDING = "sending", "Sending"
+    SENT = "sent", "Sent"
+    FAILED = "failed", "Failed"
+    BOUNCED = "bounced", "Bounced"
+
+
+phone_validator = RegexValidator(r"^\+?\d{8,15}$", "Enter a valid international phone number.")
+
+
+class SmsOutbox(models.Model):
+    to = models.CharField(max_length=20, validators=[phone_validator])
+    sender_id = models.CharField(max_length=15, blank=True)  # enforce by gateway
+    template = models.ForeignKey(MessageTemplate, on_delete=models.PROTECT, limit_choices_to={"kind": "sms"})
+    context = models.JSONField(default=dict, blank=True)
+
+    status = models.CharField(max_length=12, choices=OutboxStatus.choices, default=OutboxStatus.QUEUED)
+    attempts = models.IntegerField(default=0)
+    last_error = models.TextField(blank=True)
+
+    provider = models.CharField(max_length=32, blank=True)     # "generic", "twilio", etc
+    provider_ref = models.CharField(max_length=120, blank=True)
+
+    scheduled_at = models.DateTimeField(default=timezone.now)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+
+    created_by = models.ForeignKey(UserModel, null=True, blank=True, on_delete=models.SET_NULL, related_name="sms_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status", "scheduled_at"]),
+            models.Index(fields=["to", "template", "status"]),
+        ]
+
+
+class EmailOutbox(models.Model):
+    to = models.EmailField()
+    template = models.ForeignKey(MessageTemplate, on_delete=models.PROTECT, limit_choices_to={"kind": "email"})
+    context = models.JSONField(default=dict, blank=True)
+
+    from_email = models.CharField(max_length=200, blank=True)  # fallback DEFAULT_FROM_EMAIL
+    reply_to = models.CharField(max_length=200, blank=True)    # fallback EMAIL_REPLY_TO
+
+    status = models.CharField(max_length=12, choices=OutboxStatus.choices, default=OutboxStatus.QUEUED)
+    attempts = models.IntegerField(default=0)
+    last_error = models.TextField(blank=True)
+
+    provider = models.CharField(max_length=32, blank=True)     # "smtp", "ses", etc
+    provider_ref = models.CharField(max_length=120, blank=True)  # message-id
+
+    scheduled_at = models.DateTimeField(default=timezone.now)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    next_attempt_at = models.DateTimeField(null=True, blank=True)
+
+    created_by = models.ForeignKey(UserModel, null=True, blank=True, on_delete=models.SET_NULL, related_name="emails_created")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["status", "scheduled_at"]),
+            models.Index(fields=["to", "template", "status"]),
+        ]
+
+
+class CommsLog(models.Model):
+    when = models.DateTimeField(auto_now_add=True)
+    channel = models.CharField(max_length=10)  # "sms" | "email"
+    recipient = models.CharField(max_length=200)
+    template_slug = models.CharField(max_length=80)
+    status = models.CharField(max_length=12)
+    detail = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"[{self.channel}] {self.template_slug} -> {self.recipient} ({self.status})"
+
+
+class EmailBounce(models.Model):
+    # Marked via webhook or manual import
+    email = models.EmailField()
+    event = models.CharField(max_length=32)  # "bounce", "complaint", "blocked", etc.
+    reason = models.CharField(max_length=120, blank=True)
+    occurred_at = models.DateTimeField(default=timezone.now)
+    raw = models.JSONField(default=dict, blank=True)
+
+    def __str__(self):
+        return f"{self.event} {self.email} @ {self.occurred_at:%Y-%m-%d}"

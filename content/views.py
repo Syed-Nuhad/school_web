@@ -29,7 +29,7 @@ from django.http import (
     JsonResponse,
     HttpResponseBadRequest,
     HttpResponseRedirect,
-    HttpResponse, HttpResponseForbidden, Http404, HttpRequest, HttpResponseNotAllowed, FileResponse,
+    HttpResponse, HttpResponseForbidden, Http404, HttpRequest, HttpResponseNotAllowed, FileResponse, request,
 )
 
 from django.shortcuts import redirect, render, get_object_or_404
@@ -41,6 +41,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from django.views.generic import DetailView, CreateView
 
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.views.decorators.http import require_POST
+from django.http import HttpResponse
+from content.services.comms_outbox import queue_sms, queue_email
 from .billing import ensure_monthly_window_for_user, compute_dues_summary, allocate_payment_across_invoices
 from .decorators import teacher_or_admin_required
 from .forms import AdmissionApplicationForm
@@ -56,7 +60,7 @@ from .models import (
     TuitionPayment,
     IncomeCategory,
     AcademicClass,
-    StudentProfile, PaymentReceipt,
+    StudentProfile, PaymentReceipt, SmsOutbox, OutboxStatus, CommsLog,
 )
 from .services.receipts import generate_payment_receipt
 
@@ -1375,3 +1379,96 @@ def invoice_bulk_checkout_selected(request):
 
     # Let the browser go to Stripe
     return HttpResponseRedirect(session.url)
+
+
+
+
+
+
+
+@csrf_exempt
+@require_POST
+def email_bounce_webhook(request):
+    """
+    Connect your email provider (e.g., SendGrid/SES/Twilio SendGrid) to POST here.
+    Parse payload accordingly and mark EmailOutbox as BOUNCED if applicable.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    email = payload.get("email") or payload.get("recipient") or ""
+    reason = payload.get("reason") or payload.get("error") or ""
+    event = payload.get("event") or "bounce"
+
+    EmailBounce.objects.create(email=email, event=event, reason=reason, raw=payload)
+
+    # best-effort mark latest outbox row as bounced
+    if email:
+        eo = EmailOutbox.objects.filter(to=email).order_by("-id").first()
+        if eo:
+            eo.status = OutboxStatus.BOUNCED
+            eo.last_error = reason[:1000]
+            eo.save(update_fields=["status", "last_error"])
+            CommsLog.objects.create(channel="email", recipient=email, template_slug=eo.template.slug, status="bounced", detail=reason[:200])
+
+    return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@require_POST
+def sms_dlr_webhook(request):
+    """
+    Delivery reports from SMS gateway.
+    Adjust field names based on your provider.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        payload = {}
+
+    ref = payload.get("message_id") or payload.get("id") or ""
+    status = (payload.get("status") or "").lower()
+
+    if ref:
+        ob = SmsOutbox.objects.filter(provider_ref=ref).order_by("-id").first()
+        if ob and status in {"delivered","undelivered","failed"}:
+            if status == "delivered":
+                ob.status = OutboxStatus.SENT
+            else:
+                ob.status = OutboxStatus.FAILED
+                ob.last_error = (payload.get("error") or status)[:1000]
+            ob.save(update_fields=["status", "last_error"])
+            CommsLog.objects.create(channel="sms", recipient=ob.to, template_slug=ob.template.slug, status=status, detail=str(payload)[:300])
+
+    return JsonResponse({"ok": True})
+
+
+
+
+def is_staff(user):  # keep this tiny; or reuse your own
+    return user.is_staff
+
+@login_required
+@user_passes_test(is_staff)
+@require_POST
+def notify_demo(request):
+    # TODO: replace these with real numbers/emails from your DB
+    phone = "+8801xxxxxxxxx"
+    email = "parent@example.com"
+
+    queue_sms(
+        to=phone,
+        template_slug="dues_notice",
+        context={"student_name": "Rakib", "amount_due": "2000.00", "due_date": "2025-10-20"},
+        created_by=request.user,
+    )
+    queue_email(
+        to=email,
+        template_slug="result_published",
+        context={"student_name": "Rakib", "exam_name": "Midterm-2"},
+        # from_email="Accounts <accounts@yourdomain.tld>",
+        # reply_to="accounts@yourdomain.tld",
+    )
+    return HttpResponse("Queued")

@@ -24,6 +24,7 @@ from .views import (
     # Student invoices
     my_invoices, invoice_pay,
     invoice_bulk_checkout_all, invoice_bulk_checkout_selected, invoice_bulk_checkout, download_latest_receipt,
+    email_bounce_webhook, sms_dlr_webhook, notify_demo,
 )
 
 # These views live in ui.views but we expose them under the `content:` namespace
@@ -102,6 +103,9 @@ urlpatterns = [
     path("me/invoices/checkout/", invoice_bulk_checkout, name="invoice-bulk-checkout"),
     path("receipts/<int:payment_id>/download/", download_latest_receipt, name="receipt-download"),
     path("checkout/selected/", invoice_bulk_checkout_selected, name="invoice-bulk-checkout-selected"),
+    path("webhooks/email/bounce/", email_bounce_webhook, name="email-bounce-webhook"),
+    path("webhooks/sms/dlr/", sms_dlr_webhook, name="sms-dlr-webhook"),
+    path("comms/notify-demo/", notify_demo, name="comms-notify-demo"),
 ]
 
 # Media (dev)
