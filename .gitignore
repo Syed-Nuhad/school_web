@@ -19,3 +19,4 @@ core/settings.py
 school_project.git/
 
 core/settings_local.py
+.gitignore
