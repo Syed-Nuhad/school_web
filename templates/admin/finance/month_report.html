@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+{% load humanize %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Monthly Finance Report — {{ label }}</title>
+  <style>
+    /* Keep it boring = reliable in print */
+    html,body{margin:0;padding:0;background:#fff;color:#111;
+      font-family:"Century Gothic",CenturyGothic,AppleGothic,sans-serif;}
+    .wrap{max-width:960px;margin:24px auto;padding:0 20px;}
+    h1,h2,h3{margin:0 0 .5rem 0;font-weight:600}
+    .muted{color:#64748b;margin:.25rem 0 1rem 0;font-size:.95rem;text-align:center}
+    .tools{display:flex;gap:.5rem;justify-content:flex-end;margin:.5rem 0 1rem 0}
+    .btn{display:inline-block;padding:.4rem .7rem;border:1px solid #1f2937;
+      border-radius:.35rem;text-decoration:none;color:#111}
+    .btn:hover{background:#f3f4f6}
+    hr{border:0;border-top:1px solid #e5e7eb;margin:.5rem 0 1rem}
+
+    table{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;margin:0 0 1rem}
+    th,td{border:1px solid #e5e7eb;padding:.5rem .6rem;vertical-align:top}
+    thead th{background:#f8fafc;font-weight:600}
+    .text-end{text-align:right}
+    .center{text-align:center}
+
+    /* PRINT: no admin chrome, no forced breaks = no duplicates */
+    @media print{
+      .tools{display:none !important;}
+      @page{size:auto;margin:12mm}
+      thead{display:table-header-group}
+      tfoot{display:table-row-group}
+      tr,td,th{page-break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- screen-only actions -->
+    <div class="tools no-print">
+      <a class="btn" href="?year={{ year }}&month={{ month }}&print=1" onclick="window.print();return false;">🖨 Print</a>
+      <a class="btn" href="javascript:history.back()">Close</a>
+    </div>
+
+    <h2 class="center">Monthly Finance Report — {{ label }}</h2>
+    <div class="muted">Generated on {{ now }}</div>
+    <hr>
+
+    <h3>Incomes</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th class="text-end">Amount</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in income_rows %}
+          <tr>
+            <td>{{ i.date }}</td>
+            <td>{{ i.category }}</td>
+            <td class="text-end">{{ i.amount|floatformat:2|intcomma }}</td>
+            <td>{{ i.description|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="center">No incomes this month.</td></tr>
+        {% endfor %}
+        <tr>
+          <th colspan="2">Total</th>
+          <th class="text-end" colspan="2">{{ inc_total|floatformat:2|intcomma }}</th>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Expenses</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Category</th>
+          <th class="text-end">Amount</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in expense_rows %}
+          <tr>
+            <td>{{ e.date }}</td>
+            <td>{{ e.category }}</td>
+            <td class="text-end">{{ e.amount|floatformat:2|intcomma }}</td>
+            <td>{{ e.description|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="center">No expenses this month.</td></tr>
+        {% endfor %}
+        <tr>
+          <th colspan="2">Total</th>
+          <th class="text-end" colspan="2">{{ exp_total|floatformat:2|intcomma }}</th>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="center" style="margin-top:1rem;">
+      Net Balance: {{ net_total|floatformat:2|intcomma }}
+    </h3>
+  </div>
+
+  {% if request.GET.print %}
+  <script>
+    window.addEventListener('load',function(){
+      try{ window.print(); }catch(_){}
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

@@ -158,11 +158,11 @@
 
 
 <!-- ✅ Modern Timeline (Bootstrap + inline styles only) -->
-<section class="py-5" id="academic-timeline">
+<section class="py-5 px-0" id="academic-timeline">
   <div class="container" style="max-width:1100px;">
     <div class="text-start mb-4">
       <h1 class="fw-normal mb-1">Timeline</h1>
-      <p class="text-muted mb-0 p-3">All the key dates at a glance</p>
+      <p class="text-muted mb-0">All the key dates at a glance</p>
     </div>
 
     {% for e in timeline_events %}
@@ -222,7 +222,7 @@
         <!-- Keep .glx-card and data-* for your JS -->
         <a href="#"
            role="button"
-           class="glx-card d-block text-decoration-none border bg-body shadow-lg p-3 h-100"
+           class="glx-card d-block text-decoration-none border-0  bg-body shadow-lg p-3 h-100"
            data-kind="{{ item.kind }}"
            data-image="{% if item.image %}{{ item.image.url }}{% endif %}"
            data-video="{{ item.youtube_embed_url }}"
@@ -481,14 +481,16 @@
     {% for f in functions_page %}
       <div class="col-md-6 {% if forloop.counter|divisibleby:2 %}order-md-2{% endif %}"
            data-aos="fade-{{ forloop.counter|divisibleby:2|yesno:'left,right' }}">
+
         <div class="media-box position-relative shadow rounded overflow-hidden">
           {% if f.image %}
-            <a href="{{ f.image.url }}"
-               class="js-fn-item d-block"
-               data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
+            <!-- exactly ONE LG item per card -->
+            <a
+              href="{{ f.image.url }}"
+              class="js-fn-item d-block"
+              data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
               <img src="{{ f.image.url }}" alt="{{ f.title }}"
-                   class="img-fluid w-100 function-img"
-                   style="height:300px;object-fit:cover;">
+                   class="img-fluid w-100" style="height:300px;object-fit:cover;">
             </a>
           {% else %}
             <div class="bg-light p-5 text-center">No image</div>
@@ -497,11 +499,11 @@
           <div class="media-overlay position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-between p-3 text-white bg-dark bg-opacity-50">
             <h4 class="mb-0">{{ f.title }}</h4>
             {% if f.image %}
-              <a href="{{ f.image.url }}"
-                 class="btn btn-primary align-self-end mt-2 js-fn-item"
-                 data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
+              <button type="button"
+                      class="btn btn-primary align-self-end mt-2 fn-open"
+                      data-index="{{ forloop.counter0 }}">
                 Full View
-              </a>
+              </button>
             {% endif %}
           </div>
         </div>
@@ -526,7 +528,6 @@
     {% endfor %}
   </div>
 
-  {# --- Bootstrap-default pager (no spacing classes) --- #}
   {% if functions_page.paginator.num_pages > 1 %}
     <nav aria-label="Function pagination" class="mt-4 text-align-center align-items-center justify-content-center">
       <ul class="pagination text-align-center align-items-center justify-content-center">
@@ -539,15 +540,9 @@
         {% endif %}
 
         {% for p in functions_page.paginator.page_range %}
-          {% if p == functions_page.number %}
-            <li class="page-item active" aria-current="page">
-              <a class="page-link" href="?fpage={{ p }}#college-functions">{{ p }}</a>
-            </li>
-          {% else %}
-            <li class="page-item">
-              <a class="page-link" href="?fpage={{ p }}#college-functions">{{ p }}</a>
-            </li>
-          {% endif %}
+          <li class="page-item {% if p == functions_page.number %}active{% endif %}">
+            <a class="page-link" href="?fpage={{ p }}#college-functions">{{ p }}</a>
+          </li>
         {% endfor %}
 
         {% if functions_page.has_next %}
@@ -561,9 +556,7 @@
     </nav>
   {% endif %}
 </section>
-
-<!-- ⭐ End  College Function Highlights -->
-
+<!-- ⭐ End College Function Highlights -->
 
 
 {# === Modal with close icon & back button === #}
@@ -784,13 +777,13 @@
 
 <!-- ⭐⭐⭐⭐⭐====================== Start: College Member Dashboard Section ====================== -->
 <section class="container py-5" id="college-members" data-aos="fade-up">
-  <h2 class="text-start mb-4 fw-normal">College Members</h2>
+  <h2 class="text-start mb-4 fw-normal pb-4">College Members</h2>
 
   <div class="row g-4">
     <!-- HOD -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3 shadow-lg border-0 rounded-4">
-        <div class="card-icon mb-2 fs-1">👨‍💼</div>
+        <div class="card-icon mb-2 fs-1"><i class="fa-solid fa-user-tie"></i></div>
         <h5 class="card-title">Head of Department</h5>
         <div class="small text-muted mb-2">{{ members_counts.hod|default_if_none:"0" }} total</div>
         <div class="card-buttons mt-2">
@@ -804,7 +797,7 @@
     <!-- Teachers -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
-        <div class="card-icon mb-2 fs-1">👩‍🏫</div>
+        <div class="card-icon mb-2 fs-1"><i class="fa-solid fa-chalkboard-user"></i></div>
         <h5 class="card-title">Teachers</h5>
         <div class="small text-muted mb-2">{{ members_counts.teacher|default_if_none:"0" }} total</div>
         <div class="card-buttons mt-2">
@@ -818,7 +811,7 @@
     <!-- Students -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
-        <div class="card-icon mb-2 fs-1">👨‍🎓</div>
+        <div class="card-icon mb-2 fs-1"><i class="fa-solid fa-user-graduate"></i></div>
         <h5 class="card-title">Students</h5>
         <div class="small text-muted mb-2">{{ members_counts.student|default_if_none:"0" }} total</div>
         <div class="card-buttons mt-2">
@@ -832,7 +825,7 @@
     <!-- Staff -->
     <div class="col-md-3">
       <div class="card dashboard-card text-center p-3  shadow-lg border-0 rounded-4">
-        <div class="card-icon mb-2 fs-1">🧑‍🔧</div>
+        <div class="card-icon mb-2 fs-1"><i class="fa-solid fa-screwdriver-wrench"></i></div>
         <h5 class="card-title">Staff</h5>
         <div class="small text-muted mb-2">{{ members_counts.staff|default_if_none:"0" }} total</div>
         <div class="card-buttons mt-2">

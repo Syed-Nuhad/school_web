@@ -1,63 +1,41 @@
 # content/admin.py
+import re
+import datetime
+from calendar import monthrange
+
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.http import JsonResponse
+from django.db.models import Sum, F, Max, Q, Value, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
-from django.db.models import Sum, F, Max
 from django.utils.safestring import mark_safe
-from django.db.models.functions import Coalesce
-from django.db.models import Sum, F, Value, DecimalField, ExpressionWrapper
 
-
-
-
-
+from core import settings
 from .models import (
     # Core content
-    Banner,
-    Notice,
-    TimelineEvent,
-    GalleryItem,
-    AboutSection,
-    AcademicCalendarItem,
+    Banner, Notice, TimelineEvent, GalleryItem, AboutSection, AcademicCalendarItem,
     # Domain models
-    Course,
-    AdmissionApplication,
-    FunctionHighlight,
-    FestivalMedia,
-    CollegeFestival,
-    Member,
-    ContactInfo,
-    ContactMessage,
-    FooterSettings,
-    GalleryPost,
-    AcademicClass,
-    Subject,
-    ExamTerm,
-    ClassResultSubjectAvg,
-    ClassResultSummary,
-    ClassTopper,
+    Course, AdmissionApplication, FunctionHighlight, FestivalMedia, CollegeFestival,
+    Member, ContactInfo, ContactMessage, FooterSettings, GalleryPost,
+    AcademicClass, Subject, ExamTerm, ClassResultSubjectAvg, ClassResultSummary, ClassTopper,
     # Attendance + Exams
-    AttendanceSession,
-    ExamRoutine, BusRoute, BusStop, StudentMarksheetItem, StudentMarksheet, SiteBranding, Expense, Income,
-    TuitionInvoice, TuitionPayment, ExpenseCategory, IncomeCategory, StudentProfile, PaymentReceipt, EmailBounce,
-    CommsLog, EmailOutbox, SmsOutbox, MessageTemplate,
+    AttendanceSession, ExamRoutine, BusRoute, BusStop,
+    StudentMarksheetItem, StudentMarksheet, SiteBranding,
+    Expense, Income, TuitionInvoice, TuitionPayment,
+    ExpenseCategory, IncomeCategory, StudentProfile,
+    PaymentReceipt, EmailBounce, CommsLog, EmailOutbox, SmsOutbox, MessageTemplate,
 )
 from .services.comms_outbox import queue_sms
 from .views import finance_overview, build_finance_context
-
-
-
-
-
 
 
 
@@ -914,60 +892,158 @@ class SubjectClassFilter(admin.SimpleListFilter):
             return queryset.filter(subject__school_class_id=self.value())
         return queryset
 
+class StudentMarksheetItemInline(admin.TabularInline):
+    model = StudentMarksheetItem
+    extra = 0                                  # no blank rows that cause dup inserts
+    fields = ("subject", "max_marks", "marks_obtained", "grade_letter", "remark", "order")
+    autocomplete_fields = ("subject",)
+    ordering = ("order", "id")
+
+
 
 @admin.register(StudentMarksheet)
 class StudentMarksheetAdmin(OwnableAdminMixin):
     form = StudentMarksheetAdminForm
     inlines = [StudentMarksheetItemInline]
-    # ... your list_display / fieldsets unchanged ...
+
+    list_display = (
+        "student_full_name", "school_class", "term",
+        "percent_display", "total_grade", "is_pass",
+        "certificate_actions",           # ← buttons here
+        "updated_at",
+    )
+    list_filter = ("term", "school_class", "is_pass")
+    search_fields = ("student_full_name", "roll_number", "section")
+
+    def get_inline_instances(self, request, obj=None):
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
+
+    @admin.display(ordering="total_marks", description="Percent")
+    def percent_display(self, obj):
+        try:
+            return f"{obj.percent():.2f}%"
+        except Exception:
+            return "—"
 
     def save_model(self, request, obj, form, change):
         creating = obj.pk is None
         if not getattr(obj, "created_by_id", None):
             obj.created_by = request.user
-
         super().save_model(request, obj, form, change)
 
-        # If it's a brand-new marksheet (or has no items yet), create one row per subject for the selected class.
-        if obj.school_class_id and (creating or obj.items.count() == 0):
+        if creating and obj.school_class_id and obj.items.count() == 0:
             subjects = (Subject.objects
                         .filter(school_class_id=obj.school_class_id, is_active=True)
                         .order_by("order", "name", "id"))
-            items = []
             order = 1
             for s in subjects:
-                items.append(StudentMarksheetItem(
+                StudentMarksheetItem.objects.get_or_create(
                     marksheet=obj,
                     subject=s,
-                    max_marks=100,
-                    marks_obtained=0,
-                    order=order,
-                ))
+                    defaults={"max_marks": 100, "marks_obtained": 0, "order": order},
+                )
                 order += 1
-            if items:
-                StudentMarksheetItem.objects.bulk_create(items)
 
-        # Recalc totals after any potential new items.
         obj.recalc_totals()
         obj.save(update_fields=["total_marks", "total_grade", "updated_at"])
 
+
+
+    @admin.display(description="Certificate")
+    def certificate_link(self, obj):
+        if not obj.is_pass or not obj.is_final_term():
+            return "—"
+        url = reverse("admin:marksheet_certificate", args=[obj.pk])
+        # After download, we’ll send you back to the changelist.
+        next_url = reverse("admin:content_studentmarksheet_changelist")
+        return format_html(
+            '<a class="button" href="{}?dl=1&next={}">Download Certificate</a>',
+            url, next_url
+        )
+
+    @admin.display(description="Certificate")
+    def certificate_actions(self, obj):
+        if not obj.is_pass or not obj.is_final_term():
+            return "—"
+        view_url = reverse("admin:marksheet_certificate", args=[obj.pk])
+        next_url = reverse("admin:content_studentmarksheet_changelist")
+        # Jazzmin ships Bootstrap classes — this renders proper buttons with spacing
+        return format_html(
+
+'<div class="d-flex gap-2">'
+                '<div class="p-2">'
+                '  <a href="{}" class="btn btn-sm btn-primary">View</a>'
+                '</div>'
+                '<div class="p-2">'
+            '      <a href="{}?dl=png&next={}" class="btn btn-sm btn-success">Download PNG</a>'
+                '</div>'
+
+            '</div>',
+            view_url, view_url, next_url
+        )
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [
+            path(
+                "certificate/<int:pk>/",
+                self.admin_site.admin_view(self.certificate_view),
+                name="marksheet_certificate",
+            ),
+        ]
+        return custom + urls
+
+    def certificate_view(self, request, pk: int):
+        obj = self.get_object(request, pk)
+        if not obj or not obj.is_pass or not obj.is_final_term():
+            return HttpResponseForbidden("Certificate not available.")
+
+        obj.recalc_totals()
+        obj.save(update_fields=["total_marks", "total_grade", "is_pass", "updated_at"])
+
+        branding = SiteBranding.objects.filter(is_active=True).first()
+        auto_download_png = (request.GET.get("dl") == "png")
+        return_to = request.GET.get("next") or reverse("admin:content_studentmarksheet_changelist")
+
+        cls_str = str(obj.school_class or "")
+        m = re.search(r"\d+", cls_str)
+        class_num = int(m.group(0)) if m else None
+        ctx = {
+            **self.admin_site.each_context(request),
+            "ms": obj,
+            "percent": obj.percent(),
+            "issued_on": timezone.localdate(),
+            "branding": branding,
+            "auto_download_png": auto_download_png,
+            "return_to": return_to,
+            "class_num": class_num,
+        }
+        return TemplateResponse(request, "admin/certificates/marksheet_certificate.html", ctx)
 
 @admin.register(StudentMarksheetItem)
 class StudentMarksheetItemAdmin(OwnableAdminMixin):
     list_display  = ("marksheet", "subject", "marks_obtained", "max_marks", "grade_letter", "order")
     list_filter   = (SubjectClassFilter,)
-    search_fields = (
-        "marksheet__student_full_name",
-        "marksheet__roll_number",
-        "subject__name",
-    )
-    # ✅ only subject is autocompleted (SubjectAdmin already has search_fields)
+    search_fields = ("marksheet__student_full_name", "marksheet__roll_number", "subject__name")
     autocomplete_fields = ("subject",)
-    # ✅ avoid the admin.E039/E040 checks for the parent FK
     raw_id_fields = ("marksheet",)
 
 
 
+
+def _month_bounds_local():
+    """Return (start, end) dates for *current* month in server's local date."""
+    today = timezone.localdate()
+    start = today.replace(day=1)
+    # naive 'next month' calc
+    if start.month == 12:
+        end = start.replace(year=start.year + 1, month=1)
+    else:
+        end = start.replace(month=start.month + 1)
+    return start, end
 
 @admin.register(IncomeCategory)
 class IncomeCategoryAdmin(OwnableAdminMixin):
@@ -982,30 +1058,142 @@ class ExpenseCategoryAdmin(OwnableAdminMixin):
     list_filter  = ("is_fixed", "is_active")
     search_fields = ("name", "code")
 
+def _month_bounds(year: int, month: int):
+    from calendar import monthrange
+    first = datetime.date(year, month, 1)
+    last_day = monthrange(year, month)[1]
+    # exclusive end (first of next month)
+    if month == 12:
+        end = datetime.date(year + 1, 1, 1)
+    else:
+        end = datetime.date(year, month + 1, 1)
+    label = first.strftime("%B %Y")
+    return first, end, label
+
+
+# --- helper: compute badges context for current month & all-time ---
+def _finance_badges_ctx():
+    today = timezone.localdate()
+    start, end, label = _month_bounds(today.year, today.month)
+
+    fin_month_income = Income.objects.filter(date__gte=start, date__lt=end).aggregate(s=Sum("amount"))["s"] or 0
+    fin_month_expense = Expense.objects.filter(date__gte=start, date__lt=end).aggregate(s=Sum("amount"))["s"] or 0
+    fin_month_net = fin_month_income - fin_month_expense
+
+    fin_total_income = Income.objects.aggregate(s=Sum("amount"))["s"] or 0
+    fin_total_expense = Expense.objects.aggregate(s=Sum("amount"))["s"] or 0
+    fin_total_net = fin_total_income - fin_total_expense
+
+    return {
+        "fin_range_label": label,
+        "fin_month_income": fin_month_income,
+        "fin_month_expense": fin_month_expense,
+        "fin_month_net": fin_month_net,
+        "fin_total_net": fin_total_net,
+    }
 
 @admin.register(Income)
 class IncomeAdmin(OwnableAdminMixin):
     list_display = ("date", "category", "amount", "student", "description")
-    list_filter  = ("category", "date")
+    list_filter = ("category", "date")
     search_fields = ("description", "category__name", "student__username", "student__email")
     date_hierarchy = "date"
     autocomplete_fields = ("student",)
 
-    # Inline total in changelist
     def changelist_view(self, request, extra_context=None):
-        qs = self.get_queryset(request)
-        total = qs.aggregate(total=Sum("amount"))["total"] or 0
+        today = timezone.localdate()
+        start, end, label = _month_bounds(today.year, today.month)
+
+        incomes = Income.objects.filter(date__gte=start, date__lt=end)
+        expenses = Expense.objects.filter(date__gte=start, date__lt=end)
+
+        fin_month_income = incomes.aggregate(s=Sum("amount"))["s"] or 0
+        fin_month_expense = expenses.aggregate(s=Sum("amount"))["s"] or 0
+        fin_month_net = fin_month_income - fin_month_expense
+
+        fin_total_income = Income.objects.aggregate(s=Sum("amount"))["s"] or 0
+        fin_total_expense = Expense.objects.aggregate(s=Sum("amount"))["s"] or 0
+        fin_total_net = fin_total_income - fin_total_expense
+
+        report_url = reverse("admin:income_print_month")
+        report_url = f"{report_url}?year={today.year}&month={today.month}"
+
         extra_context = extra_context or {}
-        extra_context["inline_total"] = total
+        extra_context.update({
+            "fin_range_label": label,
+            "fin_month_income": fin_month_income,
+            "fin_month_expense": fin_month_expense,
+            "fin_month_net": fin_month_net,
+            "fin_total_net": fin_total_net,
+            "month_report_url": report_url,
+        })
         return super().changelist_view(request, extra_context=extra_context)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path("print-month/", self.admin_site.admin_view(self.print_month_view), name="income_print_month"),
+        ]
+        return custom + urls
+
+    # inside IncomeAdmin
+    def print_month_view(self, request):
+        # parse year/month; default to current month
+        try:
+            year = int(request.GET.get("year") or 0)
+            month = int(request.GET.get("month") or 0)
+        except Exception:
+            year = month = 0
+
+        today = timezone.localdate()
+        if year <= 0:
+            year = today.year
+        if not (1 <= month <= 12):
+            month = today.month
+
+        start, end, label = _month_bounds(year, month)
+
+        incomes = Income.objects.filter(date__gte=start, date__lt=end).select_related("category")
+        expenses = Expense.objects.filter(date__gte=start, date__lt=end).select_related("category")
+
+        inc_total = incomes.aggregate(s=Sum("amount"))["s"] or 0
+        exp_total = expenses.aggregate(s=Sum("amount"))["s"] or 0
+        net_total = (inc_total or 0) - (exp_total or 0)
+
+        ctx = {
+            **self.admin_site.each_context(request),
+            "title": f"Monthly Finance Report — {label}",
+            "label": label,
+            "year": year,
+            "month": month,
+            # ✅ match the template variable names
+            "income_rows": incomes,
+            "expense_rows": expenses,
+            "inc_total": inc_total,
+            "exp_total": exp_total,
+            "net_total": net_total,
+            "now": timezone.localtime().strftime("%b %d, %Y %I:%M %p"),
+        }
+        return TemplateResponse(request, "admin/finance/month_report.html", ctx)
 
 
 @admin.register(Expense)
 class ExpenseAdmin(OwnableAdminMixin):
-    list_display = ("date", "category", "amount", "vendor", "description")
-    list_filter  = ("category", "date")
+    list_display = ("date", "category", "vendor", "description", "amount")
+    list_filter = ("category", "date")
     search_fields = ("description", "vendor")
     date_hierarchy = "date"
+
+    def changelist_view(self, request, extra_context=None):
+        today = timezone.localdate()
+        report_url = reverse("admin:income_print_month")
+        report_url = f"{report_url}?year={today.year}&month={today.month}"
+
+        extra_context = extra_context or {}
+        extra_context["month_report_url"] = report_url
+        return super().changelist_view(request, extra_context=extra_context)
+
+
 
 
 class TuitionPaymentInline(admin.TabularInline):
@@ -1056,6 +1244,28 @@ class TuitionInvoiceAdmin(admin.ModelAdmin):
         except Exception:
             return 0
 
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        start, end = _month_bounds_local()
+        year, month = start.year, start.month
+
+        # "This month" filter (monthly by period, custom by created_at)
+        month_q = Q(kind="monthly", period_year=year, period_month=month) | \
+                  Q(kind="custom", created_at__date__gte=start, created_at__date__lt=end)
+
+        agg = TuitionInvoice.objects.filter(month_q).aggregate(
+            billed=Sum("tuition_amount"),
+            paid=Sum("paid_amount"),
+            balance=Sum(F("tuition_amount") - F("paid_amount")),
+        )
+
+        extra_context["month_invoice_summary"] = {
+            "label": f"{start:%b %Y}",
+            "billed": agg.get("billed") or 0,
+            "paid": agg.get("paid") or 0,
+            "balance": agg.get("balance") or 0,
+        }
+        return super().changelist_view(request, extra_context=extra_context)
 
 @admin.register(TuitionPayment)
 class TuitionPaymentAdmin(admin.ModelAdmin):

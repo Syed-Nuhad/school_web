@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Certificate</title>
+  <style>
+    :root { --brand:#0f172a; --ink:#111827; --border:#e2e8f0; --muted:#475569; }
+
+    html, body{
+      margin:0; padding:0; background:#f3f4f6; color:var(--ink);
+      font-family:"Century Gothic", CenturyGothic, AppleGothic, sans-serif;
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+
+    /* US Letter (portrait) page */
+    .sheet{
+      width:8.5in; min-height:11in;
+      margin:0 auto; background:#fff;
+      box-shadow:0 12px 36px rgba(0,0,0,.08);
+      /* more horizontal space */
+      padding:1in 1.15in;              /* ↑ widened left/right padding */
+      position:relative; text-align:center; box-sizing:border-box;
+      display:flex; flex-direction:column;
+    }
+
+    .head{
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:10px; padding-bottom:0.5in; margin-bottom:0.35in;
+      border-bottom:2px solid rgba(15,23,42,.08);
+    }
+    .logo{ width:78px; height:78px; object-fit:contain; border-radius:10px; }
+    .brand{ font-weight:600; font-size:26px; line-height:1.2; color:var(--brand); }
+    .subtitle{ font-weight:500; font-size:13px; line-height:1.4; color:var(--muted); }
+
+    .title{
+      margin:0.25in 0 0.35in 0;
+      font-weight:600; font-size:34px; line-height:1.15; color:var(--brand);
+      letter-spacing:.2px;
+    }
+
+    .body{
+      font-weight:400; font-size:14pt; line-height:1.85; color:#1f2937;
+      /* wider text area for horizontal spacing */
+      max-width:6.8in; margin:0 auto 0.45in;
+      text-align:justify; text-align-last:center;
+    }
+    .body p{ margin:0 0 0.22in 0; }
+    .key{ font-weight:600; color:#0f172a; }
+
+    /* Facts as a table */
+    .facts-wrap{ display:flex; justify-content:center; }
+    .facts{
+      width:6.6in;                     /* roomy table width */
+      border:1px solid var(--border);
+      border-radius:10px; overflow:hidden;
+      border-collapse:separate; border-spacing:0;
+      margin:0 auto;
+    }
+    .facts thead th{
+      background:#f8fafc; color:#0f172a; font-weight:600; font-size:13.5pt;
+      padding:14px 16px; text-align:left; border-bottom:1px solid var(--border);
+    }
+    .facts tbody td{
+      padding:12px 16px; font-size:13.5pt;
+      border-bottom:1px solid var(--border);
+    }
+    .facts tbody tr:last-child td{ border-bottom:none; }
+    .facts .label{ width:3in; color:#0f172a; opacity:.85; text-align: left; }
+    .facts .value{ text-align:right; color:#0f172a; }
+
+    /* Extra spacing between facts and signatures */
+    .after-facts{ height:0.6in; }      /* space block you asked for */
+
+    .signs{
+      display:flex; justify-content:center; gap:2.2in;
+      margin-top:0.15in;               /* additional spacing already handled by .after-facts */
+    }
+    .sign{
+      min-width:2.5in; padding-top:0.35in;
+      border-top:1.5px solid #94a3b8;
+      font-weight:400; font-size:11.5pt; color:#334155; text-align:center;
+    }
+
+    .actions{ position:fixed; right:16px; bottom:16px; display:flex; gap:8px; }
+    .btn{
+      background:#111827; color:#fff; border:0; padding:10px 14px; border-radius:10px; cursor:pointer;
+      font-family:"Century Gothic", CenturyGothic, AppleGothic, sans-serif; font-weight:500;
+    }
+    .btn:hover{ opacity:.9; }
+    .no-print{ display:block; }
+
+    @media print{
+      html,body{ background:#fff; }
+      .sheet{ box-shadow:none; margin:0; padding:0.8in 1in; }
+      .no-print{ display:none !important; }
+      @page{ size: Letter; margin:0.5in; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="actions no-print">
+    <button id="pngBtn" class="btn">Download PNG</button>
+  </div>
+
+  <section id="certSheet" class="sheet">
+    <header class="head">
+      {% if branding and branding.logo_src %}
+        <img class="logo" src="{{ branding.logo_src }}" alt="{{ branding.logo_alt|default:'Logo' }}">
+      {% endif %}
+      <div class="brand">{{ branding.site_name|default:"ScholarsHome" }}</div>
+      <div class="subtitle">Official Certificate of Achievement</div>
+      <div class="subtitle">{{ ms.term.name|default:"" }} Examination — {{ issued_on|date:"Y" }}</div>
+    </header>
+
+    <h1 class="title">Certificate</h1>
+
+    <div class="body">
+      <p>
+        This is to certify that <span class="key">{{ ms.student_full_name }}</span>
+        Roll <span class="key">{{ ms.roll_number|default:"—" }}</span>,
+        <span class="key">{{ ms.school_class }}</span>
+        — has <span class="key">PASSED</span> the
+        <span class="key">{{ ms.term.name }}</span> examination.
+      </p>
+      <p>We wish the absolute best!</p>
+    </div>
+
+    <div class="facts-wrap">
+      <table class="facts" role="table" aria-label="Overall results">
+        <thead>
+          <tr>
+            <th class="label">Item</th>
+            <th class="value">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="label">Overall Percentage</td>
+            <td class="value">{{ percent }}%</td>
+          </tr>
+          <tr>
+            <td class="label">Overall Grade</td>
+            <td class="value">{{ ms.total_grade }}</td>
+          </tr>
+          <tr>
+            <td class="label text-end">Issued on</td>
+            <td class="value">{{ issued_on|date:"M j, Y" }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- extra space between facts and signatures -->
+    <div class="after-facts"></div>
+
+    <div class="signs">
+      <div class="sign">Official seal above</div>
+      <div class="sign">Principal / Head of Institution</div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    async function downloadPNG() {
+      const node = document.getElementById('certSheet');
+      const canvas = await html2canvas(node, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 1.0));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const nameSafe = '{{ ms.student_full_name|default:"student" }}'.replace(/\s+/g,'_');
+      a.href = url;
+      a.download = `certificate_{{ ms.pk }}_${nameSafe}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('pngBtn').addEventListener('click', downloadPNG);
+
+    {% if auto_download_png %}
+      (async () => {
+        try { await downloadPNG(); } catch(e){}
+        setTimeout(function(){ window.location.href = "{{ return_to }}"; }, 600);
+      })();
+    {% endif %}
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% with mstart=now|date:"Y-m-01" mend=now|date:"Y-m-t" %}
+{% with
+    month_income=apps.content.models.Income.objects.filter(date__range=(mstart,mend)).aggregate(s=models.Sum("amount")) %}
+{% with
+    month_expense=apps.content.models.Expense.objects.filter(date__range=(mstart,mend)).aggregate(s=models.Sum("amount")) %}
+{% with
+    all_income=apps.content.models.Income.objects.aggregate(s=models.Sum("amount"))
+    all_expense=apps.content.models.Expense.objects.aggregate(s=models.Sum("amount")) %}
+  {% with
+      mi=month_income.s|default:0
+      me=month_expense.s|default:0
+      tn=all_income.s|default:0|add:"-"|add:all_expense.s|default:0 %}
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <span class="badge rounded-pill text-bg-success">
+      This month income: {{ mi|floatformat:2|intcomma }}
+    </span>
+    <span class="badge rounded-pill text-bg-danger">
+      This month expenses: {{ me|floatformat:2|intcomma }}
+    </span>
+    <span class="badge rounded-pill {{ mi|add:-me >= 0|yesno:'text-bg-primary,text-bg-warning' }}">
+      This month net: {{ mi|add:-me|floatformat:2|intcomma }}
+    </span>
+    <span class="badge rounded-pill text-bg-secondary">
+      All-time net: {{ tn|floatformat:2|intcomma }}
+    </span>
+  </div>
+  {% endwith %}
+{% endwith %}{% endwith %}{% endwith %}

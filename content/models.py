@@ -2058,11 +2058,12 @@ class BusStop(models.Model):
 
 
 
+# tune your pass rules here
+PASS_PERCENT_CUTOFF = 40.0   # overall %
+SUBJECT_MIN_CUTOFF  = 40.0   # per-subject absolute (out of 100)
 
-
-
-
-
+# expect these to exist elsewhere in this app
+# from .models import AcademicClass, ExamTerm, Subject  # if needed, adjust import paths
 
 
 class StudentMarksheet(models.Model):
@@ -2070,23 +2071,24 @@ class StudentMarksheet(models.Model):
     One marksheet per student per class + term.
     Subjects come from Subject objects linked to the same AcademicClass.
     """
-    school_class = models.ForeignKey(AcademicClass, on_delete=models.PROTECT, related_name="marksheets")
-    term         = models.ForeignKey(ExamTerm, on_delete=models.PROTECT, related_name="marksheets")
+    school_class = models.ForeignKey("content.AcademicClass", on_delete=models.PROTECT, related_name="marksheets")
+    term         = models.ForeignKey("content.ExamTerm", on_delete=models.PROTECT, related_name="marksheets")
 
     student_full_name = models.CharField(max_length=200)
     roll_number       = models.CharField(max_length=50, blank=True, default="")
     section           = models.CharField(max_length=50, blank=True, default="")
 
-    notes             = models.TextField(blank=True, default="")
+    notes        = models.TextField(blank=True, default="")
 
-    total_marks       = models.DecimalField(max_digits=7, decimal_places=2, default=0)   # sum of subject marks
-    total_grade       = models.CharField(max_length=10, blank=True, default="")          # e.g., A+/A/B...
+    total_marks  = models.DecimalField(max_digits=7, decimal_places=2, default=0)  # sum of subject marks
+    total_grade  = models.CharField(max_length=10, blank=True, default="")         # A+/A/...
 
-    is_published      = models.BooleanField(default=True)
+    is_pass      = models.BooleanField(default=False, editable=False, db_index=True)
+    is_published = models.BooleanField(default=True)
 
-    created_by        = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
-    created_at        = models.DateTimeField(auto_now_add=True)
-    updated_at        = models.DateTimeField(auto_now=True)
+    created_by   = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    created_at   = models.DateTimeField(auto_now_add=True)
+    updated_at   = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = [("school_class", "term", "student_full_name", "roll_number")]
@@ -2096,38 +2098,86 @@ class StudentMarksheet(models.Model):
         base = self.student_full_name or "Student"
         return f"{base} — {self.school_class} — {self.term}"
 
+    # ---------- calculations ----------
+
+    def is_final_term(self) -> bool:
+        """
+        Treat as 'final' if ExamTerm has an `is_final` bool, else fallback to name contains 'final'.
+        """
+        term = self.term
+        if hasattr(term, "is_final"):
+            try:
+                return bool(getattr(term, "is_final"))
+            except Exception:
+                pass
+        name = (getattr(term, "name", "") or "").lower()
+        return "final" in name
+
     def recalc_totals(self):
         items = list(self.items.all())
-        total = sum((i.marks_obtained or 0) for i in items)
+        total = sum(float(i.marks_obtained or 0) for i in items)
         self.total_marks = total
-        # Simple grade ladder; customize as needed
-        self.total_grade = _grade_from_percent(self.percent())
+
+        pct = self.percent()  # based on max of items
+        self.total_grade = _grade_from_percent(pct)
+        self.is_pass = self._compute_pass(pct, items)
         return total
 
-    def max_marks_total(self):
-        vals = [i.max_marks for i in self.items.all() if i.max_marks]
-        return sum(vals) if vals else 0
+    def _compute_pass(self, pct, items) -> bool:
+        # pass only depends on final term + overall percentage
+        if not self.is_final_term():
+            return False
+        return float(pct) >= float(PASS_PERCENT_CUTOFF)
 
-    def percent(self):
+    def max_marks_total(self) -> float:
+        vals = [float(i.max_marks or 0) for i in self.items.all()]
+        return sum(vals) if vals else 0.0
+
+    def percent(self) -> float:
         max_total = self.max_marks_total()
         if not max_total:
-            return 0
+            return 0.0
         return round((float(self.total_marks) * 100.0) / float(max_total), 2)
+
+    def save(self, *args, **kwargs):
+        """
+        Keep totals/grade/pass in sync whenever the sheet is saved.
+        (Signals will also do this when item rows change.)
+        """
+        try:
+            # If related manager available, recompute from items.
+            _ = self.items.all()
+            self.recalc_totals()
+        except Exception:
+            pass
+        super().save(*args, **kwargs)
 
 
 def _grade_from_percent(pct: float) -> str:
+    """
+    Simple ladder; adjust to your policy.
+    """
     try:
         pct = float(pct)
     except Exception:
         return ""
-    # Adjust cutoffs to your policy
-    if pct >= 80: return "A+"
-    if pct >= 70: return "A"
-    if pct >= 60: return "A-"
-    if pct >= 50: return "B"
-    if pct >= 40: return "C"
-    if pct >= 33: return "D"
+    if pct >= 90: return "A+"
+    if pct >= 80: return "A"
+    if pct >= 70: return "A-"
+    if pct >= 60: return "B"
+    if pct >= 50: return "C"
+    if pct >= 40: return "D"
     return "F"
+
+
+def _subject_grade_from_marks(marks_obtained, max_marks) -> str:
+    try:
+        mo = float(marks_obtained or 0)
+        mm = float(max_marks or 0)
+        pct = (mo / mm) * 100 if mm > 0 else 0.0
+    except Exception:
+        pct = 0.0
+    return _grade_from_percent(pct)
 
 
 class StudentMarksheetItem(models.Model):
@@ -2135,16 +2185,16 @@ class StudentMarksheetItem(models.Model):
     Per-subject row for a marksheet.
     Subject belongs to the same AcademicClass as the parent marksheet.
     """
-    marksheet     = models.ForeignKey(StudentMarksheet, on_delete=models.CASCADE, related_name="items")
-    subject       = models.ForeignKey(Subject, on_delete=models.PROTECT, related_name="marksheet_items")
+    marksheet      = models.ForeignKey(StudentMarksheet, on_delete=models.CASCADE, related_name="items")
+    subject        = models.ForeignKey("content.Subject", on_delete=models.PROTECT, related_name="marksheet_items")
 
-    max_marks     = models.DecimalField(max_digits=6, decimal_places=2, default=100)   # configurable per subject
-    marks_obtained= models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    max_marks      = models.DecimalField(max_digits=6, decimal_places=2, default=100)
+    marks_obtained = models.DecimalField(max_digits=6, decimal_places=2, default=0)
 
-    grade_letter  = models.CharField(max_length=5, blank=True, default="")
-    remark        = models.CharField(max_length=200, blank=True, default="")
+    grade_letter   = models.CharField(max_length=5, blank=True, default="")
+    remark         = models.CharField(max_length=200, blank=True, default="")
 
-    order         = models.PositiveIntegerField(default=0)
+    order          = models.PositiveIntegerField(default=0)
 
     class Meta:
         unique_together = [("marksheet", "subject")]
@@ -2154,21 +2204,27 @@ class StudentMarksheetItem(models.Model):
         return f"{self.subject} — {self.marks_obtained}/{self.max_marks}"
 
     def clean(self):
-        # Sanity: subject must belong to same class as parent
-        if self.subject and self.marksheet and self.subject.school_class_id != self.marksheet.school_class_id:
+        # Subject must belong to same class as parent marksheet.
+        if self.subject and self.marksheet and getattr(self.subject, "school_class_id", None) != self.marksheet.school_class_id:
             from django.core.exceptions import ValidationError
             raise ValidationError("Subject must belong to the same class as the marksheet.")
 
+    def save(self, *args, **kwargs):
+        # auto-calc per-subject letter grade
+        self.grade_letter = _subject_grade_from_marks(self.marks_obtained, self.max_marks)
+        super().save(*args, **kwargs)
 
 
-# content/models.py  (BOTTOM of file)
+# ---------- signals: keep parent totals in sync when items change ----------
 
-
-@receiver([post_save, post_delete], sender=StudentMarksheetItem)
-def _recalc_parent_totals(sender, instance, **kwargs):
+@receiver(post_save, sender=StudentMarksheetItem)
+@receiver(post_delete, sender=StudentMarksheetItem)
+def _recalc_sheet_totals(sender, instance, **kwargs):
     ms = instance.marksheet
     ms.recalc_totals()
-    ms.save(update_fields=["total_marks", "total_grade", "updated_at"])
+    ms.save(update_fields=["total_marks", "total_grade", "is_pass", "updated_at"])
+
+# content/models.py  (BOTTOM of file)
 
 
 

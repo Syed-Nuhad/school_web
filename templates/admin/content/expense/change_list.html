@@ -1,0 +1,36 @@
+{% extends "admin/change_list.html" %}
+{% load humanize %}
+
+{% block content_title %}
+  {{ block.super }}
+  <div style="margin-top:.75rem;"></div>
+
+  <div style="display:flex; flex-direction:column; gap:.5rem;">
+    <div><strong>This month ({{ fin_range_label }}):</strong></div>
+
+    <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+      <span class="badge rounded-pill text-bg-success">
+        Income {{ fin_month_income|floatformat:2|intcomma }}
+      </span>
+
+      <span class="badge rounded-pill text-bg-danger">
+        Expenses {{ fin_month_expense|floatformat:2|intcomma }}
+      </span>
+
+      <span class="badge rounded-pill {% if fin_month_net >= 0 %}text-bg-primary{% else %}text-bg-warning{% endif %}">
+        Net {{ fin_month_net|floatformat:2|intcomma }}
+      </span>
+
+      <span class="badge rounded-pill text-bg-secondary">
+        All-time Net: {{ fin_total_net|floatformat:2|intcomma }}
+      </span>
+    </div>
+      <!-- 👇 add this here -->
+      <div style="margin-top:.75rem;">
+        <a href="{{ month_report_url }}" target="_blank" class="btn btn-sm btn-outline-dark">
+          🖨 Print Monthly Report
+        </a>
+      </div>
+  </div>
+
+{% endblock %}

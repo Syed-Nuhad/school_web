@@ -1,0 +1,20 @@
+{% extends "admin/change_list.html" %}
+{% block result_list %}
+  {% if month_invoice_summary %}
+    <div style="margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px;">
+        <strong>{{ month_invoice_summary.label }} — Billed:</strong>
+        <span>{{ month_invoice_summary.billed }}</span>
+      </div>
+      <div style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px;">
+        <strong>Paid:</strong>
+        <span>{{ month_invoice_summary.paid }}</span>
+      </div>
+      <div style="padding:10px 12px; border:1px solid #e5e7eb; border-radius:8px;">
+        <strong>Balance:</strong>
+        <span>{{ month_invoice_summary.balance }}</span>
+      </div>
+    </div>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

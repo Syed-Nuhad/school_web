@@ -1373,7 +1373,8 @@ document.addEventListener('click', function (e) {
 
 
 
-<script>
+
+
 (function () {
   const modalEl = document.getElementById('functionImageModal');
   if (!modalEl) return;
@@ -1391,30 +1392,7 @@ document.addEventListener('click', function (e) {
     ? window.bootstrap.Modal.getOrCreateInstance(modalEl)
     : null;
 
-  // ---------- NEW: intercept clicks so LightGallery can't hijack ----------
-  const gallery = document.getElementById('functions-gallery');
-  if (gallery) {
-    gallery.addEventListener('click', function (e) {
-      const a = e.target.closest('a.js-fn-item');
-      if (!a) return;
 
-      e.preventDefault();
-      e.stopImmediatePropagation();  // prevents LightGallery from opening
-
-      const src  = a.getAttribute('href') || a.getAttribute('data-img') || '';
-      const text = (a.getAttribute('data-title') || a.getAttribute('title') || a.textContent || 'Full View').trim();
-      if (!src) return;
-
-      // Fill your modal now (so we don't depend on relatedTarget)
-      title.textContent = text;
-      dl.href = src;
-      try { dl.download = src.split('/').pop().split('?')[0] || 'image'; } catch(e){}
-      img.src = src;
-      img.alt = text;
-
-      if (bsModal) bsModal.show();
-    }, true); // capture phase beats LG's handler
-  }
 
   // ---------- your original code below (with one tiny guard) ----------
 
@@ -1701,8 +1679,100 @@ document.addEventListener('click', function (e) {
     }
   });
 
-.invoice-card{border:1px solid #e9ecef;border-radius:.5rem;background:#fff}
-.chip{display:inline-block;padding:.15rem .5rem;border-radius:1rem;font-size:.85rem}
-.chip-due{background:#fff3cd;border:1px solid #ffe69c;color:#8c6d1f}
-.chip-paid{background:#e9f7ef;border:1px solid #b7ebc6;color:#1f6d40}
-.row-overdue{--bs-table-bg: #fff7f7}
+
+
+
+
+
+
+
+
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // AOS (optional)
+    if (window.AOS) AOS.init();
+
+    var wrap = document.getElementById('functions-gallery');
+    if (!wrap || typeof window.lightGallery !== 'function') return;
+
+    var plugins = [];
+    if (window.lgZoom)       plugins.push(window.lgZoom);
+    if (window.lgDownload)   plugins.push(window.lgDownload);
+    if (window.lgThumbnail)  plugins.push(window.lgThumbnail);
+    if (window.lgFullscreen) plugins.push(window.lgFullscreen);
+
+    // Single LG instance for the grid
+    var lg = window.lightGallery(wrap, {
+      selector: '.js-fn-item',
+      plugins: plugins,
+      speed: 300,
+      download: true,
+      zoom: true,
+      thumbnail: true,
+      hideBarsDelay: 0,
+      hash: false
+    });
+
+    // Open by index from the button
+    wrap.addEventListener('click', function (e) {
+      var btn = e.target.closest('.fn-open');
+      if (!btn) return;
+      var idx = parseInt(btn.getAttribute('data-index'), 10);
+      if (!isNaN(idx) && lg && typeof lg.openGallery === 'function') {
+        lg.openGallery(idx);
+      }
+    });
+  });
+
+
+
+(function () {
+  function printCertificate(url) {
+    // create hidden iframe
+    var iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+
+    // clean-up handler from child
+    function onMessage(e) {
+      if (!e || !e.data || e.data.type !== 'certificate-printed') return;
+      window.removeEventListener('message', onMessage);
+      setTimeout(function () {
+        if (iframe && iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 300);
+    }
+    window.addEventListener('message', onMessage);
+
+    iframe.onload = function () {
+      try {
+        // If child doesn’t auto-print, we can force:
+        var w = iframe.contentWindow;
+        if (!w) return;
+        // Give it a beat to finish fonts/images
+        setTimeout(function(){ w.focus(); w.print(); }, 200);
+      } catch (e) {
+        console.warn('Print iframe error:', e);
+      }
+    };
+
+    iframe.src = url; // we pass ?print=1 above
+    document.body.appendChild(iframe);
+  }
+
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest('.js-print-certificate');
+    if (!a) return;
+
+    var url = a.getAttribute('data-print-url') || a.getAttribute('href');
+    if (!url) return;
+
+    ev.preventDefault();
+    printCertificate(url);
+  });
+})();
+
