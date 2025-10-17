@@ -1,31 +1,123 @@
-/* ===== Global text face (leave icon fonts alone) ===== */
-html, body,
-body :not(i):not([class*="fa-"]):not(.fa):not([class*="bi-"]):not(.bi) {
-  font-family: "Century Gothic", CenturyGothic, AppleGothic, "Segoe UI", Arial, sans-serif !important;
+/* === Site text face (never hits icons) ==================== */
+:root { --app-font: "Century Gothic", CenturyGothic, AppleGothic, "Segoe UI", Arial, sans-serif; }
+html, body { font-family: var(--app-font); font-weight: 400; }
+
+/* Common text elements only — exclude icon classes */
+body :where(
+  p, a, small, strong, em, mark,
+  h1, h2, h3, h4, h5, h6,
+  label, input, select, textarea, button,
+  ul, ol, li, dl, dt, dd,
+  table, thead, tbody, tfoot, tr, th, td,
+  blockquote, figcaption, caption,
+  div, section, article, aside, nav, header, footer
+):not(.fa):not(.fas):not(.far):not(.fab)
+ :not(.fa-solid):not(.fa-regular):not(.fa-brands)
+ :not([class^="fa-"]):not([class*=" fa-"])
+ :not(.bi):not([class^="bi-"]):not([class*=" bi-"]) {
+  font-family: var(--app-font) !important;
   font-weight: 400 !important;
 }
 
-/* Headings: slightly heavier but not shouty */
-h1, h2, h3, h4, h5, h6 {
+/* Headings (safe) */
+h1, h2, h3, h4, h5, h6 { font-family: inherit !important; font-weight: 500 !important; }
+
+/* Bootstrap weight helpers — never on icons */
+.fw-bold:not(.fa):not(.fas):not(.far):not(.fab):not([class^="fa-"]):not([class*=" fa-"]):not(.bi):not([class^="bi-"]):not([class*=" bi-"]),
+.fw-semibold:not(.fa):not(.fas):not(.far):not(.fab):not([class^="fa-"]):not([class*=" fa-"]):not(.bi):not([class^="bi-"]):not([class*=" bi-"]),
+.fw-bolder:not(.fa):not(.fas):not(.far):not(.fab):not([class^="fa-"]):not([class*=" fa-"]):not(.bi):not([class^="bi-"]):not([class*=" bi-"]),
+strong:not(.fa):not(.fas):not(.far):not(.fab):not([class^="fa-"]):not([class*=" fa-"]):not(.bi):not([class^="bi-"]):not([class*=" bi-"]),
+b:not(.fa):not(.fas):not(.far):not(.fab):not([class^="fa-"]):not([class*=" fa-"]):not(.bi):not([class^="bi-"]):not([class*=" bi-"]) {
+  font-weight: 500 !important;
+}
+
+/* === Bulletproof icon protection ========================== */
+/* Font Awesome families + weights on the element */
+.fa, .fa-solid, .fa-regular, .fas, .far { font-family: "Font Awesome 6 Free" !important; font-style: normal !important; }
+.fa-brands, .fab { font-family: "Font Awesome 6 Brands" !important; font-style: normal !important; }
+.fa-solid, .fas { font-weight: 900 !important; }
+.fa-regular, .far, .fa-brands, .fab { font-weight: 400 !important; }
+
+/* And explicitly on pseudos (beats any global *::before rule) */
+.fa::before, .fa-solid::before, .fas::before, .fa-regular::before {
+  font-family: "Font Awesome 6 Free" !important;
+  font-style: normal !important;
+  font-weight: 900 !important; /* solid defaults; regular is harmless here */
+}
+.fa-brands::before, .fab::before {
+  font-family: "Font Awesome 6 Brands" !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+}
+
+/* Bootstrap Icons on element + pseudos */
+.bi, [class^="bi-"], [class*=" bi-"] {
+  font-family: "bootstrap-icons" !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+}
+[class^="bi-"]::before, [class*=" bi-"]::before {
+  font-family: "bootstrap-icons" !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+}
+/* === Site text face (scoped; LightGallery modal stays untouched) === */
+:root { --app-font: "Century Gothic", CenturyGothic, AppleGothic, "Segoe UI", Arial, sans-serif; }
+
+/* Only apply the font inside .app-root */
+.app-root,
+.app-root :where(
+  p, a, small, strong, em, mark,
+  h1, h2, h3, h4, h5, h6,
+  label, input, select, textarea, button,
+  ul, ol, li, dl, dt, dd,
+  table, thead, tbody, tfoot, tr, th, td,
+  blockquote, figcaption, caption,
+  div, section, article, aside, nav, header, footer
+):not(.fa):not(.fas):not(.far):not(.fab)
+ :not(.fa-solid):not(.fa-regular):not(.fa-brands)
+ :not([class^="fa-"]):not([class*=" fa-"])
+ :not(.bi):not([class^="bi-"]):not([class*=" bi-"]) {
+  font-family: var(--app-font) !important;
+  font-weight: 400 !important;
+}
+
+/* Headings (safe) */
+.app-root h1, .app-root h2, .app-root h3, .app-root h4, .app-root h5, .app-root h6 {
   font-family: inherit !important;
   font-weight: 500 !important;
 }
 
-/* Common UI text holders */
-.navbar, .dropdown-item,
-.card, .alert,
-.form-control, .form-select,
-table, th, td, label, input, select, textarea,
-ul, ol, li, small, em, strong, b, mark {
-  font-family: inherit !important;
-  font-weight: 400 !important;
+/* Weight utilities — never on icons */
+.app-root .fw-bold,
+.app-root .fw-semibold,
+.app-root .fw-bolder,
+.app-root strong,
+.app-root b {
+  font-weight: 500 !important;
 }
 
-/* Tame Bootstrap weight utilities on text */
-.fw-bold, .fw-semibold, .fw-bolder, strong, b { font-weight: 500 !important; }
+/* --- LightGallery: force its icon font so globals can't override --- */
+.lg-outer .lg-icon,
+.lg-outer .lg-icon::before,
+.lg-outer .lg-icon::after,
+.lg-outer .lg-prev,
+.lg-outer .lg-next,
+.lg-outer .lg-close,
+.lg-outer .lg-download,
+.lg-outer .lg-fullscreen {
+  font-family: lg !important;        /* LG’s own icon font */
+  font-style: normal !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  line-height: 1 !important;
+}
 
-/* Never override icon fonts */
-i, .fa, [class*="fa-"], .bi, [class*="bi-"] {
-  font-family: inherit; /* FA/BI set their own on these classes; we don't force ours */
-  font-weight: inherit;
+/* keep them visible on dark */
+.lg-outer {
+  --lg-theme-color: #fff;
+  --lg-icon-color: #fff;
+  --lg-toolbar-icon-color: #fff;
+  --lg-arrow-color: #fff;
 }

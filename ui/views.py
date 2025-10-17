@@ -16,6 +16,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.utils.html import strip_tags
+from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_http_methods, require_GET
 from content.models import StudentMarksheet, StudentMarksheetItem
 
@@ -88,6 +89,8 @@ def _apply_result_filters(qs, request):
 # -------------------------------------------------------------------
 # Public pages
 # -------------------------------------------------------------------
+
+
 
 def home(request):
     # --- Core queries ---
@@ -262,17 +265,17 @@ def contact_submit(request):
 
     return redirect(reverse("home") + "#contact")
 
+@cache_page(60 * 5)
 def notices_list(request):
     """Paginated list of active notices."""
     qs = Notice.objects.filter(is_active=True).order_by("-published_at", "-created_at")
-    paginator = Paginator(qs, 12)
-    page_number = request.GET.get("page") or 1
-    try:
-        notices = paginator.get_page(page_number)
-    except EmptyPage:
-        notices = paginator.get_page(paginator.num_pages)
-    return render(request, "notices/notice_list.html", {"notices": notices})
+    page_obj = Paginator(qs, 12).get_page(request.GET.get("page") or 1)
+    return render(request, "notices/notice_list.html", {
+        "page_obj": page_obj,          # what your template expects
+        "notices": page_obj,           # optional: backwards-compat if elsewhere you used 'notices'
+    })
 
+@cache_page(60 * 5)
 def notice_detail(request, pk: int):
     notice = get_object_or_404(Notice.objects.filter(is_active=True), pk=pk)
 
@@ -292,13 +295,14 @@ def notice_detail(request, pk: int):
         .first()
     )
 
-    return render(request, "notice_detail.html", {
+    return render(request, "notices/notice_detail.html", {  # <-- correct folder
         "notice": notice,
         "more_notices": more_notices,
         "prev_notice": prev_notice,
         "next_notice": next_notice,
     })
 
+@cache_page(60 * 5)
 def gallery_page(request):
     qs = GalleryPost.objects.filter(is_active=True).order_by("order", "-created_at")
     paginator = Paginator(qs, 12)   # 12 items per page
@@ -315,6 +319,7 @@ def gallery_page(request):
 # -------------------------------------------------------------------
 # Results pages
 # -------------------------------------------------------------------
+
 
 def results_index(request):
     """
@@ -595,7 +600,7 @@ def attendance_class_page(request, class_id: int):
 
 
 
-
+@cache_page(60)
 @login_required
 @require_GET
 def exam_routines_json(request):

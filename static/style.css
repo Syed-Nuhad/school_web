@@ -3,11 +3,6 @@ body {
   color: #333;
 }
 
-/* Section Titles */
-h2 {
-  color: #0d47a1;
-}
-
 /* Buttons */
 .btn-primary {
   background: linear-gradient(to right, #00bcd4, #0097a7);
@@ -854,12 +849,6 @@ section ul li {
 
 
 
-  /* Background for marksheet */
-  #marksheet {
-    position: relative;
-    background: url('./img/background/marksheet-bg.png') no-repeat center center;
-    background-size: cover;
-  }
 
   /* Make background print as well */
  @media print {
@@ -867,10 +856,6 @@ section ul li {
     -webkit-print-color-adjust: exact !important; /* Chrome/Safari */
     print-color-adjust: exact !important;        /* Standard syntax */
   }
-    #marksheet {
-      background: url('./img/logo/certificate-border-pattern-.png') no-repeat center center !important;
-      background-size: cover !important;
-    }
     .no-print {
       display: none !important;
     }
@@ -890,8 +875,6 @@ section ul li {
 }
 body {
   font-family: "Segoe UI", Tahoma, sans-serif;
-  /* Screen background; change path if needed */
-  background: url("background.jpg") no-repeat center center fixed;
   background-size: cover;
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
@@ -917,7 +900,6 @@ body {
 }
 .header h2 {
   margin: 0;
-  color: #007bff;
   font-size: 28px;
 }
 
@@ -945,7 +927,6 @@ tr:hover { background: #ffe599; }
 /* ====== Your earlier design touches for #marksheet background frame ====== */
 #marksheet {
   /* If you want a decorative inside background for the marksheet box too: */
-  background-image: url('./img/background/marksheet-bg.png'); /* keep your existing asset */
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -968,7 +949,6 @@ tr:hover { background: #ffe599; }
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     /* Print background too */
-    background: url("background.jpg") no-repeat center center fixed !important;
     background-size: cover !important;
   }
   .marksheet, #marksheet {
@@ -2035,33 +2015,3 @@ body { background: #fff !important; }
   .hide-sm{display:none}
   @media (min-width:768px){ .hide-sm{display:table-cell} }
 
-/* === Global font + lighter weights (override) === */
-html, body, body * {
-  font-family: "Century Gothic", "Gill Sans", "Segoe UI", Arial, sans-serif !important;
-}
-
-/* Normal text weight */
-body, p, li, td, th, .btn, .form-control, .form-select {
-  font-weight: 400 !important;
-}
-
-/* Headings: keep presence, not shouty */
-h1, h2, h3, h4, h5, h6,
-.brand, .card-title, .section-title,
-.navbar .college-name, .gallery-title,
-.calendar-title {
-  font-weight: 500 !important;
-}
-
-/* Tame any hardcoded bolds from utilities/components */
-strong, b,
-.fw-bold, .fw-semibold, .fw-bolder,
-h4.mb-4, .subtitle {
-  font-weight: 500 !important;
-}
-
-/* If any “super bold” slipped in elsewhere */
-[class*="font-weight-"], [style*="font-weight"] {
-  /* don’t be obnoxious */
-  font-weight: 500 !important;
-}

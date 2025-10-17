@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
+{% load cache %}
+
 {% load humanize %}
 {% block title %}Home · College Management System{% endblock %}
 
@@ -33,7 +35,10 @@
             <img src="{{ b.image_src }}"
                  alt="{{ b.title|default:'Banner' }}"
                  class="d-block w-100"
-                 style="width:100%;height:100%;object-fit:cover;">
+                 style="width:100%;height:100%;object-fit:cover;"
+                 decoding="async"
+                 fetchpriority="high"
+            >
           {% endif %}
 
           <!-- Dark overlay -->
@@ -237,6 +242,7 @@
               alt="{{ item.title }}"
               class="w-100 h-100"
               style="object-fit:cover"
+              decoding="async"
               loading="lazy">
             {% if item.kind == 'video' %}
               <span class="glx-play" aria-hidden="true">▶</span>
@@ -285,7 +291,7 @@
         <div id="glxImageWrap"
              class="d-none w-100 vh-100 overflow-hidden d-flex align-items-center justify-content-center"
              style="cursor:grab; touch-action:none; background:#000;">
-          <img id="glxImage" alt="" draggable="false" class="user-select-none"
+          <img id="glxImage" alt="" draggable="false" class="user-select-none" decoding="async"
                style="will-change:transform; transform:translate(0px,0px) scale(1); max-width:none; max-height:none;">
         </div>
 
@@ -314,7 +320,7 @@
     <div class="col-md-6 mb-4 mb-md-0">
       <div class="image-fade-container rounded shadow" style="height:350px; overflow:hidden; position:relative;">
         {% for url, alt in about.image_list %}
-          <img src="{{ url }}" alt="{{ alt|default:about.title }}" class="fade-image {% if forloop.first %}active{% endif %}" loading="lazy" style="object-fit:cover;">
+          <img src="{{ url }}" alt="{{ alt|default:about.title }}" class="fade-image {% if forloop.first %}active{% endif %}" loading="lazy" decoding="async" style="object-fit:cover;">
         {% endfor %}
       </div>
     </div>
@@ -386,9 +392,9 @@
         <div class="col-12 col-md-6 col-lg-4 course-card" data-category="{{ course.category|lower }}">
           <div class="card h-100 shadow-sm border-0">
             {% if course.image %}
-              <img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.title }}">
+              <img src="{{ course.image.url }}" class="card-img-top" alt="{{ course.title }}"   loading="lazy" decoding="async">
             {% else %}
-              <img src="{% static 'img/default_course.jpg' %}" class="card-img-top" alt="{{ course.title }}">
+              <img src="{% static 'img/default_course.jpg' %}" class="card-img-top" alt="{{ course.title }}"   loading="lazy" decoding="async">
             {% endif %}
             <div class="card-body d-flex flex-column">
               <h5 class="card-title">{{ course.title }}</h5>
@@ -420,6 +426,7 @@
                 class="btn btn-outline-primary btn-sm js-open-syllabus"
                 data-img="{{ course.syllabus_file.url }}"
                 data-title="{{ course.title|escape }}"
+                loading="lazy" decoding="async"
               >
                 View Syllabus
               </a>
@@ -490,7 +497,9 @@
               class="js-fn-item d-block"
               data-sub-html="<h4 class='mb-0'>{{ f.title|escape }}</h4>">
               <img src="{{ f.image.url }}" alt="{{ f.title }}"
-                   class="img-fluid w-100" style="height:300px;object-fit:cover;">
+                   class="img-fluid w-100" style="height:300px;object-fit:cover;"
+                   loading="lazy" decoding="async"
+              >
             </a>
           {% else %}
             <div class="bg-light p-5 text-center">No image</div>
@@ -605,7 +614,10 @@
 
           <!-- image -->
           <img id="fimImg" src="" alt=""
-               style="max-width:none; max-height:none; user-select:none; -webkit-user-drag:none; cursor:grab;">
+               style="max-width:none; max-height:none; user-select:none; -webkit-user-drag:none; cursor:grab;"
+               loading="lazy" decoding="async"
+          >
+
 
           <!-- ▶ next arrow (added) -->
           <button id="fimNext" type="button"
@@ -639,7 +651,7 @@
             {% if fest.hero_video %}
               <a href="#" class="d-block js-play-hero" data-video="{{ fest.hero_video.url }}" aria-label="Play video">
                 {% if fest.hero_image %}
-                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}" loading="lazy" decoding="async">
                 {% else %}
                   <div class="bg-dark d-flex align-items-center justify-content-center text-white" style="height:300px">Play Video</div>
                 {% endif %}
@@ -647,14 +659,14 @@
             {% elif fest.hero_youtube_url %}
               <a href="#" class="d-block js-open-lg" data-fest="{{ fest.id }}" data-kind="youtube" data-src="{{ fest.hero_youtube_url }}" data-index="0">
                 {% if fest.hero_image %}
-                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+                  <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}" loading="lazy" decoding="async">
                 {% else %}
                   <div class="bg-dark d-flex align-items-center justify-content-center text-white" style="height:300px">Watch on YouTube</div>
                 {% endif %}
               </a>
             {% elif fest.hero_image %}
               <a href="#" class="d-block js-open-lg" data-fest="{{ fest.id }}" data-kind="image" data-src="{{ fest.hero_image.url }}" data-index="0">
-                <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}">
+                <img src="{{ fest.hero_image.url }}" class="img-fluid w-100" style="height:300px;object-fit:cover;" alt="{{ fest.title }}" loading="lazy" decoding="async">
               </a>
             {% else %}
               <div class="bg-light p-5 text-center">No media</div>
@@ -695,14 +707,14 @@
                         <a href="#" class="d-block js-open-lg"
                            data-fest="{{ fest.id }}" data-kind="image"
                            data-src="{{ m.image.url }}" data-index="{{ forloop.counter0 }}">
-                          <img src="{{ m.thumbnail.url|default:m.image.url }}" class="img-fluid rounded" alt="{{ m.caption }}">
+                          <img src="{{ m.thumbnail.url|default:m.image.url }}" class="img-fluid rounded" alt="{{ m.caption }}" loading="lazy" decoding="async">
                         </a>
                       {% elif m.kind == 'youtube' and m.youtube_url %}
                         <a href="#" class="d-block js-open-lg"
                            data-fest="{{ fest.id }}" data-kind="youtube"
                            data-src="{{ m.youtube_url }}" data-index="{{ forloop.counter0 }}">
                           {% if m.thumbnail %}
-                            <img src="{{ m.thumbnail.url }}" class="img-fluid rounded" alt="{{ m.caption }}">
+                            <img src="{{ m.thumbnail.url }}" class="img-fluid rounded" alt="{{ m.caption }}" loading="lazy" decoding="async">
                           {% else %}
                             <div class="ratio ratio-16x9 rounded bg-dark text-white d-flex align-items-center justify-content-center">
                               YT
@@ -854,9 +866,9 @@
                 <div class="col-md-6">
                   <div class="d-flex align-items-center gap-3 border rounded p-2">
                     {% if m.photo %}
-                      <img src="{{ m.photo.url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;">
+                      <img src="{{ m.photo.url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;" loading="lazy" decoding="async">
                     {% elif m.photo_url %}
-                      <img src="{{ m.photo_url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;">
+                      <img src="{{ m.photo_url }}" alt="{{ m.name }}" class="rounded" style="width:64px;height:64px;object-fit:cover;" loading="lazy" decoding="async">
                     {% endif %}
                     <div>
                       <div class="fw-semibold">{{ m.name }}</div>
@@ -901,7 +913,7 @@
                   <div class="d-flex align-items-center gap-3 border rounded p-2">
                     {% if m.photo %}
                       <img src="{{ m.photo.url }}" alt="{{ m.name }}" class="rounded"
-                           style="width:64px;height:64px;object-fit:cover;">
+                           style="width:64px;height:64px;object-fit:cover;" loading="lazy" decoding="async">
                     {% endif %}
                     <div>
                       <div class="fw-semibold">{{ m.name }}</div>

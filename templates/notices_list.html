@@ -8,23 +8,25 @@
 
   {% if page_obj.object_list %}
     <div class="row g-4">
-      {% for n in page_obj.object_list %}
-        <div class="col-md-4">
-          <div class="card h-100 shadow-lg border-0">
-            {% if n.image_src %}
-              <img src="{{ n.image_src }}" class="card-img-top" alt="{{ n.title|default:'Notice Image' }}">
-            {% endif %}
-            <div class="card-body">
-              <h5 class="card-title text-primary">{{ n.title }}</h5>
-              {% if n.subtitle %}<p class="card-text">{{ n.subtitle }}</p>{% endif %}
-            </div>
-            <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
-              <small class="text-muted">Published: {{ n.published_at|date:"F j, Y" }}</small>
-              <a href="{% url 'notice_detail' n.id %}" class="btn btn-sm btn-outline-primary">Read More</a>
-            </div>
+    {# templates/notices/notice_list.html #}
+    {% for n in page_obj.object_list %}
+      <div class="col-md-4">
+        <div class="card h-100 shadow-lg border-0">
+          {% if n.image_src %}
+            <img src="{{ n.image_src }}" class="card-img-top" alt="{{ n.title|default:'Notice Image' }}">
+          {% endif %}
+          <div class="card-body">
+            <h5 class="card-title text-primary">{{ n.title }}</h5>
+            {% if n.subtitle %}<p class="card-text">{{ n.subtitle }}</p>{% endif %}
+          </div>
+          <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+            <small class="text-muted">Published: {{ n.published_at|date:"F j, Y" }}</small>
+            <a href="{% url 'notice_detail' n.id %}" class="btn btn-sm btn-outline-primary">Read More</a>
           </div>
         </div>
-      {% endfor %}
+      </div>
+    {% endfor %}
+
     </div>
 
     <!-- Pagination -->

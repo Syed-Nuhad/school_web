@@ -1021,7 +1021,7 @@ class StudentMarksheetAdmin(OwnableAdminMixin):
             "return_to": return_to,
             "class_num": class_num,
         }
-        return TemplateResponse(request, "admin/certificates/marksheet_certificate.html", ctx)
+        return TemplateResponse(request, "site_admin/certificates/marksheet_certificate.html", ctx)
 
 @admin.register(StudentMarksheetItem)
 class StudentMarksheetItemAdmin(OwnableAdminMixin):
@@ -1174,7 +1174,7 @@ class IncomeAdmin(OwnableAdminMixin):
             "net_total": net_total,
             "now": timezone.localtime().strftime("%b %d, %Y %I:%M %p"),
         }
-        return TemplateResponse(request, "admin/finance/month_report.html", ctx)
+        return TemplateResponse(request, "stie_admin/finance/month_report.html", ctx)
 
 
 @admin.register(Expense)
@@ -1323,7 +1323,7 @@ class FinanceAdminSiteMixin(OwnableAdminMixin):
         Uses the same template as our view; admin wrapper only.
         """
         context = {"title": "Finance Overview"}
-        return TemplateResponse(request, "admin/finance/overview.html", context)
+        return TemplateResponse(request, "site_admin/finance/overview.html", context)
 
 # Attach mixin to a harmless model so the URL mounts under admin.
 # (Alternative is AdminSite-level get_urls; keeping it simple here.)
@@ -1335,7 +1335,7 @@ def finance_overview_admin(request):
     ctx = admin.site.each_context(request)            # admin chrome (nav/sidebar)
     ctx.update(build_finance_context(request))        # your finance data
     ctx.setdefault("title", "Finance Overview")
-    return TemplateResponse(request, "admin/finance/overview.html", ctx)
+    return TemplateResponse(request, "site_admin/finance/overview.html", ctx)
 
 
 
@@ -1437,7 +1437,7 @@ def student_ledger_admin(request):
 
     ctx["classes"] = AcademicClass.objects.order_by("-year", "name")
     ctx["q"] = {"class_id": q_class, "section": q_section, "roll": q_roll}
-    return render(request, "admin/finance/student_ledger.html", ctx)
+    return render(request, "site_admin/finance/student_ledger.html", ctx)
 
 
 
