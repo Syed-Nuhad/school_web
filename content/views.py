@@ -60,7 +60,7 @@ from .models import (
     TuitionPayment,
     IncomeCategory,
     AcademicClass,
-    StudentProfile, PaymentReceipt, SmsOutbox, OutboxStatus, CommsLog,
+    StudentProfile, PaymentReceipt, SmsOutbox, OutboxStatus, CommsLog, EmailOutbox, EmailBounce,
 )
 from .services.receipts import generate_payment_receipt
 

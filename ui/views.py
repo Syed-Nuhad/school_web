@@ -295,7 +295,7 @@ def notice_detail(request, pk: int):
         .first()
     )
 
-    return render(request, "notices/notice_detail.html", {  # <-- correct folder
+    return render(request, "notice_detail.html", {  # <-- correct folder
         "notice": notice,
         "more_notices": more_notices,
         "prev_notice": prev_notice,

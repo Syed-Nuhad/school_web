@@ -188,3 +188,45 @@
 [ERROR] 2025-10-18 00:00:45,664 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
 [ERROR] 2025-10-18 00:01:02,270 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
 [ERROR] 2025-10-18 00:01:02,271 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,690 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,691 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,692 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,692 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,693 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:15,693 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:18,771 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:18,772 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:37,371 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:37,372 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,298 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,298 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,300 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,300 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,300 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 00:55:39,301 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 01:24:10,720 django.request | Internal Server Error: /notices/1/
+Traceback (most recent call last):
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\utils\decorators.py", line 192, in _view_wrapper
+    result = _process_exception(request, e)
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\utils\decorators.py", line 190, in _view_wrapper
+    response = view_func(request, *args, **kwargs)
+  File "D:\Work\ScholarsHome\ui\views.py", line 298, in notice_detail
+    return render(request, "notices/notice_detail.html", {  # <-- correct folder
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\shortcuts.py", line 25, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\template\loader.py", line 61, in render_to_string
+    template = get_template(template_name, using=using)
+  File "D:\Work\ScholarsHome\.venv\lib\site-packages\django\template\loader.py", line 19, in get_template
+    raise TemplateDoesNotExist(template_name, chain=chain)
+django.template.exceptions.TemplateDoesNotExist: notices/notice_detail.html
+[ERROR] 2025-10-18 01:24:10,759 django.server | "GET /notices/1/ HTTP/1.1" 500 145
+[ERROR] 2025-10-18 02:08:47,540 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 02:08:47,541 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 02:08:49,281 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 02:08:49,281 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 02:08:49,282 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
+[ERROR] 2025-10-18 02:08:49,282 django.server | You're accessing the development server over HTTPS, but it only supports HTTP.
